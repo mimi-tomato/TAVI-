@@ -861,6 +861,9 @@
   /* 白背景バッジの年号テキスト等は明示的に黒 */
   [data-theme="dark"] .badge-ic span{color:#1b2330}
 </style>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#EC6800">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
 <div id="topbar"></div>
@@ -5294,6 +5297,13 @@ function initFollowDates(){
 initFollowDates();
 checkBadgeAwards(true);   // 起動時:既に条件を満たすバッジは通知済み扱いにする
 renderApp();
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js");
+    });
+  }
 </script>
 </body>
 </html>
