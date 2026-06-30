@@ -1466,7 +1466,9 @@ const I18N = {
     "settings.signOutConfirm":"ログアウトしますか？",
     "x.auth.verifyTitle":"確認メールを送信しました",
     "x.auth.verifyMsg":"メール内のリンクを開いて登録を完了してください。完了後、ログインできます。",
-    "x.auth.backToSignIn":"ログイン画面に戻る"
+    "x.auth.backToSignIn":"ログイン画面に戻る",
+    "x.auth.resend":"確認メールを再送する",
+    "x.auth.resent":"確認メールを再送しました",
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
@@ -1823,7 +1825,9 @@ const I18N = {
     "settings.signOutConfirm":"Sign out?",
     "x.auth.verifyTitle":"Confirmation email sent",
     "x.auth.verifyMsg":"Open the link in the email to finish signing up. You can sign in once it's done.",
-    "x.auth.backToSignIn":"Back to sign in"
+    "x.auth.backToSignIn":"Back to sign in",
+    "x.auth.resend":"Resend email",
+    "x.auth.resent":"Email resent",
   }
 };
 function curLang(){ return (typeof S!=="undefined" && S.lang) ? S.lang : "ja"; }
@@ -1837,9 +1841,11 @@ function isSignedIn(){ return !!authUser(); }
 async function authSignUp(email, password, displayName){
   if(!window.SB){ toast(t("x.auth.noConn")); return; }
   // 表示名はユーザーメタデータとして保持(メール確認後のログイン時にprofilesへ反映)
+  // 戻り先は現在のページURL(GitHub Pagesのサブパスも含む正確な場所)を明示指定
+  const redirectTo = location.origin + location.pathname;
   const { data, error } = await window.SB.auth.signUp({
     email, password,
-    options: { data: { display_name: displayName || "" } }
+    options: { data: { display_name: displayName || "" }, emailRedirectTo: redirectTo }
   });
   if(error){ toast(error.message); return; }
   // 確認メールが有効な場合、ここではまだログインしていない(セッションなし)
@@ -6521,7 +6527,8 @@ function toggleMyCalWeek(w){
 
 /* ---- 最上位レンダラ ---- */
 /* ===== 認証画面(ログイン / 新規登録) ===== */
-let authMode = "signin"; // "signin" | "signup"
+let authMode = "signin"; // "signin" | "signup" | "verify"
+let authPendingEmail = ""; // 確認コード検証のため登録時のメールを保持
 function setAuthMode(m){ authMode=m; const sc=$("#screen"); if(sc) sc.innerHTML=screenAuth(); }
 function screenAuth(){
   const isUp = authMode==="signup";
@@ -6536,6 +6543,7 @@ function screenAuth(){
         <div class="auth-verify-title">${t("x.auth.verifyTitle")}</div>
         <div class="auth-verify-msg">${t("x.auth.verifyMsg")}</div>
       </div>
+      <button class="auth-link" onclick="resendCode()">${t("x.auth.resend")}</button>
       <button class="auth-submit" onclick="setAuthMode('signin')">${t("x.auth.backToSignIn")}</button>
     </div>
   </div>`;
@@ -6562,6 +6570,7 @@ async function submitAuth(){
   if(!email||!pass){ toast(t("x.auth.fillAll")); return; }
   if(authMode==="signup"){
     const name=($("#authName")||{}).value||"";
+    authPendingEmail = email.trim();
     await authSignUp(email.trim(), pass, name.trim());
   }else{
     await authSignIn(email.trim(), pass);
@@ -6570,8 +6579,21 @@ async function submitAuth(){
 async function submitReset(){
   const email=($("#authEmail")||{}).value||"";
   if(!email){ toast(t("x.auth.enterEmail")); return; }
-  await authResetPassword(email.trim());
+  await authResetPassword(email.trim());}
+
+
+/* 確認コードの再送 */
+async function resendCode(){
+  if(!window.SB){ toast(t("x.auth.noConn")); return; }
+  if(!authPendingEmail){ toast(t("x.auth.noConn")); return; }
+  const { error } = await window.SB.auth.resend({
+    type:"signup", email: authPendingEmail,
+    options: { emailRedirectTo: location.origin + location.pathname }
+  });
+  if(error){ toast(error.message); return; }
+  toast(t("x.auth.resent"));
 }
+
 function renderApp(){
   // ===== 認証ゲート: 未ログインかつ未スキップならログイン画面 =====
   if(!isSignedIn()){

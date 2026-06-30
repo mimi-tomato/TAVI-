@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase 接続テスト</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 16px;
+      background: #f5f5f5;
+    }
+    h1 { font-size: 1.4rem; color: #333; }
+    .buttons { display: flex; gap: 12px; margin: 24px 0; }
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #fff;
+    }
+    #btn-write { background: #1a73e8; }
+    #btn-write:hover { background: #1558b0; }
+    #btn-read { background: #34a853; }
+    #btn-read:hover { background: #277040; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 160px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-ok   { color: #6adc6a; }
+    .log-err  { color: #f87171; }
+    .log-info { color: #93c5fd; }
+    #clear-btn {
+      margin-top: 8px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      background: #555;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #clear-btn:hover { background: #777; }
+  </style>
+</head>
+<body>
+  <h1>Firebase Realtime Database 接続テスト</h1>
+  <p style="color:#666;font-size:0.9rem;">
+    パス: <code>test/message</code>
+  </p>
+
+  <div class="buttons">
+    <button id="btn-write">書き込みテスト</button>
+    <button id="btn-read">読み込みテスト</button>
+  </div>
+
+  <div id="log">ログがここに表示されます...<br></div>
+  <button id="clear-btn">ログをクリア</button>
+
+  <script type="module">
+    import { initializeApp }        from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { getDatabase, ref, set, get }
+                                    from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey:            "AIzaSyD6oy5bN3P6wFOe8Qkr-nXuYDEPhoqbRlE",
+      authDomain:        "tavi-8bbbb.firebaseapp.com",
+      projectId:         "tavi-8bbbb",
+      storageBucket:     "tavi-8bbbb.firebasestorage.app",
+      messagingSenderId: "764269777447",
+      appId:             "1:764269777447:web:87078b0881edd7ec047402",
+      // Realtime Database の URL（リージョンが異なる場合は修正してください）
+      databaseURL:       "https://tavi-8bbbb-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+    const logEl = document.getElementById("log");
+
+    function appendLog(message, type = "info") {
+      const span = document.createElement("span");
+      span.className = `log-${type}`;
+      span.textContent = `[${new Date().toLocaleTimeString("ja-JP")}] ${message}\n`;
+      logEl.appendChild(span);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    document.getElementById("btn-write").addEventListener("click", async () => {
+      const btn = document.getElementById("btn-write");
+      btn.disabled = true;
+      const value = new Date().toLocaleString("ja-JP");
+      appendLog(`書き込み開始: "${value}"`);
+      try {
+        await set(ref(db, "test/message"), value);
+        appendLog(`書き込み成功: test/message = "${value}"`, "ok");
+      } catch (e) {
+        appendLog(`書き込み失敗: ${e.message}`, "err");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("btn-read").addEventListener("click", async () => {
+      const btn = document.getElementById("btn-read");
+      btn.disabled = true;
+      appendLog("読み込み開始: test/message");
+      try {
+        const snapshot = await get(ref(db, "test/message"));
+        if (snapshot.exists()) {
+          appendLog(`読み込み成功: "${snapshot.val()}"`, "ok");
+        } else {
+          appendLog("読み込み成功: データなし（null）", "ok");
+        }
+      } catch (e) {
+        appendLog(`読み込み失敗: ${e.message}`, "err");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("clear-btn").addEventListener("click", () => {
+      logEl.textContent = "";
+    });
+
+    appendLog("Firebase 初期化完了", "info");
+  </script>
+</body>
+</html>
