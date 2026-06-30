@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${t('x.splash.tagline')}</title>
+<title>TAVI。</title>
 <style>
   :root{
     --ink:#1b2330; --ink-soft:#5a6678; --line:#e3e7ee; --bg:#faf3ed; --card:#fff;
@@ -1024,10 +1024,61 @@
   [data-theme="dark"] .badge-mini[style*="#fff7e0"]{color:#1b2330}
   /* 白背景バッジの年号テキスト等は明示的に黒 */
   [data-theme="dark"] .badge-ic span{color:#1b2330}
+  /* ===== 認証画面(ログイン/登録) ===== */
+  .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:var(--bg)}
+  .auth-card{width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:12px}
+  .auth-logo{width:120px;height:auto;margin-bottom:8px}
+  .auth-tabs{display:flex;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin-bottom:4px}
+  .auth-tab{flex:1;padding:11px 0;background:var(--card);color:var(--ink-soft);border:0;font-family:inherit;
+    font-size:14px;font-weight:700;cursor:pointer}
+  .auth-tab.on{background:var(--accent);color:#fff}
+  .auth-input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);
+    background:var(--card);color:var(--ink);font-size:15px;font-family:inherit;box-sizing:border-box}
+  .auth-input:focus{outline:none;border-color:var(--accent)}
+  .auth-submit{width:100%;padding:13px 0;border-radius:12px;border:0;background:var(--accent);color:#fff;
+    font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:4px}
+  .auth-submit:active{transform:scale(.98)}
+  .auth-link{background:none;border:0;color:var(--accent);font-size:13px;font-family:inherit;cursor:pointer;padding:4px}
+  .auth-verify{text-align:center;padding:8px 0 4px}
+  .auth-verify-icon{font-size:44px;margin-bottom:10px}
+  .auth-verify-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  .auth-verify-msg{font-size:13.5px;color:var(--ink-soft);line-height:1.6}
 </style>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#EC6800">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<!-- ===== Supabase(認証 + DB + リアルタイム) ===== -->
+<script type="module">
+  const SUPABASE_URL = "https://cynaayxrquevldwxtqcy.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmFheXhycXVldmxkd3h0cWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDIyMzYsImV4cCI6MjA5ODM3ODIzNn0.9yUG7ByQ6l5_zJ_DzTEchh9w-o-Jotq5MfjEysP9RAc";
+  let supabase = null;
+  try {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("[Supabase] client created ✅");
+  } catch (e) {
+    console.log("[Supabase] SDK load failed:", e);
+  }
+  window.SB = supabase;
+  window.__fbReady = true;   // 互換: 初期化完了フラグ
+
+  // 認証状態の監視。ログイン状態が変わるたびアプリ側フックを呼ぶ
+  if (supabase) {
+    // 起動時の現在セッション
+    const { data: { session } } = await supabase.auth.getSession();
+    window.__authUser = session ? session.user : null;
+    console.log("[Supabase] auth:", window.__authUser ? ("signed in: " + window.__authUser.email) : "signed out");
+    if (typeof window.onAuthChanged === "function") window.onAuthChanged(window.__authUser);
+
+    // 以降の変化を購読
+    supabase.auth.onAuthStateChange((_event, session) => {
+      window.__authUser = session ? session.user : null;
+      console.log("[Supabase] auth state:", window.__authUser ? ("signed in: " + window.__authUser.email) : "signed out");
+      if (typeof window.onAuthChanged === "function") window.onAuthChanged(window.__authUser);
+    });
+  }
+</script>
 </head>
 <body>
 <div id="splash"><img id="splashLogo" alt="TAVI。"></div>
@@ -1396,7 +1447,26 @@ const I18N = {
     "x.chat.unpin":"ピン解除",
     "x.chat.pin":"ピン留め",
     "x.chat.unarchive2":"📦 戻す",
-    "x.chat.archive2":"📦 アーカイブ"
+    "x.chat.archive2":"📦 アーカイブ",
+    "x.auth.tabSignIn":"ログイン",
+    "x.auth.tabSignUp":"新規登録",
+    "x.auth.name":"表示名",
+    "x.auth.email":"メールアドレス",
+    "x.auth.password":"パスワード",
+    "x.auth.forgot":"パスワードを忘れた場合",
+    "x.auth.fillAll":"メールアドレスとパスワードを入力してください",
+    "x.auth.enterEmail":"メールアドレスを入力してください",
+    "x.auth.noConn":"サーバーに接続できていません",
+    "x.auth.signedUp":"登録しました",
+    "x.auth.signedIn":"ログインしました",
+    "x.auth.signedOut":"ログアウトしました",
+    "x.auth.resetSent":"再設定メールを送信しました",
+    "settings.signedInAs":"ログイン中",
+    "settings.signOut":"ログアウト",
+    "settings.signOutConfirm":"ログアウトしますか？",
+    "x.auth.verifyTitle":"確認メールを送信しました",
+    "x.auth.verifyMsg":"メール内のリンクを開いて登録を完了してください。完了後、ログインできます。",
+    "x.auth.backToSignIn":"ログイン画面に戻る"
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
@@ -1734,10 +1804,101 @@ const I18N = {
     "x.chat.unpin":"Unpin",
     "x.chat.pin":"Pin",
     "x.chat.unarchive2":"📦 Restore",
-    "x.chat.archive2":"📦 Archive"
+    "x.chat.archive2":"📦 Archive",
+    "x.auth.tabSignIn":"Sign in",
+    "x.auth.tabSignUp":"Sign up",
+    "x.auth.name":"Display name",
+    "x.auth.email":"Email",
+    "x.auth.password":"Password",
+    "x.auth.forgot":"Forgot password?",
+    "x.auth.fillAll":"Please enter your email and password",
+    "x.auth.enterEmail":"Please enter your email",
+    "x.auth.noConn":"Not connected to the server",
+    "x.auth.signedUp":"Account created",
+    "x.auth.signedIn":"Signed in",
+    "x.auth.signedOut":"Signed out",
+    "x.auth.resetSent":"Password reset email sent",
+    "settings.signedInAs":"Signed in as",
+    "settings.signOut":"Sign out",
+    "settings.signOutConfirm":"Sign out?",
+    "x.auth.verifyTitle":"Confirmation email sent",
+    "x.auth.verifyMsg":"Open the link in the email to finish signing up. You can sign in once it's done.",
+    "x.auth.backToSignIn":"Back to sign in"
   }
 };
 function curLang(){ return (typeof S!=="undefined" && S.lang) ? S.lang : "ja"; }
+
+/* ===== Supabase 認証ヘルパー(メール+パスワード) ===== */
+/* 認証状態。__authUser はモジュール側が更新する */
+function authUser(){ return window.__authUser || null; }
+function isSignedIn(){ return !!authUser(); }
+
+/* 新規登録: メール・パスワード・表示名。profilesにも行を作る */
+async function authSignUp(email, password, displayName){
+  if(!window.SB){ toast(t("x.auth.noConn")); return; }
+  // 表示名はユーザーメタデータとして保持(メール確認後のログイン時にprofilesへ反映)
+  const { data, error } = await window.SB.auth.signUp({
+    email, password,
+    options: { data: { display_name: displayName || "" } }
+  });
+  if(error){ toast(error.message); return; }
+  // 確認メールが有効な場合、ここではまだログインしていない(セッションなし)
+  if(data && data.session){
+    // 確認不要の設定なら即ログイン → プロフィール用意
+    await ensureProfile();
+    toast(t("x.auth.signedIn"));
+  }else{
+    // 確認メール送信済み。リンクを踏むまで待つ
+    authMode = "verify";
+    const sc=$("#screen"); if(sc) sc.innerHTML=screenAuth();
+  }
+}
+
+/* ログイン中ユーザーのprofiles行を用意(無ければ作る) */
+async function ensureProfile(){
+  if(!window.SB || !isSignedIn()) return;
+  const u = authUser();
+  const name = (u.user_metadata && u.user_metadata.display_name) || "";
+  try{
+    const { error } = await window.SB.from("profiles")
+      .upsert({ id: u.id, display_name: name }, { onConflict: "id", ignoreDuplicates: true });
+    if(error) console.log("[profiles] ensure error:", error.message);
+  }catch(e){ console.log("[profiles] ensure exception:", e); }
+}
+
+/* ログイン */
+async function authSignIn(email, password){
+  if(!window.SB){ toast(t("x.auth.noConn")); return; }
+  const { error } = await window.SB.auth.signInWithPassword({ email, password });
+  if(error){ toast(error.message); return; }
+  toast(t("x.auth.signedIn"));
+}
+
+/* ログアウト */
+async function authSignOut(){
+  if(!window.SB) return;
+  await window.SB.auth.signOut();
+  toast(t("x.auth.signedOut"));
+}
+/* 設定からのログアウト(確認付き) */
+function confirmSignOut(){
+  if(confirm(t("settings.signOutConfirm"))) authSignOut();
+}
+
+/* パスワード再設定メール */
+async function authResetPassword(email){
+  if(!window.SB){ toast(t("x.auth.noConn")); return; }
+  const { error } = await window.SB.auth.resetPasswordForEmail(email);
+  if(error){ toast(error.message); return; }
+  toast(t("x.auth.resetSent"));
+}
+
+/* 認証状態が変わったときにモジュールから呼ばれる */
+window.onAuthChanged = async function(user){
+  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意
+  if(user){ await ensureProfile(); }
+  if(typeof renderApp === "function") renderApp();
+};
 
 /* 選択肢項目(行きたい場所・やりたいこと・重視する要素)の表示ラベル。
    内部値は日本語のまま保持し、英語表示時のみ対訳を引く(無ければ原文) */
@@ -4494,6 +4655,8 @@ function screenSettings(){
           <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${t("settings.private.sub")}</div></div>
         <div class="switch ${ME.private?'on':''}" onclick="togglePrivate()"><i></i></div></div>
       <div class="item" onclick="goFwd('editprofile')"><span class="si"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""></span><span class="st">${t("settings.editProfile")}</span><span style="color:var(--ink-soft)">›</span></div>
+      ${isSignedIn()?`<div class="item" style="cursor:default"><span class="si">📧</span><div style="flex:1"><div class="st" style="margin:0">${t("settings.signedInAs")}</div><div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${esc(authUser().email||"")}</div></div></div>
+      <div class="item" onclick="confirmSignOut()"><span class="si">🚪</span><span class="st" style="color:#e0245e">${t("settings.signOut")}</span></div>`:``}
     </div>
 
     <h3 class="sub" style="margin:16px 4px 8px">${t("settings.display")}</h3>
@@ -6357,7 +6520,68 @@ function toggleMyCalWeek(w){
 }
 
 /* ---- 最上位レンダラ ---- */
+/* ===== 認証画面(ログイン / 新規登録) ===== */
+let authMode = "signin"; // "signin" | "signup"
+function setAuthMode(m){ authMode=m; const sc=$("#screen"); if(sc) sc.innerHTML=screenAuth(); }
+function screenAuth(){
+  const isUp = authMode==="signup";
+  // 確認メール送信後の画面
+  if(authMode==="verify"){
+    return `
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <img class="auth-logo" src="${ABOUT_LOGO||''}" alt="TAVI。">
+      <div class="auth-verify">
+        <div class="auth-verify-icon">✉️</div>
+        <div class="auth-verify-title">${t("x.auth.verifyTitle")}</div>
+        <div class="auth-verify-msg">${t("x.auth.verifyMsg")}</div>
+      </div>
+      <button class="auth-submit" onclick="setAuthMode('signin')">${t("x.auth.backToSignIn")}</button>
+    </div>
+  </div>`;
+  }
+  return `
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <img class="auth-logo" src="${ABOUT_LOGO||''}" alt="TAVI。">
+      <div class="auth-tabs">
+        <button class="auth-tab ${!isUp?'on':''}" onclick="setAuthMode('signin')">${t("x.auth.tabSignIn")}</button>
+        <button class="auth-tab ${isUp?'on':''}" onclick="setAuthMode('signup')">${t("x.auth.tabSignUp")}</button>
+      </div>
+      ${isUp?`<input id="authName" class="auth-input" type="text" placeholder="${t('x.auth.name')}" autocomplete="nickname">`:``}
+      <input id="authEmail" class="auth-input" type="email" placeholder="${t('x.auth.email')}" autocomplete="email">
+      <input id="authPass" class="auth-input" type="password" placeholder="${t('x.auth.password')}" autocomplete="${isUp?'new-password':'current-password'}">
+      <button class="auth-submit" onclick="submitAuth()">${isUp?t("x.auth.tabSignUp"):t("x.auth.tabSignIn")}</button>
+      ${!isUp?`<button class="auth-link" onclick="submitReset()">${t("x.auth.forgot")}</button>`:``}
+    </div>
+  </div>`;
+}
+async function submitAuth(){
+  const email=($("#authEmail")||{}).value||"";
+  const pass=($("#authPass")||{}).value||"";
+  if(!email||!pass){ toast(t("x.auth.fillAll")); return; }
+  if(authMode==="signup"){
+    const name=($("#authName")||{}).value||"";
+    await authSignUp(email.trim(), pass, name.trim());
+  }else{
+    await authSignIn(email.trim(), pass);
+  }
+}
+async function submitReset(){
+  const email=($("#authEmail")||{}).value||"";
+  if(!email){ toast(t("x.auth.enterEmail")); return; }
+  await authResetPassword(email.trim());
+}
 function renderApp(){
+  // ===== 認証ゲート: 未ログインかつ未スキップならログイン画面 =====
+  if(!isSignedIn()){
+    document.documentElement.setAttribute("data-theme", S.theme||"light");
+    $("#topbar").innerHTML="";
+    $("#tabbar").innerHTML="";
+    $("#screen").innerHTML=screenAuth();
+    window.scrollTo({top:0,behavior:"auto"});
+    return;
+  }
   document.documentElement.setAttribute("data-theme", S.theme);
   applyAccent(S.accent);
   $("#topbar").innerHTML = topbarHTML();
