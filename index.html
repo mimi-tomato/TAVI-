@@ -1047,7 +1047,7 @@
   .auth-logo{width:120px;height:auto;margin-bottom:8px}
   .auth-lang-switch{align-self:flex-end;margin-bottom:-4px}
   .auth-tabs{display:flex;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin-bottom:4px}
-  .auth-tab{flex:1;padding:11px 0;background:var(--card);color:var(--ink-soft);border:0;font-family:inherit;
+  .auth-tab{flex:1;height:42px;line-height:42px;padding:0;background:var(--card);color:var(--ink-soft);border:0;font-family:inherit;
     font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
   .auth-tab.on{background:var(--accent);color:#fff}
   .auth-input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);
@@ -1055,7 +1055,8 @@
   .auth-input:focus{outline:none;border-color:var(--accent)}
   .auth-field{width:100%;display:flex;flex-direction:column;gap:0}
   .auth-input.err{border-color:#e0245e}
-  .auth-field-err{min-height:2.2em;font-size:11.5px;line-height:1.5;color:#e0245e;padding:3px 4px 0;text-align:left}
+  .auth-field-err{height:1.5em;line-height:1.5;font-size:11.5px;color:#e0245e;padding:3px 4px 0;
+    text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .auth-submit{width:100%;padding:13px 0;border-radius:12px;border:0;background:var(--accent);color:#fff;
     font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:4px}
   .auth-submit:active{transform:scale(.98)}
@@ -1063,7 +1064,8 @@
   .auth-verify{text-align:center;padding:8px 0 4px}
   .auth-verify-icon{font-size:44px;margin-bottom:10px}
   .auth-verify-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px}
-  .auth-verify-msg{color:var(--ink-soft);font-size:13.5px;line-height:1.6;min-height:3.2em}
+  .auth-verify-msg{color:var(--ink-soft);font-size:13.5px;line-height:1.6;height:3.2em;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 </style>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#EC6800">
