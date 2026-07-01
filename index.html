@@ -333,6 +333,7 @@
   [data-theme="dark"][data-accent="mono"] .st-badge[style*="--accent"],
   [data-theme="dark"][data-accent="mono"] .pava,
   [data-theme="dark"][data-accent="mono"] .pcmp-submit,
+  [data-theme="dark"][data-accent="mono"] .auth-submit,
   [data-theme="dark"][data-accent="mono"] .tab-count{color:#080001 !important}
   [data-theme="dark"][data-accent="mono"] .fab svg{color:#080001}
 
@@ -580,6 +581,18 @@
   .report-note p{margin:0 0 6px;font-size:11.5px;line-height:1.6;color:var(--ink-soft)}
   .report-note p:last-child{margin-bottom:0}
   .report-note-label{font-weight:800;color:var(--ink)!important}
+  /* ===== 削除確認モーダル(危険操作の確認) ===== */
+  .confirm-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.5);
+    display:flex;align-items:center;justify-content:center;padding:24px}
+  .confirm-card{width:100%;max-width:320px;background:var(--card);border-radius:16px;padding:22px 20px;
+    box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .confirm-title-danger{font-size:16px;font-weight:800;color:#e0245e;margin-bottom:8px}
+  .confirm-body{font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:18px}
+  .confirm-actions{display:flex;gap:8px}
+  .confirm-btn{flex:1;height:42px;border-radius:10px;border:0;font-size:14px;font-weight:700;
+    font-family:inherit;cursor:pointer}
+  .confirm-btn.cancel{background:var(--chip);color:var(--ink)}
+  .confirm-btn.danger{background:#e0245e;color:#fff}
   .post-text{padding:0 14px 10px;font-size:14px;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word}
   .mention{color:var(--accent);font-weight:700}
   .post-text .mention,.pc-text .mention,.cmt-text .mention{font-weight:800}
@@ -1145,7 +1158,7 @@ const JP_PREF=[{"id":1,"name":"北海道","d":"M467.2,22.3 469.0,21.0 470.3,19.3
 const I18N = {
   ja: {
     "tab.home":"ホーム", "tab.chat":"チャット", "tab.search":"友達検索", "tab.profile":"プロフィール",
-    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.likeCount":"いいね {n}件", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"いまの旅の気持ちをシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚。複数選ぶと1枚目の比率に揃います。", "post.firstRatio":"基準", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
+    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.likeCount":"いいね {n}件", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"いまの旅の気持ちをシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚。複数選ぶと1枚目の比率に揃います。", "post.firstRatio":"基準", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
     "home.empty.sub":"右下の＋から新しい旅をつくろう。", "home.archived":"アーカイブ済み（{n}）",
     "home.sizeHint":"タップで表示サイズを切替", "home.newTrip":"新しい旅をつくる",
     "card.live":"進行中", "card.done":"確定済み", "card.prep":"準備中", "card.new":"新着", "card.archived":"アーカイブ",
@@ -1336,7 +1349,6 @@ const I18N = {
     "x.toast.groupNotFound":"このグループは見つかりません",
     "x.toast.photoSet":"プロフィール画像を設定しました",
     "x.toast.idTaken":"そのIDは既に使われています",
-    "x.toast.idLimit":"IDの変更は1時間に2回までです",
     "x.toast.profileSaved":"プロフィールを保存しました",
     "x.toast.reqCanceled":"リクエストを取り消しました",
     "x.toast.reqDeleted":"リクエストを削除しました",
@@ -1376,7 +1388,7 @@ const I18N = {
     "x.edit.title":"プロフィール編集",
     "x.edit.tapPhoto":"タップして画像を変更",
     "x.edit.userId":"ユーザーID",
-    "x.edit.idHint":"半角英数字・_・. が使えます（30文字以内）",
+    "x.edit.idHint":"半角英数字・_・. が使えます（30文字以内）", "x.edit.idSame":"現在のIDです", "x.edit.idLimitDay":"IDの変更は1日3回までです", "x.edit.idReserved":"このIDは少し前まで別の人が使っていました。しばらくしてからお試しください", "x.edit.idOk":"使用できます", "x.edit.idChecking":"確認中…",
     "x.edit.displayName":"表示名",
     "x.edit.bio":"自己紹介（30文字以内）",
     "x.edit.birthday":"誕生日（任意）",
@@ -1539,7 +1551,7 @@ const I18N = {
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
-    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.likeCount":"{n} likes", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share how your trip feels (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"Up to {n} images. The first image sets the aspect ratio.", "post.firstRatio":"Base", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
+    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.likeCount":"{n} likes", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share how your trip feels (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"Up to {n} images. The first image sets the aspect ratio.", "post.firstRatio":"Base", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
     "home.empty.sub":"Tap + below to start a new trip.", "home.archived":"Archived ({n})",
     "home.sizeHint":"Tap to change card size", "home.newTrip":"Start a new trip",
     "card.live":"In progress", "card.done":"Confirmed", "card.prep":"Getting ready", "card.new":"New", "card.archived":"Archived",
@@ -1714,7 +1726,6 @@ const I18N = {
     "x.toast.groupNotFound":"This group can't be found",
     "x.toast.photoSet":"Profile photo updated",
     "x.toast.idTaken":"That ID is already taken",
-    "x.toast.idLimit":"You can change your ID up to twice per hour",
     "x.toast.profileSaved":"Profile saved",
     "x.toast.reqCanceled":"Request canceled",
     "x.toast.reqDeleted":"Request deleted",
@@ -1754,7 +1765,7 @@ const I18N = {
     "x.edit.title":"Edit profile",
     "x.edit.tapPhoto":"Tap to change photo",
     "x.edit.userId":"User ID",
-    "x.edit.idHint":"Letters, numbers, _ and . allowed (up to 30 characters)",
+    "x.edit.idHint":"Letters, numbers, _ and . allowed (up to 30 characters)", "x.edit.idSame":"This is your current ID", "x.edit.idLimitDay":"You can change your ID up to 3 times per day", "x.edit.idReserved":"This ID was recently used by someone else. Please try again later", "x.edit.idOk":"Available", "x.edit.idChecking":"Checking…",
     "x.edit.displayName":"Display name",
     "x.edit.bio":"Bio (up to 30 characters)",
     "x.edit.birthday":"Birthday (optional)",
@@ -1958,6 +1969,11 @@ async function ensureProfile(){
     const { error } = await window.SB.from("profiles")
       .upsert(row, { onConflict: "id", ignoreDuplicates: true });
     if(error) console.log("[profiles] ensure error:", error.message);
+    // 現在のuser_idを取得して保持(既存ユーザーの場合、upsertでは書き込まれないため改めて取得)
+    const { data: myProf, error: gpe } = await window.SB
+      .from("profiles").select("user_id").eq("id", u.id).maybeSingle();
+    if(gpe){ console.log("[profiles] fetch own error:", gpe.message); }
+    myUserId = (myProf && myProf.user_id) || uid || "";
   }catch(e){ console.log("[profiles] ensure exception:", e); }
 }
 
@@ -2030,6 +2046,55 @@ async function isUserIdTaken(v){
     if(error){ console.log("[profiles] id check error:", error.message); return false; }
     return (data && data.length > 0);
   }catch(e){ console.log("[profiles] id check exception:", e); return false; }
+}
+
+/* ===== ユーザーID変更: 1日3回まで、2週間は旧IDへ本人が優先的に戻せる ===== */
+const ID_CHANGE_LIMIT_PER_DAY = 3;
+const ID_RECLAIM_WINDOW_DAYS = 14;
+
+/* 過去24時間の自分の変更回数を取得 */
+async function myIdChangeCountToday(){
+  if(!window.SB || !isSignedIn()) return 0;
+  const dayAgo = new Date(Date.now() - 24*3600*1000).toISOString();
+  const { data, error } = await window.SB.from("user_id_history")
+    .select("id").eq("user_id_owner", authUser().id).gte("changed_at", dayAgo);
+  if(error){ console.log("[user_id_history] count error:", error.message); return 0; }
+  return (data||[]).length;
+}
+
+/* 新しいIDが使えるかを判定。結果の reason: null(OK) | "same" | 検証エラー理由 | "limit" | "taken" | "reserved" */
+async function checkUserIdChange(newId){
+  if(!window.SB || !isSignedIn()) return "noConn";
+  if(newId === myUserId) return "same";
+  const vreason = validateUserId(newId);
+  if(vreason) return vreason;
+  if(await myIdChangeCountToday() >= ID_CHANGE_LIMIT_PER_DAY) return "limit";
+  // 現在誰かが使っているIDか(自分自身は除く。上のsame判定で既に弾かれているので他人のみ該当)
+  if(await isUserIdTaken(newId)) return "taken";
+  // 他人が2週間以内に手放したIDで、まだその人が優先的に戻せる権利を持っていないか
+  const windowAgo = new Date(Date.now() - ID_RECLAIM_WINDOW_DAYS*24*3600*1000).toISOString();
+  const { data, error } = await window.SB.from("user_id_history")
+    .select("user_id_owner, changed_at").eq("old_user_id", newId).gte("changed_at", windowAgo)
+    .order("changed_at", { ascending:false }).limit(1);
+  if(error){ console.log("[user_id_history] reserve check error:", error.message); }
+  const hit = data && data[0];
+  if(hit && hit.user_id_owner !== authUser().id) return "reserved"; // 他人がまだ戻せる権利を持つ
+  return null; // OK(自分自身の旧IDに戻す場合もここを通る)
+}
+
+/* IDを実際に変更し、履歴を記録する */
+async function changeUserId(newId){
+  if(!window.SB || !isSignedIn()) return false;
+  const uid = authUser().id;
+  const oldId = myUserId;
+  const { error } = await window.SB.from("profiles").update({ user_id: newId }).eq("id", uid);
+  if(error){ console.log("[profiles] id update error:", error.message); toast(error.message); return false; }
+  const { error: he } = await window.SB.from("user_id_history").insert({
+    user_id_owner: uid, old_user_id: oldId, new_user_id: newId
+  });
+  if(he) console.log("[user_id_history] insert error:", he.message);
+  myUserId = newId;
+  return true;
 }
 
 /* ===== 投稿(文章)の永続化: Supabase posts テーブル ===== */
@@ -3896,7 +3961,6 @@ function TAIWAN_IMG_OK(){ try{ return (typeof COUNTRY_IMG!=="undefined"&&COUNTRY
 let ME = { id:"tomato", name:"Tomato", avatar:"🍅", photo:null,
   bio:"旅と写真とラーメンが好き。", birthday:"5/12", affiliation:"〇〇大学 経営学部",
   private:false };
-let ID_CHANGE_LOG = [];   // ID変更のタイムスタンプ(1時間2回制限)
 
 /* 全ユーザー(自分以外)。relation: フォロー関係を各自に持たせる
    iFollow   … 自分がこの人をフォローしているか(相互/片方)
@@ -3990,6 +4054,8 @@ const POSTS = [];
 let postDraft = { text:"", images:[], ratio:"1/1", visibility:"public" };
 /* 自分の画面からだけ隠した投稿のid集合(サーバーには保存しない。再読み込みで戻る) */
 const hiddenPostIds = new Set();
+/* ログイン中ユーザーのuser_id(ハンドル)。ensureProfileで取得・更新される */
+let myUserId = "";
 // コメント入力の一時状態(投稿IDごと)・展開状態
 let postCommentDraft={};
 let postCommentsOpen={};
@@ -4353,7 +4419,7 @@ function postMenuBtn(p){
   return `<button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')" aria-label="${t('post.moreActions')}">⋮</button>
     <div class="post-menu-pop" id="pmenu_${p.id}" style="display:none">
       ${p.mine
-        ?`<button onclick="event.stopPropagation();closeAllPostMenus();deleteOwnPost('${p.id}')">${t("post.delete")}</button>`
+        ?`<button onclick="event.stopPropagation();closeAllPostMenus();confirmDeletePost('${p.id}')">${t("post.delete")}</button>`
         :`<button onclick="event.stopPropagation();closeAllPostMenus();openReportScreen('${p.id}')">${t("post.report")}</button>
           <button onclick="event.stopPropagation();closeAllPostMenus();hidePostLocally('${p.id}')">${t("post.hide")}</button>`}
     </div>`;
@@ -4565,6 +4631,27 @@ async function deletePostComment(pid,cid){
   if(!ok) return;
   p.comments=p.comments.filter(c=>c.id!==cid);
   rerenderPost();
+}
+/* 投稿削除の確認モーダルを表示 */
+function confirmDeletePost(id){
+  const p=POSTS.find(x=>x.id===id); if(!p||!p.mine)return;
+  const wrap=document.createElement("div");
+  wrap.className="confirm-overlay";
+  wrap.id="deletePostConfirm";
+  wrap.innerHTML=`
+    <div class="confirm-card">
+      <div class="confirm-title-danger">${t("post.delete.confirmTitle")}</div>
+      <div class="confirm-body">${t("post.delete.confirmBody")}</div>
+      <div class="confirm-actions">
+        <button class="confirm-btn cancel" onclick="closeDeletePostConfirm()">${t("post.delete.cancel")}</button>
+        <button class="confirm-btn danger" onclick="closeDeletePostConfirm();deleteOwnPost('${id}')">${t("post.delete.confirm")}</button>
+      </div>
+    </div>`;
+  wrap.addEventListener("click",(e)=>{ if(e.target===wrap) closeDeletePostConfirm(); });
+  document.body.appendChild(wrap);
+}
+function closeDeletePostConfirm(){
+  const el=document.getElementById("deletePostConfirm"); if(el) el.remove();
 }
 async function deleteOwnPost(id){
   const p=POSTS.find(x=>x.id===id); if(!p||!p.mine)return;
@@ -5242,7 +5329,7 @@ function screenEditProfile(){
     <label class="field-label">${t('x.edit.userId')}</label>
     <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:11px;background:var(--field);padding:0 12px">
       <span style="font-size:15px;color:var(--ink-soft);font-weight:700">@</span>
-      <input type="text" id="edId" value="${esc(idHandle(ME.id))}" placeholder="${t('x.ph.userId')}" maxlength="30" oninput="updateIdHint()" style="border:0!important;background:transparent!important;padding:11px 0!important;flex:1">
+      <input type="text" id="edId" value="${esc(myUserId)}" placeholder="${t('x.ph.userId')}" maxlength="30" oninput="updateIdHint()" style="border:0!important;background:transparent!important;padding:11px 0!important;flex:1">
     </div>
     <div class="char-count" id="idHint" style="color:var(--ink-soft)">${t('x.edit.idHint')}</div>
 
@@ -5296,50 +5383,53 @@ function updateBioCount(){
   c.classList.toggle("over", ta.value.length>=30);
 }
 function idHandle(fullId){ return (fullId||"").replace(/^@/,""); }
-function idTag(fullId){ return ""; }
-/* IDの形式チェック。OKならnull、NGなら理由文字列 */
-function validateId(handle){
-  if(!handle) return "IDを入力してください";
-  if(handle.length>30) return "30文字以内にしてください";
-  if(!/^[A-Za-z0-9_.]+$/.test(handle)) return "使えるのは半角英数字・_・. のみです";
-  if(handle.endsWith(".")) return "末尾に . は使えません";
-  if(handle.includes("..")) return ". を連続して使うことはできません";
-  return null;
-}
-/* 1時間に2回まで */
-function idChangeAllowed(){
-  const now=Date.now(), hourAgo=now-3600000;
-  ID_CHANGE_LOG=ID_CHANGE_LOG.filter(t=>t>hourAgo);
-  return ID_CHANGE_LOG.length<2;
-}
+let idHintTimer = null;
 function updateIdHint(){
   const inp=document.getElementById("edId"); const h=document.getElementById("idHint"); if(!inp||!h)return;
   const v=inp.value.trim();
-  if(v===idHandle(ME.id)){ h.textContent="現在のIDです"; h.style.color="var(--ink-soft)"; return; }
-  const err=validateId(v);
-  if(err){ h.textContent="⚠ "+err; h.style.color="var(--no)"; return; }
-  // 重複チェック(他人のハンドルと比較)
-  const dup=PEOPLE.some(p=>idHandle(p.id).toLowerCase()===v.toLowerCase());
-  if(dup){ h.textContent="⚠ このIDは既に使われています"; h.style.color="var(--no)"; return; }
-  h.textContent="✓ 使用できます"; h.style.color="var(--ok)";
+  if(idHintTimer) clearTimeout(idHintTimer);
+  if(v===myUserId){ h.textContent=t("x.edit.idSame"); h.style.color="var(--ink-soft)"; return; }
+  const vreason=validateUserId(v);
+  if(vreason){
+    const msgKey={ empty:"x.auth.idRequired", length:"x.auth.idErrLength",
+      chars:"x.auth.idErrChars", edge:"x.auth.idErrEdge", dots:"x.auth.idErrDots" }[vreason];
+    h.textContent="⚠ "+t(msgKey); h.style.color="var(--no)"; return;
+  }
+  h.textContent=t("x.edit.idChecking"); h.style.color="var(--ink-soft)";
+  // 入力が止まってからサーバーに問い合わせる(連打でのAPI呼び過ぎを防ぐ)
+  idHintTimer = setTimeout(async ()=>{
+    const cur=(document.getElementById("edId")||{}).value||"";
+    if(cur.trim()!==v) return; // その間に入力が変わっていたら結果を捨てる
+    const reason = await checkUserIdChange(v);
+    const h2=document.getElementById("idHint"); if(!h2) return;
+    if(reason===null){ h2.textContent="✓ "+t("x.edit.idOk"); h2.style.color="var(--ok)"; return; }
+    const msgKey={
+      taken:"x.toast.idTaken", limit:"x.edit.idLimitDay", reserved:"x.edit.idReserved",
+      empty:"x.auth.idRequired", length:"x.auth.idErrLength", chars:"x.auth.idErrChars",
+      edge:"x.auth.idErrEdge", dots:"x.auth.idErrDots"
+    }[reason] || null;
+    h2.textContent = "⚠ "+(msgKey?t(msgKey):reason); h2.style.color="var(--no)";
+  }, 500);
 }
-function saveProfile(){
+async function saveProfile(){
   const nm=(document.getElementById("edName")||{}).value||"";
-  // ID変更の検証
+  // ID変更の検証・実行(Supabase連携)
   const idInp=document.getElementById("edId");
   if(idInp){
-    const newH=idInp.value.trim();
-    const curH=idHandle(ME.id);
-    if(newH!==curH){
-      const err=validateId(newH);
-      if(err){ toast("ID: "+err); return; }
-      if(PEOPLE.some(p=>idHandle(p.id).toLowerCase()===newH.toLowerCase())){ toast(t("x.toast.idTaken")); return; }
-      if(!idChangeAllowed()){ toast(t("x.toast.idLimit")); return; }
-      const oldId=ME.id;
-      ME.id = newH;
-      ID_CHANGE_LOG.push(Date.now());
-      // 自分のIDを参照する相手の friends 配列・DMキーも更新
-      PEOPLE.forEach(p=>{ if(p.friends){ const i=p.friends.indexOf(oldId); if(i>=0)p.friends[i]=ME.id; } });
+    const newId=idInp.value.trim();
+    if(newId!==myUserId){
+      const reason = await checkUserIdChange(newId);
+      if(reason){
+        const msgKey={
+          taken:"x.toast.idTaken", limit:"x.edit.idLimitDay", reserved:"x.edit.idReserved",
+          empty:"x.auth.idRequired", length:"x.auth.idErrLength", chars:"x.auth.idErrChars",
+          edge:"x.auth.idErrEdge", dots:"x.auth.idErrDots", noConn:"x.auth.noConn"
+        }[reason];
+        toast(msgKey?t(msgKey):reason);
+        return;
+      }
+      const ok = await changeUserId(newId);
+      if(!ok) return;
     }
   }
   ME.name=nm.trim()||ME.name;
