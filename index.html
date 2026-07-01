@@ -1045,6 +1045,7 @@
     background:var(--bg)}
   .auth-card{width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:12px}
   .auth-logo{width:120px;height:auto;margin-bottom:8px}
+  .auth-lang-switch{align-self:flex-end;margin-bottom:-4px}
   .auth-tabs{display:flex;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin-bottom:4px}
   .auth-tab{flex:1;padding:11px 0;background:var(--card);color:var(--ink-soft);border:0;font-family:inherit;
     font-size:14px;font-weight:700;cursor:pointer}
@@ -1052,6 +1053,9 @@
   .auth-input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);
     background:var(--card);color:var(--ink);font-size:15px;font-family:inherit;box-sizing:border-box}
   .auth-input:focus{outline:none;border-color:var(--accent)}
+  .auth-field{width:100%;display:flex;flex-direction:column;gap:0}
+  .auth-input.err{border-color:#e0245e}
+  .auth-field-err{min-height:0;font-size:11.5px;line-height:1.5;color:#e0245e;padding:3px 4px 0;text-align:left}
   .auth-submit{width:100%;padding:13px 0;border-radius:12px;border:0;background:var(--accent);color:#fff;
     font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:4px}
   .auth-submit:active{transform:scale(.98)}
@@ -1470,7 +1474,6 @@ const I18N = {
     "x.auth.email":"メールアドレス",
     "x.auth.password":"パスワード",
     "x.auth.forgot":"パスワードを忘れた場合",
-    "x.auth.fillAll":"メールアドレスとパスワードを入力してください",
     "x.auth.enterEmail":"メールアドレスを入力してください",
     "x.auth.noConn":"サーバーに接続できていません",
     "x.auth.signedUp":"登録しました",
@@ -1489,8 +1492,16 @@ const I18N = {
     "x.auth.resendFail":"再送できませんでした。時間をおいてお試しください",
     "x.auth.userId":"ユーザーID（半角英数字・_・. 3〜20文字）",
     "x.auth.idRequired":"ユーザーIDを入力してください",
-    "x.auth.idInvalid":"使えない形式です（先頭・末尾のピリオドや連続ピリオドは不可）",
     "x.cmt.likedByOwner":"投稿者がいいねしました",
+    "x.auth.idErrLength":"3～20文字で入力してください",
+    "x.auth.idErrChars":"半角英数字・_・. のみ使用できます",
+    "x.auth.idErrEdge":"先頭/末尾にピリオド（.）は配置できません",
+    "x.auth.idErrDots":"ピリオド（.）の連続はできません",
+    "x.auth.emailRequired":"メールアドレスを入力してください",
+    "x.auth.passRequired":"パスワードを入力してください",
+    "x.auth.emailInvalid":"メールアドレスの形式が正しくありません",
+    "x.auth.passWeak":"パスワードは8文字以上で、英字と数字を1文字以上ずつ含めてください",
+    "x.auth.nameRequired":"表示名を入力してください",
     "time.minAgo":"{n}分前",
     "time.hourAgo":"{n}時間前",
     "time.dayAgo":"{n}日前",
@@ -1841,7 +1852,6 @@ const I18N = {
     "x.auth.email":"Email",
     "x.auth.password":"Password",
     "x.auth.forgot":"Forgot password?",
-    "x.auth.fillAll":"Please enter your email and password",
     "x.auth.enterEmail":"Please enter your email",
     "x.auth.noConn":"Not connected to the server",
     "x.auth.signedUp":"Account created",
@@ -1860,8 +1870,16 @@ const I18N = {
     "x.auth.resendFail":"Couldn't resend. Please try again later",
     "x.auth.userId":"User ID (3-20 chars, letters/numbers/_/.)",
     "x.auth.idRequired":"Please enter a user ID",
-    "x.auth.idInvalid":"Invalid format (no leading/trailing or consecutive periods)",
     "x.cmt.likedByOwner":"Liked by the poster",
+    "x.auth.idErrLength":"Please use 3-20 characters",
+    "x.auth.idErrChars":"Only letters, numbers, _ and . are allowed",
+    "x.auth.idErrEdge":"Can't start or end with a period (.)",
+    "x.auth.idErrDots":"Periods (.) can't be consecutive",
+    "x.auth.emailRequired":"Please enter your email",
+    "x.auth.passRequired":"Please enter your password",
+    "x.auth.emailInvalid":"Please enter a valid email address",
+    "x.auth.passWeak":"Password must be at least 8 characters and include both letters and numbers",
+    "x.auth.nameRequired":"Please enter a display name",
     "time.minAgo":"{n}m ago",
     "time.hourAgo":"{n}h ago",
     "time.dayAgo":"{n}d ago",
@@ -1887,7 +1905,7 @@ async function authSignUp(email, password, displayName, userId){
     email, password,
     options: { data: { display_name: displayName || "", user_id: userId || "" }, emailRedirectTo: redirectTo }
   });
-  if(error){ toast(error.message); return; }
+  if(error){ toast(translateAuthError(error.message)); return; }
   // 確認メールが有効な場合、ここではまだログインしていない(セッションなし)
   if(data && data.session){
     // 確認不要の設定なら即ログイン → プロフィール用意
@@ -1916,12 +1934,65 @@ async function ensureProfile(){
 }
 
 /* ユーザーID(ハンドル)の形式チェック: 3〜20文字、半角英数字/_/.のみ、先頭・末尾がピリオド不可、ピリオド連続不可 */
+/* ユーザーIDの形式チェック。問題があれば理由コードを返す(なければnull) */
+/* 理由: "empty" | "length" | "chars" | "edge" | "dots" */
+function validateUserId(v){
+  if(!v) return "empty";
+  if(v.length < 3 || v.length > 20) return "length";
+  if(!/^[a-zA-Z0-9_.]+$/.test(v)) return "chars";
+  if(v.startsWith(".") || v.endsWith(".")) return "edge";
+  if(v.includes("..")) return "dots";
+  return null;
+}
 function isValidUserId(v){
-  if(!v || typeof v !== "string") return false;
-  if(!/^[a-zA-Z0-9_.]{3,20}$/.test(v)) return false;
-  if(v.startsWith(".") || v.endsWith(".")) return false;
-  if(v.includes("..")) return false;
+  return validateUserId(v) === null;
+}
+/* メールアドレスの簡易形式チェック(@を含み、前後に文字がある一般的な形) */
+function isValidEmail(v){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v||"");
+}
+/* パスワード強度チェック: 8文字以上、英字と数字を1文字以上ずつ含む */
+function isStrongPassword(v){
+  if(!v || v.length < 8) return false;
+  if(!/[a-zA-Z]/.test(v)) return false;
+  if(!/[0-9]/.test(v)) return false;
   return true;
+}
+/* Supabaseの認証エラー(英語原文)を、日本語表示時のみ対訳に置き換える。
+   該当しないものは原文(英語)のまま返す(無理に訳さない) */
+/* Supabaseの認証エラー(英語原文)を、表示言語に応じた定型メッセージに変換する。
+   該当しない未知のエラーは、言語別の汎用メッセージに落とす(常にja/enどちらかで統一) */
+const AUTH_ERR_MAP = [
+  [/Invalid login credentials/i,
+    "メールアドレスまたはパスワードが正しくありません", "Incorrect email or password"],
+  [/User already registered/i,
+    "このメールアドレスは既に登録されています", "This email is already registered"],
+  [/Email not confirmed/i,
+    "メールアドレスがまだ確認されていません", "Email address not confirmed yet"],
+  [/Password should contain at least one character of each/i,
+    "パスワードは英字と数字をそれぞれ1文字以上含めてください", "Password must include at least one letter and one number"],
+  [/Password should be at least (\d+) characters/i,
+    "パスワードは$1文字以上にしてください", "Password must be at least $1 characters"],
+  [/Unable to validate email address.*invalid format/i,
+    "メールアドレスの形式が正しくありません", "Please enter a valid email address"],
+  [/For security purposes, you can only request this after (\d+) seconds?/i,
+    "セキュリティのため、$1秒後に再度お試しください", "For security, please try again in $1 seconds"],
+  [/Email rate limit exceeded/i,
+    "メール送信の上限に達しました。時間をおいてお試しください", "Email sending limit reached. Please try again later"],
+  [/Signup requires a valid password/i,
+    "有効なパスワードを入力してください", "Please enter a valid password"],
+  [/Token has expired or is invalid/i,
+    "リンクが無効か期限切れです", "This link is invalid or has expired"],
+];
+function translateAuthError(msg){
+  const ja = curLang() === "ja";
+  if(!msg) return ja ? "エラーが発生しました。もう一度お試しください" : "Something went wrong. Please try again.";
+  for(const [pat, jaMsg, enMsg] of AUTH_ERR_MAP){
+    const m = msg.match(pat);
+    if(m){ const tmpl = ja ? jaMsg : enMsg; return tmpl.replace("$1", m[1]||""); }
+  }
+  // 対応表に無い未知のエラーは言語別の汎用メッセージへ(原文の英語を漏らさない)
+  return ja ? "エラーが発生しました。もう一度お試しください" : "Something went wrong. Please try again.";
 }
 /* ユーザーIDが既に使われていないか確認(登録前の事前チェック) */
 async function isUserIdTaken(v){
@@ -2157,7 +2228,7 @@ function toggleCommentLike(postId, commentId){
 async function authSignIn(email, password){
   if(!window.SB){ toast(t("x.auth.noConn")); return; }
   const { error } = await window.SB.auth.signInWithPassword({ email, password });
-  if(error){ toast(error.message); return; }
+  if(error){ toast(translateAuthError(error.message)); return; }
   toast(t("x.auth.signedIn"));
 }
 
@@ -2176,7 +2247,7 @@ function confirmSignOut(){
 async function authResetPassword(email){
   if(!window.SB){ toast(t("x.auth.noConn")); return; }
   const { error } = await window.SB.auth.resetPasswordForEmail(email);
-  if(error){ toast(error.message); return; }
+  if(error){ toast(translateAuthError(error.message)); return; }
   toast(t("x.auth.resetSent"));
 }
 
@@ -2198,6 +2269,8 @@ function t(key, vars){
   return s;
 }
 function setLang(lang){ S.lang=lang; document.documentElement.setAttribute("lang", lang); renderApp(); }
+/* 言語切替ボタン(設定画面・認証画面で共用) */
+function langBtn(code,label){ return `<button class="lang-btn ${S.lang===code?'on':''}" onclick="setLang('${code}')">${label}</button>`; }
 /* ②i18n 日付・曜日・複数形ヘルパー */
 const EN_MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 function dowLabel(idx){ return t("dow."+idx); }
@@ -4971,7 +5044,6 @@ function screenTerms(){
 }
 function screenSettings(){
   const dark = S.theme==="dark";
-  const langBtn=(code,label)=>`<button class="lang-btn ${S.lang===code?'on':''}" onclick="setLang('${code}')">${label}</button>`;
   return `<div class="page">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
       <button class="room-back" onclick="goBack('profile')"><span class="back-arrow">←</span></button>
@@ -6854,13 +6926,31 @@ function toggleMyCalWeek(w){
 let authMode = "signin"; // "signin" | "signup" | "verify"
 let authPendingEmail = ""; // 確認コード検証のため登録時のメールを保持
 function setAuthMode(m){ authMode=m; if(m!=="verify" && authResendTimer){ clearInterval(authResendTimer); authResendTimer=null; authResendCooldown=0; } const sc=$("#screen"); if(sc) sc.innerHTML=screenAuth(); }
+/* 入力欄を赤枠にし、その下に赤字でエラーメッセージを出す */
+/* 認証画面のエラーはja/enを併記する(キーを渡すと両言語のメッセージを改行で結合して表示) */
+function showAuthFieldError(fieldId, key){
+  const input=$("#"+fieldId), err=$("#"+fieldId+"Err");
+  if(input) input.classList.add("err");
+  if(err) err.textContent = t(key);
+}
+/* 入力し直したらエラー表示を消す */
+function clearAuthFieldError(fieldId){
+  const input=$("#"+fieldId), err=$("#"+fieldId+"Err");
+  if(input) input.classList.remove("err");
+  if(err) err.textContent = "";
+}
+function clearAllAuthFieldErrors(){
+  ["authName","authUserId","authEmail","authPass"].forEach(clearAuthFieldError);
+}
 function screenAuth(){
   const isUp = authMode==="signup";
+  const langRow = `<div class="lang-switch auth-lang-switch">${langBtn("ja","日本語")}${langBtn("en","English")}</div>`;
   // 確認メール送信後の画面
   if(authMode==="verify"){
     return `
   <div class="auth-wrap">
     <div class="auth-card">
+      ${langRow}
       <img class="auth-logo" src="${ABOUT_LOGO||''}" alt="TAVI。">
       <div class="auth-verify">
         <div class="auth-verify-icon">✉️</div>
@@ -6875,30 +6965,60 @@ function screenAuth(){
   return `
   <div class="auth-wrap">
     <div class="auth-card">
+      ${langRow}
       <img class="auth-logo" src="${ABOUT_LOGO||''}" alt="TAVI。">
       <div class="auth-tabs">
         <button class="auth-tab ${!isUp?'on':''}" onclick="setAuthMode('signin')">${t("x.auth.tabSignIn")}</button>
         <button class="auth-tab ${isUp?'on':''}" onclick="setAuthMode('signup')">${t("x.auth.tabSignUp")}</button>
       </div>
-      ${isUp?`<input id="authName" class="auth-input" type="text" placeholder="${t('x.auth.name')}" autocomplete="nickname">`:``}
-      ${isUp?`<input id="authUserId" class="auth-input" type="text" placeholder="${t('x.auth.userId')}" autocomplete="off" maxlength="20">`:``}
-      <input id="authEmail" class="auth-input" type="email" placeholder="${t('x.auth.email')}" autocomplete="email">
-      <input id="authPass" class="auth-input" type="password" placeholder="${t('x.auth.password')}" autocomplete="${isUp?'new-password':'current-password'}">
+      ${isUp?`<div class="auth-field">
+        <input id="authName" class="auth-input" type="text" placeholder="${t('x.auth.name')}" autocomplete="nickname" oninput="clearAuthFieldError('authName')">
+        <div id="authNameErr" class="auth-field-err"></div>
+      </div>`:``}
+      ${isUp?`<div class="auth-field">
+        <input id="authUserId" class="auth-input" type="text" placeholder="${t('x.auth.userId')}" autocomplete="off" maxlength="20" oninput="clearAuthFieldError('authUserId')">
+        <div id="authUserIdErr" class="auth-field-err"></div>
+      </div>`:``}
+      <div class="auth-field">
+        <input id="authEmail" class="auth-input" type="email" placeholder="${t('x.auth.email')}" autocomplete="email" oninput="clearAuthFieldError('authEmail')">
+        <div id="authEmailErr" class="auth-field-err"></div>
+      </div>
+      <div class="auth-field">
+        <input id="authPass" class="auth-input" type="password" placeholder="${t('x.auth.password')}" autocomplete="${isUp?'new-password':'current-password'}" oninput="clearAuthFieldError('authPass')">
+        <div id="authPassErr" class="auth-field-err"></div>
+      </div>
       <button class="auth-submit" onclick="submitAuth()">${isUp?t("x.auth.tabSignUp"):t("x.auth.tabSignIn")}</button>
       ${!isUp?`<button class="auth-link" onclick="submitReset()">${t("x.auth.forgot")}</button>`:``}
     </div>
   </div>`;
 }
 async function submitAuth(){
+  clearAllAuthFieldErrors();
   const email=($("#authEmail")||{}).value||"";
   const pass=($("#authPass")||{}).value||"";
-  if(!email||!pass){ toast(t("x.auth.fillAll")); return; }
+  let hasErr=false;
+  if(!email){ showAuthFieldError("authEmail", "x.auth.emailRequired"); hasErr=true; }
+  else if(!isValidEmail(email)){ showAuthFieldError("authEmail", "x.auth.emailInvalid"); hasErr=true; }
+  if(!pass){ showAuthFieldError("authPass", "x.auth.passRequired"); hasErr=true; }
+  else if(authMode==="signup" && !isStrongPassword(pass)){ showAuthFieldError("authPass", "x.auth.passWeak"); hasErr=true; }
+  if(authMode==="signup"){
+    const name=($("#authName")||{}).value||"";
+    if(!name.trim()){ showAuthFieldError("authName", "x.auth.nameRequired"); hasErr=true; }
+  }
+  if(hasErr) return;
   if(authMode==="signup"){
     const name=($("#authName")||{}).value||"";
     const uid=(($("#authUserId")||{}).value||"").trim();
-    if(!uid){ toast(t("x.auth.idRequired")); return; }
-    if(!isValidUserId(uid)){ toast(t("x.auth.idInvalid")); return; }
-    if(await isUserIdTaken(uid)){ toast(t("x.toast.idTaken")); return; }
+    const reason = validateUserId(uid);
+    if(reason){
+      const msgKey = {
+        empty: "x.auth.idRequired", length: "x.auth.idErrLength",
+        chars: "x.auth.idErrChars", edge: "x.auth.idErrEdge", dots: "x.auth.idErrDots"
+      }[reason];
+      showAuthFieldError("authUserId", msgKey);
+      return;
+    }
+    if(await isUserIdTaken(uid)){ showAuthFieldError("authUserId", "x.toast.idTaken"); return; }
     authPendingEmail = email.trim();
     await authSignUp(email.trim(), pass, name.trim(), uid);
   }else{
