@@ -1932,7 +1932,7 @@ async function loadPosts(){
         mine: !!(me && row.author_id===me.id)
       });
     });
-    if(POSTS.length) await loadLikesFor(POSTS.map(p=>p.id));
+    if(POSTS.length){ await loadLikesFor(POSTS.map(p=>p.id)); await loadCommentsFor(POSTS.map(p=>p.id)); }
     if(typeof rerenderPost === "function") rerenderPost();
   }catch(e){ console.log("[posts] load exception:", e); }
 }
@@ -1988,6 +1988,56 @@ async function removeLikeFromSupabase(postId){
   const { error } = await window.SB.from("likes").delete()
     .eq("post_id", postId).eq("user_id", authUser().id);
   if(error){ console.log("[likes] delete error:", error.message); return false; }
+  return true;
+}
+
+/* ===== コメントの永続化: Supabase comments テーブル(フラット型) ===== */
+/* 与えた投稿id一覧のコメントをまとめて取得し、各POSTS要素のcommentsへ反映 */
+async function loadCommentsFor(postIds){
+  if(!window.SB || !postIds.length) return;
+  try{
+    const { data, error } = await window.SB
+      .from("comments").select("id, post_id, author_id, text, created_at")
+      .in("post_id", postIds).order("created_at", { ascending:true });
+    if(error){ console.log("[comments] load error:", error.message); return; }
+    const rows = data || [];
+    const authorIds = [...new Set(rows.map(r=>r.author_id))];
+    let profMap = {};
+    if(authorIds.length){
+      const { data: profs, error: pe } = await window.SB
+        .from("profiles").select("id, display_name, avatar_url").in("id", authorIds);
+      if(pe) console.log("[profiles] load error:", pe.message);
+      (profs||[]).forEach(p=>{ profMap[p.id]=p; });
+    }
+    const me = authUser();
+    const byPost = {};
+    rows.forEach(row=>{
+      const prof = profMap[row.author_id] || {};
+      (byPost[row.post_id] = byPost[row.post_id] || []).push({
+        id: row.id, who: prof.display_name || t("post.noName"),
+        avatar: prof.avatar_url || "🧳", text: row.text || "",
+        mine: !!(me && row.author_id===me.id), ts: new Date(row.created_at).getTime()
+      });
+    });
+    const idSet = new Set(postIds);
+    POSTS.forEach(p=>{ if(idSet.has(p.id)) p.comments = byPost[p.id] || []; });
+  }catch(e){ console.log("[comments] load exception:", e); }
+}
+
+/* コメントを保存 */
+async function saveCommentToSupabase(postId, text){
+  if(!window.SB || !isSignedIn()) return false;
+  const { error } = await window.SB.from("comments").insert({
+    post_id: postId, author_id: authUser().id, text
+  });
+  if(error){ console.log("[comments] insert error:", error.message); toast(error.message); return false; }
+  return true;
+}
+/* コメントを削除(本人のみRLSで許可) */
+async function deleteCommentFromSupabase(commentId){
+  if(!window.SB) return false;
+  const { error } = await window.SB.from("comments").delete().eq("id", commentId);
+  if(error){ console.log("[comments] delete error:", error.message); toast(error.message); return false; }
   return true;
 }
 
@@ -4175,17 +4225,21 @@ function togglePostLike(id){
     }
   })();
 }
-function addPostComment(id){
+async function addPostComment(id){
   const p=POSTS.find(x=>x.id===id); if(!p)return;
   const txt=(postCommentDraft[id]||"").trim(); if(!txt)return;
-  if(!p.comments)p.comments=[];
-  p.comments.push({id:"cm_"+Date.now(), who:"Tomato", avatar:(ME&&ME.avatar)||"🍅", text:txt.slice(0,300), mine:true, ts:Date.now()});
+  if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
+  const ok = await saveCommentToSupabase(id, txt.slice(0,300));
+  if(!ok) return;
   postCommentDraft[id]="";
   if(!p.mine) pushPostNotif("comment",p,txt);
+  await loadCommentsFor([id]);
   rerenderPost();
 }
-function deletePostComment(pid,cid){
+async function deletePostComment(pid,cid){
   const p=POSTS.find(x=>x.id===pid); if(!p||!p.comments)return;
+  const ok = await deleteCommentFromSupabase(cid);
+  if(!ok) return;
   p.comments=p.comments.filter(c=>c.id!==cid);
   rerenderPost();
 }
