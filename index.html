@@ -556,12 +556,30 @@
   .feed.post-feed{padding:0 0 96px}
   .post-card{background:var(--card);overflow:hidden;border-bottom:1px solid var(--line)}
   .post-card.text-post{padding-bottom:6px}
-  .post-head{display:flex;align-items:center;gap:8px;padding:12px 14px}
+  .post-head{display:flex;align-items:center;gap:8px;padding:12px 14px;position:relative}
   .post-ava{width:34px;height:34px;border-radius:50%;background:var(--field);display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;cursor:pointer}
   .post-who{font-weight:800;color:var(--ink);font-size:14px}
   .post-ago{color:var(--ink-soft);font-size:12px;margin-left:auto}
   .post-vis{font-size:12px;margin-left:4px;opacity:.75}
   .post-menu-btn{background:transparent;border:0;color:inherit;opacity:.6;font-size:18px;cursor:pointer;line-height:1;padding:0 2px;margin-left:6px}
+  .post-menu-pop{position:absolute;top:38px;right:10px;z-index:20;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.15);flex-direction:column;overflow:hidden;min-width:140px}
+  .post-menu-pop button{background:transparent;border:0;text-align:left;padding:11px 14px;font-size:13.5px;
+    color:var(--ink);font-family:inherit;cursor:pointer;white-space:nowrap}
+  .post-menu-pop button:not(:last-child){border-bottom:1px solid var(--line)}
+  .post-menu-pop button:active{background:var(--chip)}
+  /* ===== 通報画面 ===== */
+  .report-body{display:flex;flex-direction:column;gap:2px}
+  .report-q{font-size:15px;font-weight:800;color:var(--ink);margin:4px 0 12px}
+  .report-reason{display:flex;align-items:center;gap:10px;padding:12px 4px;cursor:pointer;font-size:14px;color:var(--ink)}
+  .report-reason:not(:last-of-type){border-bottom:1px solid var(--line)}
+  .report-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;position:relative}
+  .report-reason.on .report-radio{border-color:var(--accent)}
+  .report-reason.on .report-radio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+  .report-note{margin:18px 0;padding:12px;border-radius:12px;background:var(--chip)}
+  .report-note p{margin:0 0 6px;font-size:11.5px;line-height:1.6;color:var(--ink-soft)}
+  .report-note p:last-child{margin-bottom:0}
+  .report-note-label{font-weight:800;color:var(--ink)!important}
   .post-text{padding:0 14px 10px;font-size:14px;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word}
   .mention{color:var(--accent);font-weight:700}
   .post-text .mention,.pc-text .mention,.cmt-text .mention{font-weight:800}
@@ -655,7 +673,7 @@
   .post-carousel.full .pc-overlay .post-ava{pointer-events:auto}
   .post-carousel.full .pc-overlay .post-menu-btn{pointer-events:auto}
   .post-carousel.full .pc-overlay .mention.link{pointer-events:auto}
-  .pc-top{display:flex;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,0))}
+  .pc-top{display:flex;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,0));position:relative}
   .pc-text{padding:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;
     background:linear-gradient(to top,rgba(0,0,0,.55),rgba(0,0,0,0))}
   /* ④文字色: on-dark=白文字(暗背景/既定), on-light=黒文字(明背景) */
@@ -1127,7 +1145,7 @@ const JP_PREF=[{"id":1,"name":"北海道","d":"M467.2,22.3 469.0,21.0 470.3,19.3
 const I18N = {
   ja: {
     "tab.home":"ホーム", "tab.chat":"チャット", "tab.search":"友達検索", "tab.profile":"プロフィール",
-    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.likeCount":"いいね {n}件", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"いまの旅の気持ちをシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚。複数選ぶと1枚目の比率に揃います。", "post.firstRatio":"基準", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
+    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.likeCount":"いいね {n}件", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"いまの旅の気持ちをシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚。複数選ぶと1枚目の比率に揃います。", "post.firstRatio":"基準", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
     "home.empty.sub":"右下の＋から新しい旅をつくろう。", "home.archived":"アーカイブ済み（{n}）",
     "home.sizeHint":"タップで表示サイズを切替", "home.newTrip":"新しい旅をつくる",
     "card.live":"進行中", "card.done":"確定済み", "card.prep":"準備中", "card.new":"新着", "card.archived":"アーカイブ",
@@ -1521,7 +1539,7 @@ const I18N = {
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
-    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.likeCount":"{n} likes", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share how your trip feels (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"Up to {n} images. The first image sets the aspect ratio.", "post.firstRatio":"Base", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
+    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.likeCount":"{n} likes", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share how your trip feels (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"Up to {n} images. The first image sets the aspect ratio.", "post.firstRatio":"Base", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
     "home.empty.sub":"Tap + below to start a new trip.", "home.archived":"Archived ({n})",
     "home.sizeHint":"Tap to change card size", "home.newTrip":"Start a new trip",
     "card.live":"In progress", "card.done":"Confirmed", "card.prep":"Getting ready", "card.new":"New", "card.archived":"Archived",
@@ -3970,6 +3988,8 @@ let GID = 100;
 const POSTS = [];
 // 投稿作成ドラフト(本文・画像・1枚目比率)
 let postDraft = { text:"", images:[], ratio:"1/1", visibility:"public" };
+/* 自分の画面からだけ隠した投稿のid集合(サーバーには保存しない。再読み込みで戻る) */
+const hiddenPostIds = new Set();
 // コメント入力の一時状態(投稿IDごと)・展開状態
 let postCommentDraft={};
 let postCommentsOpen={};
@@ -4257,8 +4277,9 @@ function sortHomeTrips(a,b){
 /* ---- ホーム:旅グループのフィード ---- */
 /* ②投稿タブ(枠のみ・中身は今後Firebaseで実装) */
 function screenPost(){
-  const cards = POSTS.slice().sort((a,b)=>b.ts-a.ts).map(postCardHTML).join("");
-  const body = POSTS.length ? cards : `<div class="feed-empty"><div class="ic">📸</div>${t("post.empty")}<br>${t("post.empty.sub")}</div>`;
+  const visible = POSTS.filter(p=>!hiddenPostIds.has(p.id));
+  const cards = visible.slice().sort((a,b)=>b.ts-a.ts).map(postCardHTML).join("");
+  const body = visible.length ? cards : `<div class="feed-empty"><div class="ic">📸</div>${t("post.empty")}<br>${t("post.empty.sub")}</div>`;
   return `<div class="feed post-feed">
     <div class="feed-h" style="padding:14px 14px 8px"><h2>${t("post.title")}</h2></div>
     ${body}
@@ -4308,7 +4329,7 @@ function postCardHTML(p){
           <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.who)}')`}">${esc(p.avatar||"🙂")}</span>
           <span class="post-who">${esc(p.who||"")}</span>
           <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
-          ${p.mine?postMenuBtn(p):''}
+          ${postMenuBtn(p)}
         </div>
         ${p.text?`<div class="pc-text">${decorateMentionsClickable(p.text)}</div>`:''}
       </div>
@@ -4322,14 +4343,97 @@ function postCardHTML(p){
       <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.who)}')`}">${esc(p.avatar||"🙂")}</span>
       <span class="post-who">${esc(p.who||"")}</span>
       <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
-      ${p.mine?postMenuBtn(p):''}
+      ${postMenuBtn(p)}
     </div>
     ${p.text?`<div class="post-text">${decorateMentionsClickable(p.text)}</div>`:''}
     ${actions}${commentsHTML}${commentInput}
   </div>`;
 }
 function postMenuBtn(p){
-  return `<button class="post-menu-btn" onclick="event.stopPropagation();deleteOwnPost('${p.id}')" aria-label="${t('post.delete')}" title="${t('post.delete')}">×</button>`;
+  return `<button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')" aria-label="${t('post.moreActions')}">⋮</button>
+    <div class="post-menu-pop" id="pmenu_${p.id}" style="display:none">
+      ${p.mine
+        ?`<button onclick="event.stopPropagation();closeAllPostMenus();deleteOwnPost('${p.id}')">${t("post.delete")}</button>`
+        :`<button onclick="event.stopPropagation();closeAllPostMenus();openReportScreen('${p.id}')">${t("post.report")}</button>
+          <button onclick="event.stopPropagation();closeAllPostMenus();hidePostLocally('${p.id}')">${t("post.hide")}</button>`}
+    </div>`;
+}
+/* 投稿の「⋮」メニューの開閉。開くときは他のメニューを全部閉じてから対象だけ開く */
+function togglePostMenu(id){
+  const target=document.getElementById("pmenu_"+id);
+  const wasOpen = target && target.style.display!=="none";
+  closeAllPostMenus();
+  if(target && !wasOpen){
+    target.style.display="flex";
+    setTimeout(()=>document.addEventListener("click",closeAllPostMenus,{once:true}),0);
+  }
+}
+function closeAllPostMenus(){
+  document.querySelectorAll(".post-menu-pop").forEach(el=>{ el.style.display="none"; });
+}
+/* 投稿を自分の画面からだけ非表示にする(サーバーには保存しない・軽量な機能) */
+function hidePostLocally(id){
+  hiddenPostIds.add(id);
+  toast(t("post.hidden"));
+  rerenderPost();
+}
+
+/* ===== 通報画面(1画面完結: 理由選択+送信情報の注記+送信) ===== */
+let reportTargetPostId = null;
+let reportReason = "spam";
+function openReportScreen(postId){
+  reportTargetPostId = postId;
+  reportReason = "spam";
+  goFwd("report");
+}
+const REPORT_REASONS = ["spam","harassment","inappropriate","fraud","other"];
+function setReportReason(v){
+  reportReason = v;
+  const sc=$("#screen"); if(sc && S.view==="report") sc.innerHTML=screenReport();
+}
+function screenReport(){
+  const p = POSTS.find(x=>x.id===reportTargetPostId);
+  const reasonRow = (v)=>`<label class="report-reason ${reportReason===v?'on':''}" onclick="setReportReason('${v}')">
+    <span class="report-radio"></span><span>${t("post.report.reason."+v)}</span>
+  </label>`;
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="goBack('post')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t("post.report.title")}</h2>
+    </div>
+    <div class="report-body">
+      <h3 class="report-q">${t("post.report.question")}</h3>
+      ${REPORT_REASONS.map(reasonRow).join("")}
+      <div class="report-note">
+        <p>${t("post.report.privacyNote")}</p>
+        <p class="report-note-label">${t("post.report.dataLabel")}</p>
+        <p>${t("post.report.dataDetail")}</p>
+      </div>
+      <button class="auth-submit" onclick="submitReport()">${t("post.report.send")}</button>
+    </div>
+  </div>`;
+}
+async function submitReport(){
+  if(!reportTargetPostId){ return; }
+  if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
+  if(!window.SB){ toast(t("x.auth.noConn")); return; }
+  const { error } = await window.SB.from("reports").insert({
+    post_id: reportTargetPostId, reporter_id: authUser().id, reason: reportReason
+  });
+  if(error){
+    // 複合主キー違反(既に同じ投稿を通報済み)は静かに成功扱いにする(二重通報の抑止)
+    if(/duplicate key|already exists/i.test(error.message||"")){
+      toast(t("post.report.done"));
+    }else{
+      console.log("[reports] insert error:", error.message);
+      toast(error.message);
+      return;
+    }
+  }else{
+    toast(t("post.report.done"));
+  }
+  reportTargetPostId = null;
+  goBack("post");
 }
 function commentHTML(p,c){
   const canDel=c.mine||p.mine;
@@ -7142,6 +7246,7 @@ function renderApp(){
   else if(S.view==="calendar"){ sc.innerHTML=screenCalendar(); drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="addfriend") html=screenAddFriend();
   else if(S.view==="editprofile"){ sc.innerHTML=screenEditProfile(); updateBioCount(); window.scrollTo({top:0,behavior:"auto"}); return; }
+  else if(S.view==="report"){ sc.innerHTML=screenReport(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
   else if(S.view==="notify")  html=screenNotify();
