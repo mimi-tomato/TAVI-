@@ -1048,14 +1048,14 @@
   .auth-lang-switch{align-self:flex-end;margin-bottom:-4px}
   .auth-tabs{display:flex;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin-bottom:4px}
   .auth-tab{flex:1;padding:11px 0;background:var(--card);color:var(--ink-soft);border:0;font-family:inherit;
-    font-size:14px;font-weight:700;cursor:pointer}
+    font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
   .auth-tab.on{background:var(--accent);color:#fff}
   .auth-input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);
     background:var(--card);color:var(--ink);font-size:15px;font-family:inherit;box-sizing:border-box}
   .auth-input:focus{outline:none;border-color:var(--accent)}
   .auth-field{width:100%;display:flex;flex-direction:column;gap:0}
   .auth-input.err{border-color:#e0245e}
-  .auth-field-err{min-height:0;font-size:11.5px;line-height:1.5;color:#e0245e;padding:3px 4px 0;text-align:left}
+  .auth-field-err{min-height:2.2em;font-size:11.5px;line-height:1.5;color:#e0245e;padding:3px 4px 0;text-align:left}
   .auth-submit{width:100%;padding:13px 0;border-radius:12px;border:0;background:var(--accent);color:#fff;
     font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:4px}
   .auth-submit:active{transform:scale(.98)}
@@ -1063,7 +1063,7 @@
   .auth-verify{text-align:center;padding:8px 0 4px}
   .auth-verify-icon{font-size:44px;margin-bottom:10px}
   .auth-verify-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px}
-  .auth-verify-msg{font-size:13.5px;color:var(--ink-soft);line-height:1.6}
+  .auth-verify-msg{color:var(--ink-soft);font-size:13.5px;line-height:1.6;min-height:3.2em}
 </style>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#EC6800">
@@ -7153,6 +7153,7 @@ renderApp();
   const screen=document.getElementById("screen");
   if(!screen) return;
   screen.addEventListener("touchstart",(e)=>{
+    if(!isSignedIn()){ tracking=false; return; } // 認証画面表示中はスワイプでのタブ移動を無効化
     if(e.touches.length!==1){ tracking=false; return; }
     if(TAB_ORDER.indexOf(S.view)<0){ tracking=false; return; }
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
