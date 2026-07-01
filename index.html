@@ -563,8 +563,8 @@
   .post-ago{color:var(--ink-soft);font-size:12px;margin-left:auto}
   .post-vis{font-size:12px;margin-left:4px;opacity:.75}
   .post-menu-btn{background:transparent;border:0;color:inherit;opacity:.6;font-size:18px;cursor:pointer;line-height:1;padding:0 2px;margin-left:6px}
-  .post-menu-pop{position:absolute;top:38px;right:10px;z-index:20;background:var(--card);border:1px solid var(--line);
-    border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.15);flex-direction:column;overflow:hidden;min-width:140px}
+  .post-menu-pop{position:fixed;z-index:210;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;min-width:140px}
   .post-menu-pop button{background:transparent;border:0;text-align:left;padding:11px 14px;font-size:13.5px;
     color:var(--ink);font-family:inherit;cursor:pointer;white-space:nowrap}
   .post-menu-pop button:not(:last-child){border-bottom:1px solid var(--line)}
@@ -596,7 +596,8 @@
   /* ===== 画像拡大表示(拡大用/full画質) ===== */
   .full-img-overlay{position:fixed;inset:0;z-index:220;background:rgba(0,0,0,.92);
     display:flex;align-items:center;justify-content:center;padding:12px}
-  .full-img-overlay img{max-width:100%;max-height:100%;object-fit:contain}
+  .full-img-overlay img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center center;
+    touch-action:none;will-change:transform}
   .post-text{padding:0 14px 10px;font-size:14px;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word}
   .mention{color:var(--accent);font-weight:700}
   .post-text .mention,.pc-text .mention,.cmt-text .mention{font-weight:800}
@@ -714,11 +715,16 @@
     font-size:15px;font-family:inherit;color:var(--ink);background:var(--card);resize:vertical;line-height:1.6}
   .pcmp-count{text-align:right;font-size:12px;color:var(--ink-soft);margin:4px 2px 12px}
   .pcmp-imgs{display:flex;flex-wrap:wrap;gap:8px}
-  .pcmp-thumb{position:relative;width:96px;border-radius:10px;overflow:hidden;background:var(--field);flex:0 0 auto}
+  .pcmp-thumb{position:relative;width:96px;border-radius:10px;overflow:hidden;background:var(--field);flex:0 0 auto;touch-action:none}
+  .pcmp-thumb.dragging{opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.35);transform:scale(1.05)}
   .pcmp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .pcmp-del{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;
     background:rgba(0,0,0,.55);color:#fff;font-size:14px;cursor:pointer;line-height:1}
   .pcmp-first{position:absolute;bottom:3px;left:3px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px}
+  .pcmp-reorder{position:absolute;bottom:3px;right:3px;display:flex;gap:2px}
+  .pcmp-reorder button{width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.55);
+    color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .pcmp-reorder button:disabled{opacity:.25;cursor:default}
   .pcmp-add{width:96px;height:96px;border:2px dashed var(--line);border-radius:10px;background:transparent;
     color:var(--ink-soft);font-size:22px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
   .pcmp-add span{font-size:11px}
@@ -4491,26 +4497,35 @@ function postCardHTML(p){
   </div>`;
 }
 function postMenuBtn(p){
-  return `<button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')" aria-label="${t('post.moreActions')}">⋮</button>
-    <div class="post-menu-pop" id="pmenu_${p.id}" style="display:none">
-      ${p.mine
-        ?`<button onclick="event.stopPropagation();closeAllPostMenus();confirmDeletePost('${p.id}')">${t("post.delete")}</button>`
-        :`<button onclick="event.stopPropagation();closeAllPostMenus();openReportScreen('${p.id}')">${t("post.report")}</button>
-          <button onclick="event.stopPropagation();closeAllPostMenus();hidePostLocally('${p.id}')">${t("post.hide")}</button>`}
-    </div>`;
+  return `<button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}', event)" aria-label="${t('post.moreActions')}">⋮</button>`;
 }
-/* 投稿の「⋮」メニューの開閉。開くときは他のメニューを全部閉じてから対象だけ開く */
-function togglePostMenu(id){
-  const target=document.getElementById("pmenu_"+id);
-  const wasOpen = target && target.style.display!=="none";
+/* 投稿の「⋮」メニューの開閉。overflow:hiddenな親(画像カルーセル等)の影響を受けないよう、
+   ポップアップはdocument.body直下に、ボタンの位置を基準とした絶対座標で生成する */
+function togglePostMenu(id, ev){
+  const already = document.getElementById("pmenu_"+id);
   closeAllPostMenus();
-  if(target && !wasOpen){
-    target.style.display="flex";
-    setTimeout(()=>document.addEventListener("click",closeAllPostMenus,{once:true}),0);
-  }
+  if(already) return; // 同じボタンをもう一度押したら閉じるだけ
+  const p = POSTS.find(x=>x.id===id); if(!p) return;
+  const btn = ev.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const pop = document.createElement("div");
+  pop.className = "post-menu-pop";
+  pop.id = "pmenu_"+id;
+  pop.innerHTML = p.mine
+    ? `<button onclick="event.stopPropagation();closeAllPostMenus();confirmDeletePost('${id}')">${t("post.delete")}</button>`
+    : `<button onclick="event.stopPropagation();closeAllPostMenus();openReportScreen('${id}')">${t("post.report")}</button>
+       <button onclick="event.stopPropagation();closeAllPostMenus();hidePostLocally('${id}')">${t("post.hide")}</button>`;
+  document.body.appendChild(pop);
+  // ボタンの右下に配置。画面右端をはみ出さないよう調整
+  const popW = pop.offsetWidth || 140;
+  let left = rect.right - popW;
+  if(left < 6) left = 6;
+  pop.style.left = left + "px";
+  pop.style.top = (rect.bottom + 4) + "px";
+  setTimeout(()=>document.addEventListener("click",closeAllPostMenus,{once:true}),0);
 }
 function closeAllPostMenus(){
-  document.querySelectorAll(".post-menu-pop").forEach(el=>{ el.style.display="none"; });
+  document.querySelectorAll(".post-menu-pop").forEach(el=>el.remove());
 }
 /* 投稿を自分の画面からだけ非表示にする(サーバーには保存しない・軽量な機能) */
 function hidePostLocally(id){
@@ -4735,11 +4750,66 @@ function openFullImage(url){
   wrap.className="full-img-overlay";
   wrap.id="fullImgOverlay";
   wrap.innerHTML=`<img src="${url}" alt="">`;
-  wrap.addEventListener("click", closeFullImage);
   document.body.appendChild(wrap);
+  setupFullImageZoom(wrap);
 }
 function closeFullImage(){
   const el=document.getElementById("fullImgOverlay"); if(el) el.remove();
+}
+/* 拡大画像のピンチズーム・ダブルタップズーム・ズーム中のパン操作 */
+function setupFullImageZoom(wrap){
+  const img = wrap.querySelector("img");
+  let scale=1, tx=0, ty=0;
+  const MIN=1, MAX=4;
+  let pinchStartDist=0, pinchStartScale=1;
+  let panning=false, panStartX=0, panStartY=0, panStartTx=0, panStartTy=0;
+  let moved=false; // タップとドラッグ/ピンチを区別するためのフラグ
+  function apply(){ img.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`; }
+  function dist(t0,t1){ return Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY); }
+  function clampPan(){
+    // 拡大していないときは常に中央(0,0)に戻す
+    if(scale<=1){ tx=0; ty=0; }
+  }
+  wrap.addEventListener("touchstart",(e)=>{
+    moved=false;
+    if(e.touches.length===2){
+      pinchStartDist = dist(e.touches[0], e.touches[1]);
+      pinchStartScale = scale;
+      panning=false;
+    }else if(e.touches.length===1){
+      if(scale>1){
+        panning=true;
+        panStartX=e.touches[0].clientX; panStartY=e.touches[0].clientY;
+        panStartTx=tx; panStartTy=ty;
+      }
+    }
+  }, {passive:true});
+  wrap.addEventListener("touchmove",(e)=>{
+    if(e.touches.length===2 && pinchStartDist>0){
+      e.preventDefault();
+      moved=true;
+      const d = dist(e.touches[0], e.touches[1]);
+      scale = Math.min(MAX, Math.max(MIN, pinchStartScale * (d/pinchStartDist)));
+      apply();
+    }else if(e.touches.length===1 && panning){
+      e.preventDefault();
+      moved=true;
+      tx = panStartTx + (e.touches[0].clientX - panStartX);
+      ty = panStartTy + (e.touches[0].clientY - panStartY);
+      apply();
+    }
+  }, {passive:false});
+  wrap.addEventListener("touchend",(e)=>{
+    if(e.touches.length===0){
+      panning=false; pinchStartDist=0;
+      clampPan(); apply();
+    }
+  });
+  // タップ(ドラッグ/ピンチを伴わない)で閉じる。拡大中はタップしても閉じない
+  wrap.addEventListener("click",()=>{
+    if(moved) return;
+    if(scale<=1) closeFullImage();
+  });
 }
 async function deleteOwnPost(id){
   const p=POSTS.find(x=>x.id===id); if(!p||!p.mine)return;
@@ -4867,9 +4937,10 @@ function setPostVisibility(v){
   const sc=$("#screen"); if(sc && S.view==="postcompose") sc.innerHTML=screenPostCompose();
 }
 function screenPostCompose(){
-  const imgs=postDraft.images.map((src,i)=>`<div class="pcmp-thumb" style="aspect-ratio:${postDraft.ratio}">
-      <img src="${src}" alt="">
-      <button class="pcmp-del" onclick="removePostImage(${i})">×</button>
+  const n=postDraft.images.length;
+  const imgs=postDraft.images.map((src,i)=>`<div class="pcmp-thumb" data-idx="${i}" style="aspect-ratio:${postDraft.ratio}">
+      <img src="${src}" alt="" draggable="false">
+      <button class="pcmp-del" onclick="event.stopPropagation();removePostImage(${i})">×</button>
       ${i===0?`<span class="pcmp-first">${t("post.firstRatio")}</span>`:''}
     </div>`).join("");
   const canAddImg=postDraft.images.length<POST_MAX_IMAGES;
@@ -4892,7 +4963,7 @@ function screenPostCompose(){
     </div>
     <textarea id="postText" class="pcmp-text" maxlength="${POST_MAX_CHARS}" placeholder="${t("post.placeholder")}" oninput="onPostTextInput()">${esc(postDraft.text)}</textarea>
     <div class="pcmp-count"><span id="postCount">${postDraft.text.length}</span>/${POST_MAX_CHARS}</div>
-    <div class="pcmp-imgs">
+    <div class="pcmp-imgs" id="pcmpImgs">
       ${imgs}
       ${canAddImg?`<button class="pcmp-add" onclick="document.getElementById('postImgInput').click()">＋<span>${t("post.addImg")}</span></button>`:''}
     </div>
@@ -4950,6 +5021,30 @@ function removePostImage(i){
   postDraft.images.splice(i,1);
   if(!postDraft.images.length){ postDraft._ratioSet=false; postDraft.ratio="1/1"; }
   if(S.view==="postcompose") renderApp();
+}
+/* 画像の並び順を左右に入れ替える。1枚目が変わったら、デフォルト比率を新しい1枚目に合わせて測り直す */
+/* 画像をfromの位置からtoの位置へ移動する。1枚目が変わったら、デフォルト比率を新しい1枚目に合わせて測り直す。
+   skipRender=trueならDOMは更新しない(ドラッグ中に使う。掴んでいる要素の消失を防ぐため) */
+function reorderPostImages(from, to, skipRender){
+  if(from===to) return;
+  const arr = postDraft.images;
+  if(from<0 || from>=arr.length || to<0 || to>=arr.length) return;
+  const [moved] = arr.splice(from, 1);
+  arr.splice(to, 0, moved);
+  if(from===0 || to===0){
+    postDraft._ratioSet = false;
+    if(!skipRender){
+      const im = new Image();
+      im.onload = ()=>{
+        postDraft.ratio = ratioString(im.naturalWidth, im.naturalHeight);
+        postDraft._ratioSet = true;
+        if(S.view==="postcompose") renderApp();
+      };
+      im.src = arr[0];
+    }
+  } else {
+    if(!skipRender && S.view==="postcompose") renderApp();
+  }
 }
 /* 最高画質(長辺1600px)にするかの切り替え。未使用時は1080px */
 function togglePostHQ(){
@@ -7507,6 +7602,72 @@ renderApp();
     pendingViewAnim = dx<0 ? "cut-in-right" : "cut-in-left";
     goView(TAB_ORDER[ni]);
   },{passive:true});
+})();
+/* 投稿作成画面: 画像サムネイルのドラッグ&ドロップ並べ替え(タッチイベント委譲)
+   ドラッグ中は掴んだ要素を指に追従させるだけで配列は動かさず、指を離した瞬間に
+   その時点で指の下にあった要素のインデックスへ1回だけ並べ替えを確定する */
+(function(){
+  let dragEl=null, dragFrom=-1, startX=0, startY=0, offX=0, offY=0, moved=false;
+  const DRAG_THRESHOLD=6; // これ以上動いたらドラッグとみなす(単なるタップと区別)
+
+  function findThumb(target){ return target.closest && target.closest(".pcmp-thumb"); }
+
+  document.addEventListener("touchstart",(e)=>{
+    if(e.touches.length!==1) return;
+    const thumb=findThumb(e.target);
+    if(!thumb || !thumb.parentElement || thumb.parentElement.id!=="pcmpImgs") return;
+    dragEl=thumb; dragFrom=parseInt(thumb.dataset.idx,10);
+    startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+    moved=false;
+  },{passive:true});
+
+  document.addEventListener("touchmove",(e)=>{
+    if(!dragEl) return;
+    const t=e.touches[0];
+    const dx=t.clientX-startX, dy=t.clientY-startY;
+    if(!moved && Math.hypot(dx,dy)<DRAG_THRESHOLD) return;
+    if(!moved){
+      moved=true;
+      const r=dragEl.getBoundingClientRect();
+      offX=startX-r.left; offY=startY-r.top;
+      dragEl.classList.add("dragging");
+      dragEl.style.position="fixed";
+      dragEl.style.zIndex="300";
+      dragEl.style.width=r.width+"px";
+      dragEl.style.height=r.height+"px";
+      dragEl.style.pointerEvents="none";
+    }
+    e.preventDefault();
+    dragEl.style.left=(t.clientX-offX)+"px";
+    dragEl.style.top=(t.clientY-offY)+"px";
+  },{passive:false});
+
+  document.addEventListener("touchend",(e)=>{
+    if(!dragEl){ return; }
+    const wasDragging = moved;
+    let dropIdx = -1;
+    if(wasDragging){
+      const t=(e.changedTouches&&e.changedTouches[0]) || null;
+      if(t){
+        dragEl.style.display="none";
+        const under=document.elementFromPoint(t.clientX,t.clientY);
+        dragEl.style.display="";
+        const overThumb=findThumb(under);
+        if(overThumb && overThumb.parentElement && overThumb.parentElement.id==="pcmpImgs"){
+          const overIdx=parseInt(overThumb.dataset.idx,10);
+          if(!isNaN(overIdx)) dropIdx=overIdx;
+        }
+      }
+    }
+    dragEl.classList.remove("dragging");
+    dragEl.style.position=""; dragEl.style.zIndex=""; dragEl.style.left=""; dragEl.style.top="";
+    dragEl.style.width=""; dragEl.style.height=""; dragEl.style.pointerEvents="";
+    dragEl=null;
+    if(wasDragging && dropIdx>=0 && dropIdx!==dragFrom){
+      reorderPostImages(dragFrom, dropIdx); // ここで1回だけ並べ替えと再描画を行う
+    }
+    dragFrom=-1; moved=false;
+  });
 })();
 </script>
 <script>
