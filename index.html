@@ -1932,6 +1932,7 @@ async function loadPosts(){
         mine: !!(me && row.author_id===me.id)
       });
     });
+    if(POSTS.length) await loadLikesFor(POSTS.map(p=>p.id));
     if(typeof rerenderPost === "function") rerenderPost();
   }catch(e){ console.log("[posts] load exception:", e); }
 }
@@ -1951,6 +1952,42 @@ async function deletePostFromSupabase(id){
   if(!window.SB) return false;
   const { error } = await window.SB.from("posts").delete().eq("id", id);
   if(error){ console.log("[posts] delete error:", error.message); toast(error.message); return false; }
+  return true;
+}
+
+/* ===== いいねの永続化: Supabase likes テーブル ===== */
+/* 与えた投稿id一覧について、件数と自分がいいね済みかをまとめて取得しPOSTSへ反映 */
+async function loadLikesFor(postIds){
+  if(!window.SB || !postIds.length) return;
+  try{
+    const { data, error } = await window.SB.from("likes").select("post_id, user_id").in("post_id", postIds);
+    if(error){ console.log("[likes] load error:", error.message); return; }
+    const me = authUser();
+    const countMap = {}, mineSet = new Set();
+    (data||[]).forEach(row=>{
+      countMap[row.post_id] = (countMap[row.post_id]||0) + 1;
+      if(me && row.user_id===me.id) mineSet.add(row.post_id);
+    });
+    POSTS.forEach(p=>{
+      p.likeCount = countMap[p.id] || 0;
+      p.likedByMe = mineSet.has(p.id);
+    });
+  }catch(e){ console.log("[likes] load exception:", e); }
+}
+
+/* いいねを追加(既にあれば何もしない。likesのpost_id+user_id複合主キーで二重防止) */
+async function addLikeToSupabase(postId){
+  if(!window.SB || !isSignedIn()) return false;
+  const { error } = await window.SB.from("likes").insert({ post_id: postId, user_id: authUser().id });
+  if(error){ console.log("[likes] insert error:", error.message); return false; }
+  return true;
+}
+/* いいねを取り消す */
+async function removeLikeFromSupabase(postId){
+  if(!window.SB || !isSignedIn()) return false;
+  const { error } = await window.SB.from("likes").delete()
+    .eq("post_id", postId).eq("user_id", authUser().id);
+  if(error){ console.log("[likes] delete error:", error.message); return false; }
   return true;
 }
 
@@ -4060,7 +4097,10 @@ function openProfileByName(name){
 function likeBurst(id){
   const p=POSTS.find(x=>x.id===id); if(!p)return;
   const wasLiked=p.likedByMe;
-  if(!wasLiked){ p.likedByMe=true; p.likeCount=(p.likeCount||0)+1; if(!p.mine) pushPostNotif("like",p); }
+  if(!wasLiked){
+    if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
+    p.likedByMe=true; p.likeCount=(p.likeCount||0)+1; if(!p.mine) pushPostNotif("like",p);
+  }
   const card=document.querySelector(`.post-card[data-pid="${id}"]`);
   const wrap=card?card.querySelector(".post-carousel.full"):null;
   if(wrap){
@@ -4077,6 +4117,17 @@ function likeBurst(id){
     const likesEl=card.querySelector(".pa-likes");
     if(likesEl && p.mine) likesEl.textContent=t("post.likeCount",{n:p.likeCount||0});
   }
+  // 見た目は即座に反映し、裏でSupabaseへ保存。失敗したら状態を戻す
+  if(!wasLiked){
+    (async()=>{
+      const ok = await addLikeToSupabase(id);
+      if(!ok){
+        p.likedByMe=false; p.likeCount=Math.max(0,(p.likeCount||0)-1);
+        toast(t("x.auth.noConn"));
+        rerenderPost();
+      }
+    })();
+  }
 }
 /* ①いいねボタンの付近からハートがふわっと立ち上る */
 function spawnFloatHeart(btn){
@@ -4090,6 +4141,7 @@ function spawnFloatHeart(btn){
 }
 function togglePostLike(id){
   const p=POSTS.find(x=>x.id===id); if(!p)return;
+  if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
   const wasLiked=p.likedByMe;
   if(wasLiked){ p.likedByMe=false; p.likeCount=Math.max(0,(p.likeCount||0)-1); }
   else { p.likedByMe=true; p.likeCount=(p.likeCount||0)+1; if(!p.mine) pushPostNotif("like",p); }
@@ -4112,6 +4164,16 @@ function togglePostLike(id){
   } else {
     rerenderPost();
   }
+  // 見た目は即座に反映し、裏でSupabaseへ保存。失敗したら状態を戻す
+  (async()=>{
+    const ok = wasLiked ? await removeLikeFromSupabase(id) : await addLikeToSupabase(id);
+    if(!ok){
+      p.likedByMe = wasLiked;
+      p.likeCount = wasLiked ? (p.likeCount||0)+1 : Math.max(0,(p.likeCount||0)-1);
+      toast(t("x.auth.noConn"));
+      rerenderPost();
+    }
+  })();
 }
 function addPostComment(id){
   const p=POSTS.find(x=>x.id===id); if(!p)return;
