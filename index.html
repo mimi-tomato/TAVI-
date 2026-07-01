@@ -1901,16 +1901,27 @@ function computeAgo(ts){
 async function loadPosts(){
   if(!window.SB) return;
   try{
+    // postsだけを取得(テーブル結合はスキーマキャッシュの更新待ちで不安定になりうるため使わない)
     const { data, error } = await window.SB
       .from("posts")
-      .select("id, author_id, text, created_at, profiles(display_name, avatar_url)")
+      .select("id, author_id, text, created_at")
       .order("created_at", { ascending:false })
       .limit(100);
     if(error){ console.log("[posts] load error:", error.message); return; }
+    const rows = data || [];
+    // 投稿者idの一覧でprofilesをまとめて取得し、アプリ側で組み合わせる
+    const authorIds = [...new Set(rows.map(r=>r.author_id))];
+    let profMap = {};
+    if(authorIds.length){
+      const { data: profs, error: pe } = await window.SB
+        .from("profiles").select("id, display_name, avatar_url").in("id", authorIds);
+      if(pe){ console.log("[profiles] load error:", pe.message); }
+      (profs||[]).forEach(p=>{ profMap[p.id]=p; });
+    }
     const me = authUser();
     POSTS.length = 0;
-    (data||[]).forEach(row=>{
-      const prof = row.profiles || {};
+    rows.forEach(row=>{
+      const prof = profMap[row.author_id] || {};
       POSTS.push({
         id: row.id, who: prof.display_name || t("post.noName"),
         avatar: prof.avatar_url || "🧳",
