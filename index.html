@@ -1469,6 +1469,12 @@ const I18N = {
     "x.auth.backToSignIn":"ログイン画面に戻る",
     "x.auth.resend":"確認メールを再送する",
     "x.auth.resent":"確認メールを再送しました",
+    "x.auth.resendWait":"再送する（{s}秒）",
+    "x.auth.resendFail":"再送できませんでした。時間をおいてお試しください",
+    "time.minAgo":"{n}分前",
+    "time.hourAgo":"{n}時間前",
+    "time.dayAgo":"{n}日前",
+    "post.noName":"名無しの旅人",
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
@@ -1828,6 +1834,12 @@ const I18N = {
     "x.auth.backToSignIn":"Back to sign in",
     "x.auth.resend":"Resend email",
     "x.auth.resent":"Email resent",
+    "x.auth.resendWait":"Resend ({s}s)",
+    "x.auth.resendFail":"Couldn't resend. Please try again later",
+    "time.minAgo":"{n}m ago",
+    "time.hourAgo":"{n}h ago",
+    "time.dayAgo":"{n}d ago",
+    "post.noName":"Anonymous traveler"
   }
 };
 function curLang(){ return (typeof S!=="undefined" && S.lang) ? S.lang : "ja"; }
@@ -1872,6 +1884,65 @@ async function ensureProfile(){
   }catch(e){ console.log("[profiles] ensure exception:", e); }
 }
 
+/* ===== 投稿(文章)の永続化: Supabase posts テーブル ===== */
+/* 簡易な経過時間表示(投稿取得時のみ計算。分単位までの粗い表示) */
+function computeAgo(ts){
+  const diff = Math.max(0, Date.now() - ts);
+  const min = Math.floor(diff/60000);
+  if(min < 1) return t("time.justNow");
+  if(min < 60) return t("time.minAgo").replace("{n}", min);
+  const hr = Math.floor(min/60);
+  if(hr < 24) return t("time.hourAgo").replace("{n}", hr);
+  const day = Math.floor(hr/24);
+  return t("time.dayAgo").replace("{n}", day);
+}
+
+/* Supabaseからposts一覧を取得しPOSTS配列を作り直す(いいね/コメントは次段まで初期値) */
+async function loadPosts(){
+  if(!window.SB) return;
+  try{
+    const { data, error } = await window.SB
+      .from("posts")
+      .select("id, author_id, text, created_at, profiles(display_name, avatar_url)")
+      .order("created_at", { ascending:false })
+      .limit(100);
+    if(error){ console.log("[posts] load error:", error.message); return; }
+    const me = authUser();
+    POSTS.length = 0;
+    (data||[]).forEach(row=>{
+      const prof = row.profiles || {};
+      POSTS.push({
+        id: row.id, who: prof.display_name || t("post.noName"),
+        avatar: prof.avatar_url || "🧳",
+        ts: new Date(row.created_at).getTime(),
+        ago: computeAgo(new Date(row.created_at).getTime()),
+        text: row.text || "", images: [], ratio: "1/1",
+        likedByMe:false, likeCount:0, comments:[],
+        mine: !!(me && row.author_id===me.id)
+      });
+    });
+    if(typeof rerenderPost === "function") rerenderPost();
+  }catch(e){ console.log("[posts] load exception:", e); }
+}
+
+/* 投稿をSupabaseへ保存 */
+async function savePostToSupabase(text){
+  if(!window.SB || !isSignedIn()) return false;
+  const { error } = await window.SB.from("posts").insert({
+    author_id: authUser().id, text, visibility: "public"
+  });
+  if(error){ console.log("[posts] insert error:", error.message); toast(error.message); return false; }
+  return true;
+}
+
+/* 投稿をSupabaseから削除(本人のみRLSで許可) */
+async function deletePostFromSupabase(id){
+  if(!window.SB) return false;
+  const { error } = await window.SB.from("posts").delete().eq("id", id);
+  if(error){ console.log("[posts] delete error:", error.message); toast(error.message); return false; }
+  return true;
+}
+
 /* ログイン */
 async function authSignIn(email, password){
   if(!window.SB){ toast(t("x.auth.noConn")); return; }
@@ -1901,8 +1972,8 @@ async function authResetPassword(email){
 
 /* 認証状態が変わったときにモジュールから呼ばれる */
 window.onAuthChanged = async function(user){
-  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意
-  if(user){ await ensureProfile(); }
+  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、投稿一覧を取得
+  if(user){ await ensureProfile(); await loadPosts(); }
   if(typeof renderApp === "function") renderApp();
 };
 
@@ -3600,15 +3671,8 @@ function mkMembers(names){ return names.map(n=>({id:uid(), name:n})); }
 let GID = 100;
 /* ①投稿(SNS)データ。試作のデモ投稿を数件。Firebase化までメモリ保持
    like: 自分のいいね状態と数(数は自分だけに見える)。comments: 各コメント */
-const POSTS = [
-  {id:"po_demo1", who:"Tomato", avatar:"🍅", ts:Date.now()-3600000, ago:"1時間前",
-   text:"沖縄の離島、最高だった！@ゆうき も次は一緒に行こう🏝️", images:[], ratio:"1/1",
-   likedByMe:false, likeCount:12, mine:true,
-   comments:[{id:"cm1", who:"あおい", avatar:"🐧", text:"いいなあ！どの島？", mine:false, ts:Date.now()-3000000}]},
-  {id:"po_demo2", who:"ゆうき", avatar:"🐧", ts:Date.now()-3*3600000, ago:"3時間前",
-   text:"京都の紅葉シーズンの計画立て中。おすすめスポットあったら教えて〜🍁", images:[], ratio:"1/1",
-   likedByMe:true, likeCount:8, mine:false, comments:[]},
-];
+/* 投稿一覧。Supabaseのpostsテーブルから loadPosts() で満たされる(ログイン完了時に自動取得) */
+const POSTS = [];
 // 投稿作成ドラフト(本文・画像・1枚目比率)
 let postDraft = { text:"", images:[], ratio:"1/1" };
 // コメント入力の一時状態(投稿IDごと)・展開状態
@@ -4052,8 +4116,10 @@ function deletePostComment(pid,cid){
   p.comments=p.comments.filter(c=>c.id!==cid);
   rerenderPost();
 }
-function deleteOwnPost(id){
+async function deleteOwnPost(id){
   const p=POSTS.find(x=>x.id===id); if(!p||!p.mine)return;
+  const ok = await deletePostFromSupabase(id);
+  if(!ok) return;
   const i=POSTS.indexOf(p); if(i>=0)POSTS.splice(i,1);
   rerenderPost();
 }
@@ -4241,7 +4307,7 @@ function removePostImage(i){
   if(!postDraft.images.length){ postDraft._ratioSet=false; postDraft.ratio="1/1"; }
   if(S.view==="postcompose") renderApp();
 }
-function submitPost(){
+async function submitPost(){
   const text=(postDraft.text||"").trim();
   const hasImg=postDraft.images.length>0;
   if(!text && !hasImg){ toast(t("post.empty.warn")); return; }
@@ -4251,14 +4317,14 @@ function submitPost(){
   if(postDayCount.count>=POST_DAILY_LIMIT){
     toast(t("post.onceADay")); return;
   }
-  POSTS.unshift({
-    id:"po_"+Date.now(), who:"Tomato", avatar:(ME&&ME.avatar)||"🍅",
-    ts:Date.now(), ago:t("time.justNow"), mine:true, likedByMe:false, likeCount:0, comments:[],
-    text:text.slice(0,POST_MAX_CHARS), images:postDraft.images.slice(), ratio:postDraft.ratio||"1/1"
-  });
+  if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
+  // 現段階は文章のみ共有(画像は永続化しない)
+  const ok = await savePostToSupabase(text.slice(0,POST_MAX_CHARS));
+  if(!ok) return;
   postDayCount.count++;
   postDraft={ text:"", images:[], ratio:"1/1" };
   toast(t("post.done"));
+  await loadPosts();
   goView("post");
 }
 function screenHome(){
@@ -6529,7 +6595,7 @@ function toggleMyCalWeek(w){
 /* ===== 認証画面(ログイン / 新規登録) ===== */
 let authMode = "signin"; // "signin" | "signup" | "verify"
 let authPendingEmail = ""; // 確認コード検証のため登録時のメールを保持
-function setAuthMode(m){ authMode=m; const sc=$("#screen"); if(sc) sc.innerHTML=screenAuth(); }
+function setAuthMode(m){ authMode=m; if(m!=="verify" && authResendTimer){ clearInterval(authResendTimer); authResendTimer=null; authResendCooldown=0; } const sc=$("#screen"); if(sc) sc.innerHTML=screenAuth(); }
 function screenAuth(){
   const isUp = authMode==="signup";
   // 確認メール送信後の画面
@@ -6543,7 +6609,7 @@ function screenAuth(){
         <div class="auth-verify-title">${t("x.auth.verifyTitle")}</div>
         <div class="auth-verify-msg">${t("x.auth.verifyMsg")}</div>
       </div>
-      <button class="auth-link" onclick="resendCode()">${t("x.auth.resend")}</button>
+      <button id="authResendBtn" class="auth-link" onclick="resendCode()">${t("x.auth.resend")}</button>
       <button class="auth-submit" onclick="setAuthMode('signin')">${t("x.auth.backToSignIn")}</button>
     </div>
   </div>`;
@@ -6583,15 +6649,41 @@ async function submitReset(){
 
 
 /* 確認コードの再送 */
+let authResendCooldown = 0;      // 残り秒数
+let authResendTimer = null;      // カウントダウン用
+function authResendTick(){
+  const btn = $("#authResendBtn");
+  if(authResendCooldown > 0){
+    if(btn){ btn.textContent = t("x.auth.resendWait").replace("{s}", authResendCooldown); btn.style.opacity="0.5"; btn.style.pointerEvents="none"; }
+    authResendCooldown--;
+  }else{
+    if(authResendTimer){ clearInterval(authResendTimer); authResendTimer=null; }
+    if(btn){ btn.textContent = t("x.auth.resend"); btn.style.opacity=""; btn.style.pointerEvents=""; }
+  }
+}
+function startResendCooldown(sec){
+  authResendCooldown = sec;
+  if(authResendTimer) clearInterval(authResendTimer);
+  authResendTick();
+  authResendTimer = setInterval(authResendTick, 1000);
+}
 async function resendCode(){
   if(!window.SB){ toast(t("x.auth.noConn")); return; }
   if(!authPendingEmail){ toast(t("x.auth.noConn")); return; }
+  if(authResendCooldown > 0) return; // クールダウン中は無効
   const { error } = await window.SB.auth.resend({
     type:"signup", email: authPendingEmail,
     options: { emailRedirectTo: location.origin + location.pathname }
   });
-  if(error){ toast(error.message); return; }
+  if(error){
+    // 送信失敗(レート制限など)を明確に表示
+    toast(t("x.auth.resendFail"));
+    console.log("[auth] resend error:", error.message);
+    startResendCooldown(60);   // 失敗時もクールダウン(連打防止)
+    return;
+  }
   toast(t("x.auth.resent"));
+  startResendCooldown(60);
 }
 
 function renderApp(){
