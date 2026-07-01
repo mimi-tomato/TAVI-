@@ -29,6 +29,8 @@
   html[data-fontsize="lg"]{font-size:18px}
   body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
     color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+  /* 拡大画像を開いている間、背後のスクロール/スワイプを止める(ピンチズームとの競合を防ぐ) */
+  body.no-scroll{overflow:hidden;touch-action:none;position:fixed;width:100%}
   .wrap{max-width:760px;margin:0 auto;padding:0 16px 90px}
   header.app{position:sticky;top:0;z-index:30;background:rgba(246,247,251,.86);
     backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--line)}
@@ -722,14 +724,16 @@
   .pcmp-imgs{display:flex;flex-wrap:wrap;gap:8px}
   .pcmp-thumb{position:relative;width:96px;border-radius:10px;overflow:hidden;background:var(--field);flex:0 0 auto;touch-action:none}
   .pcmp-thumb.dragging{opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.35);transform:scale(1.05)}
+  .pcmp-thumb.sel{outline:3px solid var(--accent);outline-offset:-3px}
   .pcmp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .pcmp-del{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;
-    background:rgba(0,0,0,.55);color:#fff;font-size:0.875rem;cursor:pointer;line-height:1}
   .pcmp-first{position:absolute;bottom:3px;left:3px;background:var(--accent);color:#fff;font-size:0.625rem;font-weight:700;padding:2px 6px;border-radius:6px}
-  .pcmp-reorder{position:absolute;bottom:3px;right:3px;display:flex;gap:2px}
-  .pcmp-reorder button{width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.55);
-    color:#fff;font-size:0.875rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
-  .pcmp-reorder button:disabled{opacity:.25;cursor:default}
+  /* ドラッグ開始時にだけ現れるゴミ箱の受け皿。画面下中央に固定表示 */
+  .pcmp-trash{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(30px);
+    width:60px;height:60px;border-radius:50%;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;
+    z-index:290;opacity:0;transition:opacity .15s,transform .15s}
+  .pcmp-trash.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .pcmp-trash.hover{background:#e0245e;transform:translateX(-50%) translateY(0) scale(1.15)}
+  .pcmp-trash-ic{font-size:1.5rem}
   .pcmp-add{width:96px;height:96px;border:2px dashed var(--line);border-radius:10px;background:transparent;
     color:var(--ink-soft);font-size:1.375rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
   .pcmp-add span{font-size:0.6875rem}
@@ -1177,7 +1181,7 @@ const JP_PREF=[{"id":1,"name":"北海道","d":"M467.2,22.3 469.0,21.0 470.3,19.3
 const I18N = {
   ja: {
     "tab.home":"ホーム", "tab.chat":"チャット", "tab.search":"友達検索", "tab.profile":"プロフィール",
-    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.likeCount":"いいね {n}件", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"いまの旅の気持ちをシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚。複数選ぶと1枚目の比率に揃います。", "post.firstRatio":"基準", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
+    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.likeCount":"いいね {n}件", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"いまの旅の気持ちをシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚。複数選ぶと1枚目の比率に揃います。", "post.firstRatio":"基準", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
     "home.empty.sub":"右下の＋から新しい旅をつくろう。", "home.archived":"アーカイブ済み（{n}）",
     "home.sizeHint":"タップで表示サイズを切替", "home.newTrip":"新しい旅をつくる",
     "card.live":"進行中", "card.done":"確定済み", "card.prep":"準備中", "card.new":"新着", "card.archived":"アーカイブ",
@@ -1570,7 +1574,7 @@ const I18N = {
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
-    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.likeCount":"{n} likes", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share how your trip feels (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"Up to {n} images. The first image sets the aspect ratio.", "post.firstRatio":"Base", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
+    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.likeCount":"{n} likes", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share how your trip feels (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"Up to {n} images. The first image sets the aspect ratio.", "post.firstRatio":"Base", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
     "home.empty.sub":"Tap + below to start a new trip.", "home.archived":"Archived ({n})",
     "home.sizeHint":"Tap to change card size", "home.newTrip":"Start a new trip",
     "card.live":"In progress", "card.done":"Confirmed", "card.prep":"Getting ready", "card.new":"New", "card.archived":"Archived",
@@ -4075,7 +4079,7 @@ let GID = 100;
 /* 投稿一覧。Supabaseのpostsテーブルから loadPosts() で満たされる(ログイン完了時に自動取得) */
 const POSTS = [];
 // 投稿作成ドラフト(本文・画像・1枚目比率)
-let postDraft = { text:"", images:[], ratio:"1/1", visibility:"public", hq:false };
+let postDraft = { text:"", images:[], previewThumbs:[], ratio:"1/1", visibility:"public", hq:false, selected:new Set() };
 /* 自分の画面からだけ隠した投稿のid集合(サーバーには保存しない。再読み込みで戻る) */
 const hiddenPostIds = new Set();
 /* ログイン中ユーザーのuser_id(ハンドル)。ensureProfileで取得・更新される */
@@ -4758,6 +4762,7 @@ function closeDeletePostConfirm(){
   const el=document.getElementById("deletePostConfirm"); if(el) el.remove();
 }
 /* 画像タップで拡大用(full)画質を全画面表示 */
+let _preFullImgScrollY = 0;
 function openFullImage(url){
   if(!url) return;
   const wrap=document.createElement("div");
@@ -4765,12 +4770,21 @@ function openFullImage(url){
   wrap.id="fullImgOverlay";
   wrap.innerHTML=`<img src="${url}" alt="">`;
   document.body.appendChild(wrap);
+  // 拡大画像を開いている間は背後のスクロール/スワイプを止める。bodyをfixedにする副作用で
+  // スクロール位置が失われるため、閉じたときに元へ戻せるよう先に記録しておく
+  _preFullImgScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  document.body.style.top = (-_preFullImgScrollY) + "px";
+  document.body.classList.add("no-scroll");
   setupFullImageZoom(wrap);
 }
 function closeFullImage(){
   const el=document.getElementById("fullImgOverlay"); if(el) el.remove();
+  document.body.classList.remove("no-scroll");
+  document.body.style.top = "";
+  window.scrollTo(0, _preFullImgScrollY);
 }
-/* 拡大画像のピンチズーム・ダブルタップズーム・ズーム中のパン操作 */
+/* 拡大画像のピンチズーム・ズーム中のパン操作。
+   touchstartの時点で2本指を検知したら即座にpreventDefaultし、ブラウザの標準ズームより先に割り込む */
 function setupFullImageZoom(wrap){
   const img = wrap.querySelector("img");
   let scale=1, tx=0, ty=0;
@@ -4787,17 +4801,19 @@ function setupFullImageZoom(wrap){
   wrap.addEventListener("touchstart",(e)=>{
     moved=false;
     if(e.touches.length===2){
+      e.preventDefault(); // ここで即座に止め、ブラウザ標準ズームに先を越されないようにする
       pinchStartDist = dist(e.touches[0], e.touches[1]);
       pinchStartScale = scale;
       panning=false;
     }else if(e.touches.length===1){
       if(scale>1){
+        e.preventDefault();
         panning=true;
         panStartX=e.touches[0].clientX; panStartY=e.touches[0].clientY;
         panStartTx=tx; panStartTy=ty;
       }
     }
-  }, {passive:true});
+  }, {passive:false});
   wrap.addEventListener("touchmove",(e)=>{
     if(e.touches.length===2 && pinchStartDist>0){
       e.preventDefault();
@@ -4942,7 +4958,7 @@ function applyPostImageLuminance(){
 }
 /* ①投稿作成画面を開く */
 function openPostCompose(){
-  postDraft={ text:"", images:[], ratio:"1/1", visibility:"public", hq:false };
+  postDraft={ text:"", images:[], previewThumbs:[], ratio:"1/1", visibility:"public", hq:false, selected:new Set() };
   goView("postcompose");
 }
 /* 投稿の公開範囲を切り替え(全体/フォロワー/自分のみ) */
@@ -4951,12 +4967,14 @@ function setPostVisibility(v){
   const sc=$("#screen"); if(sc && S.view==="postcompose") sc.innerHTML=screenPostCompose();
 }
 function screenPostCompose(){
-  const n=postDraft.images.length;
-  const imgs=postDraft.images.map((src,i)=>`<div class="pcmp-thumb" data-idx="${i}" style="aspect-ratio:${postDraft.ratio}">
-      <img src="${src}" alt="" draggable="false">
-      <button class="pcmp-del" onclick="event.stopPropagation();removePostImage(${i})">×</button>
+  const imgs=postDraft.images.map((src,i)=>{
+    const thumbSrc = postDraft.previewThumbs[i] || src;
+    const isSel = postDraft.selected.has(i);
+    return `<div class="pcmp-thumb ${isSel?'sel':''}" data-idx="${i}" style="aspect-ratio:${postDraft.ratio}" onclick="togglePostImageSelect(${i})">
+      <img src="${thumbSrc}" alt="" draggable="false">
       ${i===0?`<span class="pcmp-first">${t("post.firstRatio")}</span>`:''}
-    </div>`).join("");
+    </div>`;
+  }).join("");
   const canAddImg=postDraft.images.length<POST_MAX_IMAGES;
   return `<div class="page">
     <div class="pcmp-bar">
@@ -5001,8 +5019,17 @@ function onPostImagePick(e){
   let loaded=0;
   take.forEach(f=>{
     const r=new FileReader();
-    r.onload=()=>{
-      postDraft.images.push(r.result);
+    r.onload=async ()=>{
+      const src = r.result;
+      postDraft.images.push(src);
+      // 一覧・並べ替え時の表示は最小サイズのプレビューを使う(元画像はimagesに保持し投稿時に使う)
+      try{
+        const thumbBlob = await compressImageToBlob(src, IMG_THUMB_MAX, 0.6);
+        postDraft.previewThumbs.push(URL.createObjectURL(thumbBlob));
+      }catch(err){
+        console.log("[post] preview thumb error:", err);
+        postDraft.previewThumbs.push(src); // 失敗時は元画像をそのまま使う
+      }
       loaded++;
       if(loaded===take.length){
         // ①1枚目の比率を全画像に適用するため、1枚目の縦横比を測る
@@ -5031,8 +5058,17 @@ function ratioString(w,h){
   cand.forEach(c=>{ const d=Math.abs(r-c[1]); if(d<diff){diff=d;best=c;} });
   return best[0];
 }
+/* 画像サムネイルの選択トグル。将来の複数選択・範囲選択機能の土台(今回は見た目の状態のみ) */
+function togglePostImageSelect(i){
+  if(postDraft.selected.has(i)) postDraft.selected.delete(i);
+  else postDraft.selected.add(i);
+  if(S.view==="postcompose") renderApp();
+}
 function removePostImage(i){
   postDraft.images.splice(i,1);
+  const [removedThumb] = postDraft.previewThumbs.splice(i,1);
+  if(removedThumb && removedThumb.startsWith("blob:")) URL.revokeObjectURL(removedThumb);
+  postDraft.selected.clear(); // 並びが変わるため選択状態はいったんリセット(土台のみのため簡易対応)
   if(!postDraft.images.length){ postDraft._ratioSet=false; postDraft.ratio="1/1"; }
   if(S.view==="postcompose") renderApp();
 }
@@ -5042,9 +5078,15 @@ function removePostImage(i){
 function reorderPostImages(from, to, skipRender){
   if(from===to) return;
   const arr = postDraft.images;
+  const thumbs = postDraft.previewThumbs;
   if(from<0 || from>=arr.length || to<0 || to>=arr.length) return;
+  postDraft.selected.clear(); // 並びが変わるため選択状態はいったんリセット(土台のみのため簡易対応)
   const [moved] = arr.splice(from, 1);
   arr.splice(to, 0, moved);
+  if(thumbs && from<thumbs.length){
+    const [movedThumb] = thumbs.splice(from, 1);
+    thumbs.splice(to, 0, movedThumb);
+  }
   if(from===0 || to===0){
     // 比率の再計算(画像読み込み待ちが要る)を待たず、まず並び順の変更を即座に画面へ反映する
     postDraft._ratioSet = false;
@@ -5088,7 +5130,7 @@ async function submitPost(){
   const ok = await savePostToSupabase(text.slice(0,POST_MAX_CHARS), postDraft.visibility, imageObjs, postDraft.ratio);
   if(!ok) return;
   postDayCount.count++;
-  postDraft={ text:"", images:[], ratio:"1/1", visibility:"public", hq:false };
+  postDraft={ text:"", images:[], previewThumbs:[], ratio:"1/1", visibility:"public", hq:false, selected:new Set() };
   toast(t("post.done"));
   await loadPosts();
   goView("post");
@@ -7619,14 +7661,21 @@ renderApp();
     goView(TAB_ORDER[ni]);
   },{passive:true});
 })();
-/* 投稿作成画面: 画像サムネイルのドラッグ&ドロップ並べ替え(タッチイベント委譲)
-   requestAnimationFrameで描画フレームに合わせて位置を更新し(指の動きに素早く追従)、
-   position変更ではなくtransform(translate)で動かすことでレイアウト再計算を避け軽くする。
-   ドラッグ中は配列を動かさず、指を離した瞬間に1回だけ並べ替えを確定する */
+/* 投稿作成画面: 画像サムネイルの操作(タッチイベント委譲)
+   ・タップ(短押し・移動なし) = 選択のトグル(将来の範囲選択機能の土台。今回は見た目のみ)
+   ・長押し(450ms)でドラッグ開始。開始と同時にゴミ箱の受け皿を表示する
+   ・ドラッグ中に他のサムネイルの上で離すと、そこへ並び替える
+   ・ドラッグ中にゴミ箱の上で離すと、その画像を削除する
+   位置更新はrequestAnimationFrame+transformで行い、レイアウト再計算を避けて軽くする */
 (function(){
-  let dragEl=null, dragFrom=-1, startX=0, startY=0, baseLeft=0, baseTop=0, moved=false;
+  const LONG_PRESS_MS = 450;
+  const MOVE_CANCEL_THRESHOLD = 10; // 長押し確定前にこれ以上動いたらドラッグ待ちを取り消す(スクロール等と区別)
+
+  let pressThumb=null, pressFrom=-1, pressTimer=null;
+  let startX=0, startY=0, baseLeft=0, baseTop=0;
+  let dragging=false, dragEl=null;
   let curX=0, curY=0, rafId=null;
-  const DRAG_THRESHOLD=6; // これ以上動いたらドラッグとみなす(単なるタップと区別)
+  let trashEl=null, overTrash=false;
 
   function findThumb(target){ return target.closest && target.closest(".pcmp-thumb"); }
 
@@ -7639,47 +7688,103 @@ renderApp();
     if(rafId===null) rafId=requestAnimationFrame(tick);
   }
 
+  function showTrash(){
+    if(trashEl) return;
+    trashEl=document.createElement("div");
+    trashEl.className="pcmp-trash";
+    trashEl.id="pcmpTrash";
+    trashEl.setAttribute("aria-label", t("post.dragToDelete"));
+    trashEl.innerHTML=`<span class="pcmp-trash-ic">🗑️</span>`;
+    document.body.appendChild(trashEl);
+    requestAnimationFrame(()=>trashEl.classList.add("show"));
+  }
+  function hideTrash(){
+    if(!trashEl) return;
+    trashEl.remove();
+    trashEl=null; overTrash=false;
+  }
+  function pointInTrash(x,y){
+    if(!trashEl) return false;
+    const r=trashEl.getBoundingClientRect();
+    return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom;
+  }
+
+  function beginDrag(){
+    dragging=true;
+    dragEl=pressThumb;
+    const r=dragEl.getBoundingClientRect();
+    baseLeft=r.left; baseTop=r.top;
+    dragEl.classList.add("dragging");
+    dragEl.style.position="fixed";
+    dragEl.style.left=baseLeft+"px";
+    dragEl.style.top=baseTop+"px";
+    dragEl.style.zIndex="300";
+    dragEl.style.width=r.width+"px";
+    dragEl.style.height=r.height+"px";
+    dragEl.style.pointerEvents="none";
+    showTrash();
+    if(navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
+  }
+
+  function endInteraction(){
+    if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
+    if(rafId!==null){ cancelAnimationFrame(rafId); rafId=null; }
+    if(dragEl){
+      dragEl.classList.remove("dragging");
+      dragEl.style.position=""; dragEl.style.zIndex=""; dragEl.style.left=""; dragEl.style.top="";
+      dragEl.style.width=""; dragEl.style.height=""; dragEl.style.pointerEvents="";
+      dragEl.style.transform="";
+    }
+    hideTrash();
+    dragEl=null; pressThumb=null; pressFrom=-1; dragging=false; overTrash=false;
+  }
+
   document.addEventListener("touchstart",(e)=>{
     if(e.touches.length!==1) return;
     const thumb=findThumb(e.target);
     if(!thumb || !thumb.parentElement || thumb.parentElement.id!=="pcmpImgs") return;
-    dragEl=thumb; dragFrom=parseInt(thumb.dataset.idx,10);
+    pressThumb=thumb; pressFrom=parseInt(thumb.dataset.idx,10);
     startX=e.touches[0].clientX; startY=e.touches[0].clientY;
-    moved=false;
+    dragging=false;
+    pressTimer=setTimeout(()=>{
+      pressTimer=null;
+      if(pressThumb) beginDrag();
+    }, LONG_PRESS_MS);
   },{passive:true});
 
   document.addEventListener("touchmove",(e)=>{
-    if(!dragEl) return;
+    if(!pressThumb) return;
     const t=e.touches[0];
     const dx=t.clientX-startX, dy=t.clientY-startY;
-    if(!moved && Math.hypot(dx,dy)<DRAG_THRESHOLD) return;
-    if(!moved){
-      moved=true;
-      const r=dragEl.getBoundingClientRect();
-      baseLeft=r.left; baseTop=r.top;
-      dragEl.classList.add("dragging");
-      dragEl.style.position="fixed";
-      dragEl.style.left=baseLeft+"px";
-      dragEl.style.top=baseTop+"px";
-      dragEl.style.zIndex="300";
-      dragEl.style.width=r.width+"px";
-      dragEl.style.height=r.height+"px";
-      dragEl.style.pointerEvents="none";
+    if(!dragging){
+      // 長押し確定前に指が大きく動いたら、ドラッグ待ちを取り消す(スクロール操作として扱う)
+      if(Math.hypot(dx,dy)>MOVE_CANCEL_THRESHOLD){
+        if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
+        pressThumb=null; pressFrom=-1;
+      }
+      return;
     }
     e.preventDefault();
     curX=t.clientX-(startX-baseLeft);
     curY=t.clientY-(startY-baseTop);
+    overTrash=pointInTrash(t.clientX,t.clientY);
+    if(trashEl) trashEl.classList.toggle("hover", overTrash);
     scheduleTick();
   },{passive:false});
 
   document.addEventListener("touchend",(e)=>{
-    if(!dragEl){ return; }
-    if(rafId!==null){ cancelAnimationFrame(rafId); rafId=null; }
-    const wasDragging = moved;
-    let dropIdx = -1;
-    if(wasDragging){
-      const t=(e.changedTouches&&e.changedTouches[0]) || null;
-      if(t){
+    if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
+    if(!pressThumb){ return; }
+    if(!dragging){
+      // 長押しに至らない短いタップ = 選択のトグル(onclickが処理するのでここでは何もしない)
+      pressThumb=null; pressFrom=-1;
+      return;
+    }
+    const t=(e.changedTouches&&e.changedTouches[0]) || null;
+    let dropIdx=-1, droppedOnTrash=false;
+    if(t){
+      droppedOnTrash = pointInTrash(t.clientX,t.clientY);
+      if(!droppedOnTrash){
         dragEl.style.display="none";
         const under=document.elementFromPoint(t.clientX,t.clientY);
         dragEl.style.display="";
@@ -7690,16 +7795,16 @@ renderApp();
         }
       }
     }
-    dragEl.classList.remove("dragging");
-    dragEl.style.position=""; dragEl.style.zIndex=""; dragEl.style.left=""; dragEl.style.top="";
-    dragEl.style.width=""; dragEl.style.height=""; dragEl.style.pointerEvents="";
-    dragEl.style.transform="";
-    dragEl=null;
-    if(wasDragging && dropIdx>=0 && dropIdx!==dragFrom){
-      reorderPostImages(dragFrom, dropIdx); // ここで1回だけ並べ替えと再描画を行う
+    const from=pressFrom;
+    endInteraction();
+    if(droppedOnTrash){
+      removePostImage(from);
+    }else if(dropIdx>=0 && dropIdx!==from){
+      reorderPostImages(from, dropIdx);
     }
-    dragFrom=-1; moved=false;
   });
+
+  document.addEventListener("touchcancel",()=>{ endInteraction(); });
 })();
 </script>
 <script>
