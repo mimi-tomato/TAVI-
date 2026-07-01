@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
 <title>TAVI。</title>
 <style>
   :root{
@@ -5046,16 +5046,16 @@ function reorderPostImages(from, to, skipRender){
   const [moved] = arr.splice(from, 1);
   arr.splice(to, 0, moved);
   if(from===0 || to===0){
+    // 比率の再計算(画像読み込み待ちが要る)を待たず、まず並び順の変更を即座に画面へ反映する
     postDraft._ratioSet = false;
-    if(!skipRender){
-      const im = new Image();
-      im.onload = ()=>{
-        postDraft.ratio = ratioString(im.naturalWidth, im.naturalHeight);
-        postDraft._ratioSet = true;
-        if(S.view==="postcompose") renderApp();
-      };
-      im.src = arr[0];
-    }
+    if(!skipRender && S.view==="postcompose") renderApp();
+    const im = new Image();
+    im.onload = ()=>{
+      postDraft.ratio = ratioString(im.naturalWidth, im.naturalHeight);
+      postDraft._ratioSet = true;
+      if(!skipRender && S.view==="postcompose") renderApp();
+    };
+    im.src = arr[0];
   } else {
     if(!skipRender && S.view==="postcompose") renderApp();
   }
