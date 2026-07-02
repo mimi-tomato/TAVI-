@@ -1,4 +1,4 @@
-const CACHE_NAME = "tavi-v1";
+const CACHE_NAME = "tavi-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -25,9 +25,30 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// ページを開くとき、まず手元の保存を試し、なければネットから取る
+// ページ本体(HTML・ナビゲーション)は、まずネットから最新を取りに行き、
+// 取れなければ手元の保存を使う(オフライン対応)。これにより、GitHub更新が
+// sw.js自体を変更しなくても、次にページを開いたときにすぐ反映される。
+// アイコンやマニフェストのようなほぼ変わらないものだけ、従来通りキャッシュ優先にする。
 self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const isNavigation = req.mode === "navigate" || (req.destination === "document");
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          // 取得に成功したら、次回オフライン用に手元の保存も更新しておく
+          const resClone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+          return res;
+        })
+        .catch(() => caches.match(req).then((cached) => cached || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  // それ以外(アイコン等の静的ファイル)は、これまで通りキャッシュ優先
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.match(req).then((cached) => cached || fetch(req))
   );
 });
