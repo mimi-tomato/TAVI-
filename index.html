@@ -569,7 +569,7 @@
   .post-who{font-weight:800;color:var(--ink);font-size:0.875rem}
   .post-ago{color:var(--ink-soft);font-size:0.75rem;margin-left:auto}
   .post-vis{font-size:0.75rem;margin-left:4px;opacity:.75}
-  .post-menu-btn{background:transparent;border:0;color:inherit;opacity:.6;font-size:1.125rem;cursor:pointer;line-height:1;padding:0 2px;margin-left:6px}
+  .post-menu-btn{background:transparent;border:0;color:inherit;opacity:1;font-size:1.125rem;cursor:pointer;line-height:1;padding:0 2px;margin-left:6px}
   .post-menu-pop{position:fixed;z-index:210;background:var(--card);border:1px solid var(--line);
     border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;min-width:140px}
   .post-menu-pop button{background:transparent;border:0;text-align:left;padding:11px 14px;font-size:0.8438rem;
@@ -765,6 +765,31 @@
   .pcmp-hint{font-size:0.75rem;color:var(--ink-soft);margin:10px 2px}
   .pcmp-hq-row{display:flex;align-items:center;justify-content:space-between;padding:6px 2px;margin-top:6px}
   .pcmp-hq-label{color:var(--ink-soft);font-size:0.875rem;font-weight:700}
+  /* 投稿への位置情報タグ付け */
+  .pcmp-loc-row{display:flex;align-items:center;justify-content:space-between;padding:6px 2px;margin-top:6px}
+  .pcmp-loc-label{display:inline-flex;align-items:center;gap:6px;font-size:0.875rem;color:var(--ink-soft);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pcmp-loc-pin-ic{width:16px;height:16px;object-fit:contain;flex:0 0 auto}
+  .pcmp-loc-sub{display:flex;align-items:center;gap:6px;padding:0 2px;font-size:0.8125rem;color:var(--ink)}
+  .loc-overlay{position:fixed;inset:0;z-index:240;background:var(--bg);display:flex;flex-direction:column}
+  .loc-bar{display:flex;align-items:center;gap:8px;padding:14px 16px 8px}
+  .loc-search-input{margin:0 16px 10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;
+    font-size:0.9375rem;font-family:inherit;color:var(--ink);background:var(--card)}
+  .loc-current-btn{display:flex;align-items:center;gap:8px;margin:0 16px 10px;padding:11px 14px;
+    border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);
+    font-size:0.875rem;font-weight:700;font-family:inherit;cursor:pointer}
+  .loc-current-btn:disabled{opacity:.5;cursor:default}
+  .loc-current-btn img{width:16px;height:16px}
+  .loc-results{flex:1;overflow-y:auto;padding:0 8px 16px}
+  .loc-status{padding:20px 16px;color:var(--ink-soft);font-size:0.875rem;text-align:center}
+  .loc-result-item{display:flex;align-items:center;gap:10px;width:100%;padding:12px;border:0;background:transparent;
+    text-align:left;cursor:pointer;border-radius:10px}
+  .loc-result-item:active{background:var(--chip)}
+  .loc-result-ic{font-size:1.0625rem;flex:0 0 auto}
+  .loc-result-name{font-size:0.875rem;color:var(--ink)}
+  /* 投稿カード内の位置情報タグ表示 */
+  .pc-location{position:absolute;left:14px;top:48px;z-index:2;color:#fff;font-size:0.75rem;font-weight:700;
+    text-shadow:0 1px 3px rgba(0,0,0,.7);cursor:pointer}
+  .tx-location{padding:0 14px 6px;color:var(--ink-soft);font-size:0.8125rem;font-weight:700;cursor:pointer}
   .gcard.s-min .min-done{max-width:none}
 
   .prof-top{text-align:center;padding:18px 0 8px}
@@ -1204,7 +1229,7 @@ const JP_PREF=[{"id":1,"name":"北海道","d":"M467.2,22.3 469.0,21.0 470.3,19.3
 const I18N = {
   ja: {
     "tab.home":"ホーム", "tab.chat":"チャット", "tab.search":"友達検索", "tab.profile":"プロフィール",
-    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.showMore":"…さらに表示", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
+    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.useCurrentLocation":"現在地を使う", "post.locNoGeo":"この端末は位置情報に対応していません", "post.locGeoDenied":"位置情報を取得できませんでした", "post.addLocation":"位置情報を追加", "post.locSearchPh":"場所を検索…", "post.locSearching":"検索中…", "post.locNoResults":"見つかりませんでした", "post.showMore":"…さらに表示", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
     "home.empty.sub":"右下の＋から新しい旅をつくろう。", "home.archived":"アーカイブ済み（{n}）",
     "home.sizeHint":"タップで表示サイズを切替", "home.newTrip":"新しい旅をつくる",
     "card.live":"進行中", "card.done":"確定済み", "card.prep":"準備中", "card.new":"新着", "card.archived":"アーカイブ",
@@ -1597,7 +1622,7 @@ const I18N = {
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
-    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.showMore":"…more", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
+    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.useCurrentLocation":"Use current location", "post.locNoGeo":"Location services are not supported on this device", "post.locGeoDenied":"Could not get your location", "post.addLocation":"Add location", "post.locSearchPh":"Search for a place…", "post.locSearching":"Searching…", "post.locNoResults":"No results found", "post.showMore":"…more", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
     "home.empty.sub":"Tap + below to start a new trip.", "home.archived":"Archived ({n})",
     "home.sizeHint":"Tap to change card size", "home.newTrip":"Start a new trip",
     "card.live":"In progress", "card.done":"Confirmed", "card.prep":"Getting ready", "card.new":"New", "card.archived":"Archived",
@@ -2167,7 +2192,7 @@ async function loadPosts(){
     // postsだけを取得(テーブル結合はスキーマキャッシュの更新待ちで不安定になりうるため使わない)
     const { data, error } = await window.SB
       .from("posts")
-      .select("id, author_id, text, visibility, image_urls, image_ratio, created_at")
+      .select("id, author_id, text, visibility, image_urls, image_ratio, location, created_at")
       .order("created_at", { ascending:false })
       .limit(100);
     if(error){ console.log("[posts] load error:", error.message); return; }
@@ -2197,6 +2222,7 @@ async function loadPosts(){
         images: Array.isArray(row.image_urls) ? row.image_urls : [],
         ratio: row.image_ratio || "1/1",
         visibility: row.visibility || "public",
+        location: row.location || null,
         likedByMe:false, likeCount:0, comments:[],
         mine: !!(me && row.author_id===me.id)
       });
@@ -2207,11 +2233,12 @@ async function loadPosts(){
 }
 
 /* 投稿をSupabaseへ保存 */
-async function savePostToSupabase(text, visibility, imageObjs, ratio){
+async function savePostToSupabase(text, visibility, imageObjs, ratio, location){
   if(!window.SB || !isSignedIn()) return false;
   const { error } = await window.SB.from("posts").insert({
     author_id: authUser().id, text, visibility: visibility || "public",
-    image_urls: imageObjs || [], image_ratio: (imageObjs && imageObjs.length) ? (ratio||"1/1") : null
+    image_urls: imageObjs || [], image_ratio: (imageObjs && imageObjs.length) ? (ratio||"1/1") : null,
+    location: location || null
   });
   if(error){ console.log("[posts] insert error:", error.message); toast(error.message); return false; }
   return true;
@@ -4131,7 +4158,7 @@ let GID = 100;
 /* 投稿一覧。Supabaseのpostsテーブルから loadPosts() で満たされる(ログイン完了時に自動取得) */
 const POSTS = [];
 // 投稿作成ドラフト(本文・画像・1枚目比率)
-let postDraft = { text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false };
+let postDraft = { text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null };
 /* 自分の画面からだけ隠した投稿のid集合(サーバーには保存しない。再読み込みで戻る) */
 const hiddenPostIds = new Set();
 /* ログイン中ユーザーのuser_id(ハンドル)。ensureProfileで取得・更新される */
@@ -4720,6 +4747,7 @@ function postCardHTML(p){
         <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
         ${postMenuBtn(p)}
       </div>
+      ${p.location?`<div class="pc-location" onclick="event.stopPropagation();openLocationOnMap(${p.location.lat},${p.location.lng})">📍 ${esc(p.location.name)}</div>`:''}
     </div>`;
     const textHTML = p.text?`<div class="post-text-block" data-pid="${p.id}">
       <div class="post-text clampable" id="ptext_${p.id}" data-clamp-full="2" data-clamp-collapsed="1">${decorateMentionsClickable(p.text)}</div>
@@ -4736,6 +4764,7 @@ function postCardHTML(p){
       <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
       ${postMenuBtn(p)}
     </div>
+    ${p.location?`<div class="tx-location" onclick="event.stopPropagation();openLocationOnMap(${p.location.lat},${p.location.lng})">📍 ${esc(p.location.name)}</div>`:''}
     ${p.text?`<div class="post-text-block" data-pid="${p.id}">
       <div class="post-text clampable" id="ptext_${p.id}" data-clamp-full="9" data-clamp-collapsed="9">${decorateMentionsClickable(p.text)}</div>
       <span class="post-text-more" id="ptextmore_${p.id}" style="display:none" onclick="event.stopPropagation();expandPostText('${p.id}')">${t("post.showMore")}</span>
@@ -5229,7 +5258,7 @@ window.__carDragConsumed=false;
 /* ④画像下部の輝度を測り、明るければ文字を黒に切り替える(グラデと併用) */
 /* ①投稿作成画面を開く */
 function openPostCompose(){
-  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false };
+  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null };
   goView("postcompose");
 }
 /* 投稿の公開範囲を切り替え(全体/フォロワー/自分のみ) */
@@ -5283,6 +5312,13 @@ function screenPostCompose(){
     ${postDraft.images.length?`<div class="pcmp-hq-row">
       <span class="pcmp-hq-label">－${t("post.hqToggle")}</span>
       <div class="switch ${postDraft.hq?'on':''}" onclick="togglePostHQ()"><i></i></div>
+    </div>`:''}
+    <div class="pcmp-loc-row">
+      <span class="pcmp-loc-label">－${t("post.addLocation")}</span>
+      <div class="switch ${postDraft.location?'on':''}" onclick="togglePostLocationSwitch()"><i></i></div>
+    </div>
+    ${postDraft.location?`<div class="pcmp-loc-sub">
+      <img src="${pinSrc()}" class="pcmp-loc-pin-ic" alt="">${esc(postDraft.location.name)}
     </div>`:''}
     <input type="file" id="postImgInput" accept="image/*" multiple style="display:none" onchange="onPostImagePick(event)">
   </div>`;
@@ -5493,6 +5529,122 @@ function togglePostHQ(){
   postDraft.hq = !postDraft.hq;
   if(S.view==="postcompose") renderApp();
 }
+/* ===== 投稿への位置情報タグ付け(OpenStreetMap Nominatimで検索、Googleマップへの外部リンクで表示) =====
+   Nominatimは無料でAPIキー不要の検索サービス。検索語をそのままクエリとして問い合わせ、
+   候補地の名前・緯度経度を受け取る。過度な連続リクエストを避けるため、入力停止後に検索する */
+let locSearchTimer = null;
+function openLocationPicker(){
+  const wrap=document.createElement("div");
+  wrap.className="loc-overlay";
+  wrap.id="locOverlay";
+  wrap.innerHTML=`
+    <div class="loc-bar">
+      <button class="room-back" onclick="closeLocationPicker()"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:17px;color:var(--ink);flex:1">${t("post.addLocation")}</h2>
+    </div>
+    <input type="text" id="locSearchInput" class="loc-search-input" placeholder="${t('post.locSearchPh')}" oninput="onLocSearchInput()" autofocus>
+    <button class="loc-current-btn" id="locCurrentBtn" onclick="useCurrentLocation()">
+      <img src="${pinSrc()}" class="pcmp-loc-pin-ic" alt="">${t("post.useCurrentLocation")}
+    </button>
+    <div id="locResults" class="loc-results"></div>`;
+  document.body.appendChild(wrap);
+  setTimeout(()=>{ const inp=$("#locSearchInput"); if(inp) inp.focus(); }, 50);
+}
+function closeLocationPicker(){
+  const wrap=document.getElementById("locOverlay"); if(wrap) wrap.remove();
+  if(locSearchTimer){ clearTimeout(locSearchTimer); locSearchTimer=null; }
+}
+function onLocSearchInput(){
+  if(locSearchTimer) clearTimeout(locSearchTimer);
+  const q=($("#locSearchInput")||{}).value||"";
+  if(!q.trim()){ const r=$("#locResults"); if(r) r.innerHTML=""; return; }
+  locSearchTimer=setTimeout(()=>runLocSearch(q.trim()), 450);
+}
+async function runLocSearch(q){
+  const resultsEl=$("#locResults");
+  if(!resultsEl) return;
+  resultsEl.innerHTML=`<div class="loc-status">${t("post.locSearching")}</div>`;
+  try{
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=0&limit=8&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, { headers: { "Accept-Language": curLang()==="ja" ? "ja" : "en" } });
+    const data = await res.json();
+    if(!Array.isArray(data) || !data.length){
+      resultsEl.innerHTML=`<div class="loc-status">${t("post.locNoResults")}</div>`;
+      return;
+    }
+    resultsEl.innerHTML = data.map((d,i)=>`
+      <button class="loc-result-item" onclick="pickLocationResult(${i})">
+        <span class="loc-result-ic">📍</span>
+        <span class="loc-result-name">${esc(d.display_name)}</span>
+      </button>`).join("");
+    window._locSearchResults = data; // 選択時に参照するため一時保持
+  }catch(e){
+    console.log("[location] search error:", e);
+    resultsEl.innerHTML=`<div class="loc-status">${t("post.locNoResults")}</div>`;
+  }
+}
+function pickLocationResult(i){
+  const d = (window._locSearchResults||[])[i];
+  if(!d) return;
+  // 表示名が長いことが多いので、先頭の分かりやすい部分だけを場所名として使う
+  const shortName = (d.display_name||"").split(",")[0].trim() || d.display_name;
+  postDraft.location = { name: shortName, lat: parseFloat(d.lat), lng: parseFloat(d.lon) };
+  closeLocationPicker();
+  if(S.view==="postcompose") renderApp();
+}
+/* ②現在地から自動で位置情報を判定する。ブラウザの位置情報機能(Geolocation API)で緯度経度を取得し、
+   Nominatimの逆ジオコーディング(座標→場所名)で人が読める名前に変換する */
+function useCurrentLocation(){
+  if(!navigator.geolocation){ toast(t("post.locNoGeo")); return; }
+  const btn = $("#locCurrentBtn");
+  if(btn) btn.disabled = true;
+  const resultsEl = $("#locResults");
+  if(resultsEl) resultsEl.innerHTML = `<div class="loc-status">${t("post.locSearching")}</div>`;
+  navigator.geolocation.getCurrentPosition(
+    async (pos)=>{
+      const { latitude, longitude } = pos.coords;
+      try{
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+        const res = await fetch(url, { headers: { "Accept-Language": curLang()==="ja" ? "ja" : "en" } });
+        const d = await res.json();
+        const shortName = (d && d.display_name) ? d.display_name.split(",")[0].trim() : null;
+        postDraft.location = { name: shortName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, lat: latitude, lng: longitude };
+        closeLocationPicker();
+        if(S.view==="postcompose") renderApp();
+      }catch(e){
+        console.log("[location] reverse geocode error:", e);
+        if(resultsEl) resultsEl.innerHTML = `<div class="loc-status">${t("post.locNoResults")}</div>`;
+        if(btn) btn.disabled = false;
+      }
+    },
+    (err)=>{
+      console.log("[location] geolocation error:", err);
+      toast(t("post.locGeoDenied"));
+      if(btn) btn.disabled = false;
+      if(resultsEl) resultsEl.innerHTML = "";
+    },
+    { enableHighAccuracy:true, timeout:10000, maximumAge:60000 }
+  );
+}
+function clearPostLocation(){
+  postDraft.location = null;
+  if(S.view==="postcompose") renderApp();
+}
+/* 位置情報スイッチの切り替え。既に設定されていればオフにしてクリア、
+   未設定ならオンにする代わりに検索画面を開く(選択が完了した時点で実際にオンになる) */
+function togglePostLocationSwitch(){
+  if(postDraft.location){
+    clearPostLocation();
+  }else{
+    openLocationPicker();
+  }
+}
+/* 投稿の位置情報タグをタップしたとき、Googleマップでその場所を開く(新しいタブ) */
+function openLocationOnMap(lat, lng){
+  if(!isFinite(lat) || !isFinite(lng)) return;
+  const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  window.open(url, "_blank", "noopener");
+}
 async function submitPost(){
   const text=(postDraft.text||"").trim();
   const hasImg=postDraft.images.length>0;
@@ -5518,10 +5670,10 @@ async function submitPost(){
       imageObjs = results;
     }catch(e){ console.log("[post] image processing error:", e); toast(t("post.uploadFailed")); return; }
   }
-  const ok = await savePostToSupabase(text.slice(0,POST_MAX_CHARS), postDraft.visibility, imageObjs, postRatioInfo(postDraft.ratio).css);
+  const ok = await savePostToSupabase(text.slice(0,POST_MAX_CHARS), postDraft.visibility, imageObjs, postRatioInfo(postDraft.ratio).css, postDraft.location);
   if(!ok) return;
   postDayCount.count++;
-  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false };
+  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null };
   toast(t("post.done"));
   await loadPosts();
   goView("post");
