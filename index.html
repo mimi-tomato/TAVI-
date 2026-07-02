@@ -6,7 +6,7 @@
 <title>TAVI。</title>
 <style>
   :root{
-    --ink:#1b2330; --ink-soft:#5a6678; --line:#e3e7ee; --bg:#faf3ed; --card:#fff;
+    --ink:#1b2330; --ink-soft:#5a6678; --line:#e3e7ee; --bg:#ffffff; --card:#fff;
     --accent:#EC6800; --accent-deep:#c45500; --warm:#f2994a; --sun:#e2574c; --sat:#EC6800;
     --ok:#2e9e6b; --hold:#c9a227; --no:#d9534f;
     --shadow:0 1px 2px rgba(27,35,48,.06),0 8px 24px rgba(27,35,48,.06); --radius:14px;
@@ -613,13 +613,17 @@
   .fimg-badge-av{width:30px;height:30px;border-radius:50%;background-size:cover;background-position:center;
     background-color:#333;display:flex;align-items:center;justify-content:center;font-size:1rem;flex:0 0 auto}
   .fimg-badge-name{color:#fff;font-size:0.8125rem;font-weight:700;white-space:nowrap}
-  .post-text{padding:0 14px 10px;font-size:0.875rem;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .post-text-block{position:relative;padding:2px 14px 6px}
+  .post-text{font-size:0.875rem;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .post-text-more{position:absolute;right:14px;bottom:6px;background:var(--card);padding-left:6px;
+    color:var(--ink-soft);font-size:0.8125rem;font-weight:700;cursor:pointer;line-height:1.6}
   .mention{color:var(--accent);font-weight:700}
   .post-text .mention,.pc-text .mention,.cmt-text .mention{font-weight:800}
   .mention.link{cursor:pointer}
   /* ③アクション行(いいね・コメント) */
-  .post-actions{display:flex;align-items:center;gap:6px;padding:4px 12px 6px}
-  .pa-btn{background:transparent;border:0;color:var(--ink);cursor:pointer;padding:4px;display:flex;align-items:center;line-height:0}
+  .post-actions{display:flex;align-items:center;gap:6px;padding:4px 12px 3px}
+  .pa-btn{background:transparent;border:0;color:var(--ink);cursor:pointer;padding:4px;display:flex;align-items:center;gap:4px;line-height:0}
+  .pa-count{font-size:0.8125rem;font-weight:700;color:var(--ink-soft);line-height:normal}
   /* ③いいねハートのポップ */
   .pa-btn svg{transition:transform .18s cubic-bezier(.2,1.4,.5,1)}
   .pa-btn:active svg{transform:scale(.8)}
@@ -658,9 +662,8 @@
     15%{transform:translate(-50%,-50%) scale(1.1);opacity:1}
     70%{transform:translate(-50%,-50%) scale(1);opacity:1}
     100%{transform:translate(-50%,-50%) scale(1.3);opacity:0}}
-  .pa-likes{margin-left:6px;font-size:0.8125rem;font-weight:700;color:var(--ink-soft)}
   /* ③コメント */
-  .post-comments{padding:0 14px 6px}
+  .post-comments{padding:0 14px 4px}
   .cmt-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:0.8438rem}
   .cmt-av{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background-size:cover;background-position:center;
     background-color:var(--chip);display:flex;align-items:center;justify-content:center;font-size:0.875rem}
@@ -668,7 +671,10 @@
   .cmt-head{display:flex;align-items:center;gap:5px}
   .cmt-who{font-weight:800;color:var(--ink);flex:0 0 auto}
   .cmt-ago{color:var(--ink-soft);font-size:0.6875rem;flex:0 0 auto}
-  .cmt-text{color:var(--ink);word-break:break-word}
+  .cmt-text{display:block;color:var(--ink);word-break:break-word}
+  .cmt-text-block{position:relative}
+  .cmt-text-more{position:absolute;right:0;bottom:0;background:var(--card);padding-left:5px;
+    color:var(--ink-soft);font-size:0.75rem;font-weight:700;cursor:pointer}
   .cmt-del{background:transparent;border:0;color:var(--ink-soft);cursor:pointer;font-size:0.8125rem;flex:0 0 auto;align-self:flex-start}
   /* コメントへのいいね: 総数のみ表示(誰がいいねしたかは非公開) */
   .cmt-like-btn{background:transparent;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;
@@ -700,23 +706,13 @@
   .pc-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;gap:5px;justify-content:center;z-index:3}
   .pc-dots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5)}
   .pc-dots span.on{background:var(--accent)}
-  /* ④画像全面オーバーレイ(アバター・本文を画像内に重ねる) */
-  .post-carousel.full .pc-overlay{position:absolute;left:0;right:0;bottom:0;top:0;display:flex;flex-direction:column;justify-content:space-between;
-    pointer-events:none;z-index:2}
-  .post-carousel.full .pc-overlay .post-ava{pointer-events:auto}
-  .post-carousel.full .pc-overlay .post-menu-btn{pointer-events:auto}
-  .post-carousel.full .pc-overlay .mention.link{pointer-events:auto}
-  .pc-top{display:flex;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,0));position:relative}
-  .pc-text{padding:14px;font-size:0.875rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;
-    background:linear-gradient(to top,rgba(0,0,0,.55),rgba(0,0,0,0))}
-  /* ④文字色: on-dark=白文字(暗背景/既定), on-light=黒文字(明背景) */
-  .post-carousel.full .on-dark .post-who,.post-carousel.full .on-dark .post-ago,.post-carousel.full .on-dark .pc-text{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
-  .post-carousel.full .on-dark .post-menu-btn{color:#fff}
-  .post-carousel.full .on-light .post-who,.post-carousel.full .on-light .post-ago,.post-carousel.full .on-light .pc-text{color:#111;text-shadow:0 1px 3px rgba(255,255,255,.5)}
-  .post-carousel.full .on-light .post-menu-btn{color:#111}
-  .post-carousel.full .on-light .pc-top{background:linear-gradient(to bottom,rgba(255,255,255,.5),rgba(255,255,255,0))}
-  .post-carousel.full .on-light .pc-text{background:linear-gradient(to top,rgba(255,255,255,.6),rgba(255,255,255,0))}
-  .post-carousel.full .pc-overlay .mention{color:var(--accent)}
+  /* ③投稿者情報(アバター・ID・時刻・メニュー)は画像の上に直接重ね、帯状の影ではなく
+     各要素の文字・アイコン自体に最小限のtext-shadow/drop-shadowだけをかける */
+  .pc-top{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:8px;padding:12px 14px;z-index:2}
+  .pc-top .post-ava{filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
+  .pc-top .post-who,.pc-top .post-ago{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+  .pc-top .post-menu-btn{color:#fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85))}
+  .pc-top .mention{color:var(--accent)}
   /* ①投稿作成画面 */
   .pcmp-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .pcmp-vis-switch{width:100%;margin-left:0;margin-bottom:4px}
@@ -741,13 +737,13 @@
   .crop-done{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:8px 20px;
     font-weight:800;font-size:0.8125rem;cursor:pointer;font-family:inherit}
   .crop-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;min-height:0}
-  .crop-frame{position:relative;height:100%;width:auto;max-width:100%;aspect-ratio:1/1;overflow:hidden;border-radius:4px;
+  .crop-frame{position:relative;overflow:hidden;border-radius:4px;
     box-shadow:0 0 0 2px #fff, 0 0 24px rgba(0,0,0,.6)}
   .crop-frame img{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
   .crop-hint{text-align:center;color:rgba(255,255,255,.6);font-size:0.75rem;padding:0 20px 20px}
   .pcmp-submit{margin-left:auto;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:8px 20px;font-weight:800;font-size:0.875rem;cursor:pointer}
   .pcmp-text{width:100%;min-height:130px;border:1px solid var(--line);border-radius:12px;padding:12px;
-    font-size:0.9375rem;font-family:inherit;color:var(--ink);background:var(--card);resize:vertical;line-height:1.6}
+    font-size:0.9375rem;font-family:inherit;color:var(--ink);background:var(--card);resize:vertical;line-height:1.6;box-sizing:border-box}
   .pcmp-count{text-align:right;font-size:0.75rem;color:var(--ink-soft);margin:4px 2px 12px}
   .pcmp-imgs{display:grid;grid-template-columns:repeat(5, 1fr);gap:6px}
   .pcmp-thumb{position:relative;width:100%;max-height:96px;min-height:0;border-radius:8px;overflow:hidden;background:var(--field);touch-action:none}
@@ -1208,7 +1204,7 @@ const JP_PREF=[{"id":1,"name":"北海道","d":"M467.2,22.3 469.0,21.0 470.3,19.3
 const I18N = {
   ja: {
     "tab.home":"ホーム", "tab.chat":"チャット", "tab.search":"友達検索", "tab.profile":"プロフィール",
-    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.likeCount":"いいね {n}件", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
+    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.showMore":"…さらに表示", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
     "home.empty.sub":"右下の＋から新しい旅をつくろう。", "home.archived":"アーカイブ済み（{n}）",
     "home.sizeHint":"タップで表示サイズを切替", "home.newTrip":"新しい旅をつくる",
     "card.live":"進行中", "card.done":"確定済み", "card.prep":"準備中", "card.new":"新着", "card.archived":"アーカイブ",
@@ -1601,7 +1597,7 @@ const I18N = {
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
-    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.likeCount":"{n} likes", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
+    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.showMore":"…more", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
     "home.empty.sub":"Tap + below to start a new trip.", "home.archived":"Archived ({n})",
     "home.sizeHint":"Tap to change card size", "home.newTrip":"Start a new trip",
     "card.live":"In progress", "card.done":"Confirmed", "card.prep":"Getting ready", "card.new":"New", "card.archived":"Archived",
@@ -4267,6 +4263,53 @@ function applyAllPostCrops(){
     else img.addEventListener("load", run, {once:true});
   });
 }
+/* ②投稿本文の行数判定。2行以内に収まるならそのまま全文表示、
+   3行以上になる場合は1行だけ見せて「…さらに表示」を出す(クリックで全文表示に切り替える) */
+/* ②投稿本文の行数判定。data-clamp-full(この行数以内なら全文表示)と
+   data-clamp-collapsed(超える場合に折りたたむ行数)を投稿の種類ごとに読み取って判定する。
+   画像投稿: full=2, collapsed=1(2行までは全文、超えたら1行+「さらに表示」)
+   文章のみ投稿: full=9, collapsed=9(9行までは全文、超えたら9行までに切り詰め+「さらに表示」) */
+/* ②本文の行数判定。投稿本文(.post-text)とコメント本文(.cmt-text)の両方に使う汎用処理。
+   data-clamp-full(この行数以内なら全文表示)とdata-clamp-collapsed(超える場合に折りたたむ行数)を、
+   要素ごとに個別に読み取って判定する。「さらに表示」ボタンは、同じ親ブロック内から探す
+   (投稿本文=.post-text-more、コメント本文=.cmt-text-more、どちらも同じ考え方で処理できる) */
+function applyAllPostTextClamps(){
+  document.querySelectorAll(".post-text.clampable, .cmt-text.clampable").forEach(el=>{
+    if(el.dataset.clampChecked) return; // 展開後や判定済みのものは再判定しない
+    el.dataset.clampChecked = "1";
+    const fullLines = parseInt(el.dataset.clampFull, 10) || 2;
+    const collapsedLines = parseInt(el.dataset.clampCollapsed, 10) || 1;
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20;
+    const fullHeight = lineHeight * fullLines + 2; // 誤差吸収の余白
+    if(el.scrollHeight > fullHeight){
+      // 指定行数に収まらない場合は、折りたたみ行数まで切り詰めて「さらに表示」を出す
+      el.style.display = "-webkit-box";
+      el.style.webkitBoxOrient = "vertical";
+      el.style.webkitLineClamp = String(collapsedLines);
+      el.style.overflow = "hidden";
+      const block = el.closest(".post-text-block, .cmt-text-block");
+      const moreEl = block ? block.querySelector(".post-text-more, .cmt-text-more") : null;
+      if(moreEl) moreEl.style.display = "";
+    }
+    // 収まる場合は何もしない(自然な高さのまま、行数分だけ表示される)
+  });
+}
+/* 投稿本文の「さらに表示」タップで全文表示に切り替える */
+function expandPostText(pid){
+  expandClampedText(document.getElementById("ptext_"+pid), document.getElementById("ptextmore_"+pid));
+}
+/* コメント本文の「さらに表示」タップで全文表示に切り替える */
+function expandCommentText(pid, cid){
+  expandClampedText(document.getElementById("ctext_"+pid+"_"+cid), document.getElementById("ctextmore_"+pid+"_"+cid));
+}
+function expandClampedText(el, moreEl){
+  if(el){
+    el.style.display = el.tagName==="SPAN" ? "inline" : "block";
+    el.style.webkitLineClamp = "";
+    el.style.overflow = "visible";
+  }
+  if(moreEl) moreEl.style.display = "none";
+}
 
 /* ===== 投稿画像の圧縮・保存(Supabase Storage: post-images) ===== */
 const IMG_STD_MAX = 1080;   // 通常(拡大用・最高画質ボタン未使用時)の長辺上限
@@ -4639,19 +4682,20 @@ function postCardHTML(p){
   const cmtCount=(p.comments||[]).length;
   const open=postCommentsOpen[p.id];
   const shownComments=open?(p.comments||[]):(p.comments||[]).slice(0,1);
-  const commentsHTML=`<div class="post-comments">
+  const commentsHTML = (cmtCount>0) ? `<div class="post-comments">
     ${shownComments.map(c=>commentHTML(p,c)).join("")}
     ${(!open&&cmtCount>1)?`<div class="cmt-more" onclick="event.stopPropagation();togglePostComments('${p.id}')">${t("post.viewAllComments",{n:cmtCount})}</div>`:''}
     ${open&&cmtCount>1?`<div class="cmt-more" onclick="event.stopPropagation();togglePostComments('${p.id}')">${t("post.hideComments")}</div>`:''}
-  </div>`;
+  </div>` : '';
   const actions=`<div class="post-actions">
     <button class="pa-btn ${p.likedByMe?'liked':''}" onclick="event.stopPropagation();togglePostLike('${p.id}')" aria-label="${t('post.like')}">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="${p.likedByMe?`url(#mh_${p.id})`:'none'}" stroke="url(#mh_${p.id})" stroke-width="2"><defs><linearGradient id="mh_${p.id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFD23F"/><stop offset="45%" stop-color="#FFA62B"/><stop offset="100%" stop-color="#EC6800"/></linearGradient></defs><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      ${p.likeCount?`<span class="pa-count">${p.likeCount}</span>`:''}
     </button>
     <button class="pa-btn" onclick="event.stopPropagation();focusCommentInput('${p.id}')" aria-label="${t('post.comment')}">
       <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6a8.5 8.5 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+      ${cmtCount?`<span class="pa-count">${cmtCount}</span>`:''}
     </button>
-    ${p.mine?`<span class="pa-likes">${t("post.likeCount",{n:p.likeCount||0})}</span>`:''}
   </div>`;
   const inputOpen=postCommentOpen[p.id];
   const commentInput=inputOpen?`<div class="post-cmt-input">
@@ -4659,7 +4703,6 @@ function postCardHTML(p){
     <button onclick="event.stopPropagation();addPostComment('${p.id}')">${t("post.send")}</button>
   </div>`:'';
   if(hasImg){
-    const lightCls=p._lightBottom?'on-light':'on-dark';
     const carousel=`<div class="post-carousel full" style="aspect-ratio:${p.ratio||'1/1'}" ondblclick="event.stopPropagation();likeBurst('${p.id}')">
       <div class="pc-track" id="pct_${p.id}">${p.images.map((img,imgI)=>{
         const isObj = typeof img!=="string";
@@ -4671,28 +4714,32 @@ function postCardHTML(p){
       ${p.images.length>1?`<button class="pc-nav prev" onclick="event.stopPropagation();carouselMove('${p.id}',-1,${p.images.length})" ondblclick="event.stopPropagation()">‹</button>
         <button class="pc-nav next" onclick="event.stopPropagation();carouselMove('${p.id}',1,${p.images.length})" ondblclick="event.stopPropagation()">›</button>
         <div class="pc-dots" id="pcd_${p.id}">${p.images.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join("")}</div>`:''}
-      <div class="pc-overlay ${lightCls}">
-        <div class="pc-top">
-          <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.who)}')`}">${esc(p.avatar||"🙂")}</span>
-          <span class="post-who">${esc(p.who||"")}</span>
-          <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
-          ${postMenuBtn(p)}
-        </div>
-        ${p.text?`<div class="pc-text">${decorateMentionsClickable(p.text)}</div>`:''}
+      <div class="pc-top">
+        <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${esc(p.avatar||"🙂")}</span>
+        <span class="post-who">@${esc(p.userId||"")}</span>
+        <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
+        ${postMenuBtn(p)}
       </div>
     </div>`;
+    const textHTML = p.text?`<div class="post-text-block" data-pid="${p.id}">
+      <div class="post-text clampable" id="ptext_${p.id}" data-clamp-full="2" data-clamp-collapsed="1">${decorateMentionsClickable(p.text)}</div>
+      <span class="post-text-more" id="ptextmore_${p.id}" style="display:none" onclick="event.stopPropagation();expandPostText('${p.id}')">${t("post.showMore")}</span>
+    </div>`:'';
     return `<div class="post-card img-post" data-pid="${p.id}">
-      ${carousel}${actions}${commentsHTML}${commentInput}
+      ${carousel}${actions}${textHTML}${commentsHTML}${commentInput}
     </div>`;
   }
   return `<div class="post-card text-post" data-pid="${p.id}">
     <div class="post-head">
-      <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.who)}')`}">${esc(p.avatar||"🙂")}</span>
-      <span class="post-who">${esc(p.who||"")}</span>
+      <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${esc(p.avatar||"🙂")}</span>
+      <span class="post-who">@${esc(p.userId||"")}</span>
       <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
       ${postMenuBtn(p)}
     </div>
-    ${p.text?`<div class="post-text">${decorateMentionsClickable(p.text)}</div>`:''}
+    ${p.text?`<div class="post-text-block" data-pid="${p.id}">
+      <div class="post-text clampable" id="ptext_${p.id}" data-clamp-full="9" data-clamp-collapsed="9">${decorateMentionsClickable(p.text)}</div>
+      <span class="post-text-more" id="ptextmore_${p.id}" style="display:none" onclick="event.stopPropagation();expandPostText('${p.id}')">${t("post.showMore")}</span>
+    </div>`:''}
     ${actions}${commentsHTML}${commentInput}
   </div>`;
 }
@@ -4809,7 +4856,10 @@ function commentHTML(p,c){
         <span class="cmt-who">${idText}</span>${ownerBadge}
         <span class="cmt-ago">${c.ago||""}</span>
       </div>
-      <span class="cmt-text">${decorateMentionsClickable(c.text||"")}</span>
+      <div class="cmt-text-block" data-pid="${p.id}" data-cid="${c.id}">
+        <div class="cmt-text clampable" id="ctext_${p.id}_${c.id}" data-clamp-full="1" data-clamp-collapsed="1">${decorateMentionsClickable(c.text||"")}</div>
+        <span class="cmt-text-more" id="ctextmore_${p.id}_${c.id}" style="display:none" onclick="event.stopPropagation();expandCommentText('${p.id}','${c.id}')">${t("post.showMore")}</span>
+      </div>
     </div>
     <button class="cmt-like-btn ${c.likedByMe?'on':''}" onclick="event.stopPropagation();toggleCommentLike('${p.id}','${c.id}')" aria-label="${t('post.like')}">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="${c.likedByMe?'#EC6800':'none'}" stroke="#EC6800" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
@@ -4841,10 +4891,11 @@ function likeBurst(id){
   // いいねボタンの見た目だけ部分更新
   if(card && !wasLiked){
     const btn=card.querySelector(".pa-btn");
-    if(btn){ btn.classList.add("liked"); const svg=btn.querySelector("svg"); if(svg)svg.setAttribute("fill",`url(#mh_${id})`);
-      btn.classList.remove("just-liked"); void btn.offsetWidth; btn.classList.add("just-liked"); spawnFloatHeart(btn); }
-    const likesEl=card.querySelector(".pa-likes");
-    if(likesEl && p.mine) likesEl.textContent=t("post.likeCount",{n:p.likeCount||0});
+    if(btn){
+      btn.classList.add("liked"); const svg=btn.querySelector("svg"); if(svg)svg.setAttribute("fill",`url(#mh_${id})`);
+      btn.classList.remove("just-liked"); void btn.offsetWidth; btn.classList.add("just-liked"); spawnFloatHeart(btn);
+      updatePaCount(btn, p.likeCount);
+    }
   }
   // 見た目は即座に反映し、裏でSupabaseへ保存。失敗したら状態を戻す
   if(!wasLiked){
@@ -4868,6 +4919,17 @@ function spawnFloatHeart(btn){
   requestAnimationFrame(()=>h.classList.add("go"));
   setTimeout(()=>{ if(h.parentNode)h.parentNode.removeChild(h); },950);
 }
+/* ①いいね・コメント数の表示更新。0件なら要素ごと消し、1件以上なら作成/更新する */
+function updatePaCount(btn, count){
+  if(!btn) return;
+  let el = btn.querySelector(".pa-count");
+  if(count>0){
+    if(!el){ el=document.createElement("span"); el.className="pa-count"; btn.appendChild(el); }
+    el.textContent = count;
+  }else if(el){
+    el.remove();
+  }
+}
 function togglePostLike(id){
   const p=POSTS.find(x=>x.id===id); if(!p)return;
   if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
@@ -4886,10 +4948,8 @@ function togglePostLike(id){
         btn.classList.remove("just-liked"); void btn.offsetWidth; btn.classList.add("just-liked");
         spawnFloatHeart(btn);
       }
+      updatePaCount(btn, p.likeCount);
     }
-    // 自分の投稿のいいね数表示を更新
-    const likesEl=card.querySelector(".pa-likes");
-    if(likesEl && p.mine) likesEl.textContent=t("post.likeCount",{n:p.likeCount||0});
   } else {
     rerenderPost();
   }
@@ -5086,7 +5146,7 @@ function focusCommentInput(id){
   rerenderPost();
   setTimeout(()=>{ const el=document.getElementById("cmtin_"+id); if(el){ el.focus(); el.scrollIntoView({block:"center",behavior:"smooth"}); } },40);
 }
-function rerenderPost(){ if(S.view==="post"){ const sc=$("#screen"); if(sc)sc.innerHTML=screenPost(); applyPostImageLuminance(); applyAllPostCrops(); } }
+function rerenderPost(){ if(S.view==="post"){ const sc=$("#screen"); if(sc)sc.innerHTML=screenPost(); applyAllPostCrops(); applyAllPostTextClamps(); } }
 function pushPostNotif(kind,p,txt){
   const verb = kind==="like" ? t("notif.likedYourPost") : t("notif.commentedYourPost",{text:(txt||"").slice(0,20)});
   NOTIFS.unshift({id:"nt_"+Date.now(), unread:true, who:"Tomato", avatar:(ME&&ME.avatar)||"🍅", text:verb, ago:t("time.justNow")});
@@ -5167,27 +5227,6 @@ window.__carDragConsumed=false;
   document.addEventListener("mouseup",()=>end());
 })();
 /* ④画像下部の輝度を測り、明るければ文字を黒に切り替える(グラデと併用) */
-function applyPostImageLuminance(){
-  POSTS.forEach(p=>{
-    if(!(p.images&&p.images.length))return;
-    const ov=document.querySelector(`.post-card[data-pid="${p.id}"] .pc-overlay`);
-    if(!ov)return;
-    const im=new Image();
-    im.onload=()=>{
-      try{
-        const cv=document.createElement("canvas"); const w=cv.width=24, h=cv.height=24;
-        const ctx=cv.getContext("2d");
-        ctx.drawImage(im,0,Math.floor(im.naturalHeight*0.5),im.naturalWidth,Math.ceil(im.naturalHeight*0.5),0,0,w,h);
-        const d=ctx.getImageData(0,0,w,h).data; let sum=0,n=0;
-        for(let i=0;i<d.length;i+=4){ sum+=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; n++; }
-        const lum=sum/n;
-        if(lum>165){ ov.classList.add("on-light"); ov.classList.remove("on-dark"); }
-        else { ov.classList.add("on-dark"); ov.classList.remove("on-light"); }
-      }catch(e){}
-    };
-    im.src=p.images[0];
-  });
-}
 /* ①投稿作成画面を開く */
 function openPostCompose(){
   postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false };
@@ -5305,17 +5344,38 @@ function openImageCropScreen(i){
       <button class="crop-done" onclick="closeCropScreen(${i})">${t("post.cropDone")}</button>
     </div>
     <div class="crop-stage" id="cropStage">
-      <div class="crop-frame" id="cropFrame" style="aspect-ratio:${ratioInfo.css}">
+      <div class="crop-frame" id="cropFrame">
         <img id="cropImg" src="${src}" alt="" draggable="false" oncontextmenu="return false" style="visibility:hidden">
       </div>
     </div>
     <div class="crop-hint">${t("post.cropGestureHint")}</div>`;
   document.body.appendChild(wrap);
   document.body.classList.add("no-scroll");
+  // 枠の実寸(px)を、選んだ比率とステージの実際の表示可能サイズから計算して直接設定する。
+  // CSSのaspect-ratio(height:100%;width:auto)だけに頼ると、divでは環境によって計算が不安定になることがあるため、
+  // 確実な結果を得るためJS側でも明示的にピクセル値を求める
+  sizeCropFrame(wrap, ratioInfo.value);
+  // 画面回転などでステージのサイズが変わったときも、枠を再計算する
+  const resizeFrame = ()=>sizeCropFrame(wrap, ratioInfo.value);
+  window.addEventListener("resize", resizeFrame);
+  window.addEventListener("orientationchange", resizeFrame);
+  wrap._frameResizeFn = resizeFrame;
   const img = wrap.querySelector("#cropImg");
   const start = ()=>setupCropGesture(wrap, initial);
   if(img.complete && img.naturalWidth) start();
   else img.addEventListener("load", start, {once:true});
+}
+/* クロップ枠の表示サイズ(px)を、ステージの実際の余白と選んだ比率から計算して設定する */
+function sizeCropFrame(wrap, ratioValue){
+  const stage = wrap.querySelector("#cropStage");
+  const frame = wrap.querySelector("#cropFrame");
+  const stageRect = stage.getBoundingClientRect();
+  const availW = stageRect.width, availH = stageRect.height;
+  // 「幅いっぱいに収めたときの高さ」と「高さいっぱいに収めたときの幅」を比べ、はみ出さない方を採用する
+  let w = availW, h = availW / ratioValue;
+  if(h > availH){ h = availH; w = availH * ratioValue; }
+  frame.style.width = Math.round(w) + "px";
+  frame.style.height = Math.round(h) + "px";
 }
 /* ===== クロップ調整(画像実寸表示+マスク方式) =====
    画像はimg要素の実寸(naturalWidth/naturalHeight)を基準に、常にフレームを完全に覆うscale以上で表示する。
@@ -5391,6 +5451,10 @@ function closeCropScreen(i){
   const wrap = document.getElementById("cropOverlay");
   if(wrap && wrap._cropResult){
     postDraft.crops[i] = wrap._cropResult();
+  }
+  if(wrap && wrap._frameResizeFn){
+    window.removeEventListener("resize", wrap._frameResizeFn);
+    window.removeEventListener("orientationchange", wrap._frameResizeFn);
   }
   if(wrap) wrap.remove();
   document.body.classList.remove("no-scroll");
@@ -7914,7 +7978,7 @@ function renderApp(){
   // タブ画面
   let html="";
   if(S.view==="home")    html=screenHome();
-  else if(S.view==="post"){ html=screenPost(); sc.innerHTML=html; applyPostImageLuminance(); applyAllPostCrops(); window.scrollTo({top:0,behavior:"auto"}); return; }
+  else if(S.view==="post"){ html=screenPost(); sc.innerHTML=html; applyAllPostCrops(); applyAllPostTextClamps(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="search")  html=screenSearch();
   else if(S.view==="chat")    html=screenChat();
   else if(S.view==="calendar"){ sc.innerHTML=screenCalendar(); drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
@@ -8003,6 +8067,7 @@ renderApp();
   let dragging=false, dragEl=null;
   let curX=0, curY=0, rafId=null;
   let trashEl=null, overTrash=false;
+  let hoverIdx=-1; // ドラッグ中、指の下にあるサムネイルのインデックス(隙間を開けるアニメーション用)
 
   function findThumb(target){ return target.closest && target.closest(".pcmp-thumb"); }
 
@@ -8010,6 +8075,17 @@ renderApp();
     rafId=null;
     if(!dragEl) return;
     dragEl.style.transform = `translate(${curX-baseLeft}px, ${curY-baseTop}px) scale(1.05)`;
+    // 指の下(掴んでいる画像の中心座標)にあるサムネイルを判定し、隙間プレビューを更新する
+    dragEl.style.display="none";
+    const under=document.elementFromPoint(curX, curY);
+    dragEl.style.display="";
+    const overThumb=findThumb(under);
+    if(overThumb && overThumb.parentElement && overThumb.parentElement.id==="pcmpImgs"){
+      const idx=parseInt(overThumb.dataset.idx,10);
+      if(!isNaN(idx)) applyGapPreview(idx);
+    }else if(!overTrash){
+      applyGapPreview(-1);
+    }
   }
   function scheduleTick(){
     if(rafId===null) rafId=requestAnimationFrame(tick);
@@ -8053,6 +8129,34 @@ renderApp();
     if(navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
   }
 
+  /* ドラッグ中、指の下にあるサムネイルが変わったとき、その間にある他のサムネイルを1枠分ずらして
+     隙間を見せる(ドロップ先が視覚的に分かるようにする)。実際の並べ替えは指を離した瞬間に1回だけ行う */
+  function applyGapPreview(newHoverIdx){
+    if(newHoverIdx===hoverIdx) return;
+    hoverIdx = newHoverIdx;
+    const container = document.getElementById("pcmpImgs");
+    if(!container) return;
+    const cellRect = dragEl.getBoundingClientRect(); // 掴んでいる画像自体は元のサイズを保持しているのでセル寸法の基準にできる
+    document.querySelectorAll(".pcmp-thumb").forEach(el=>{
+      if(el===dragEl) return;
+      const idx = parseInt(el.dataset.idx, 10);
+      if(isNaN(idx)) return;
+      let shift = 0;
+      if(hoverIdx<0){
+        shift = 0; // ドロップ先未定(枠外など)のときは全部元の位置に戻す
+      }else if(pressFrom < hoverIdx && idx > pressFrom && idx <= hoverIdx){
+        shift = -1; // 右へ移動中: 間にある画像は1つ前へ詰める
+      }else if(pressFrom > hoverIdx && idx < pressFrom && idx >= hoverIdx){
+        shift = 1; // 左へ移動中: 間にある画像は1つ後ろへ下げる
+      }
+      el.style.transition = "transform .18s ease";
+      el.style.transform = shift===0 ? "" : `translateX(${shift*(cellRect.width+6)}px)`; // 6pxはグリッドのgapに合わせる
+    });
+  }
+  function clearGapPreview(){
+    hoverIdx=-1;
+    document.querySelectorAll(".pcmp-thumb").forEach(el=>{ el.style.transition=""; el.style.transform=""; });
+  }
   function endInteraction(){
     if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
     if(rafId!==null){ cancelAnimationFrame(rafId); rafId=null; }
@@ -8063,6 +8167,7 @@ renderApp();
       dragEl.style.transform="";
     }
     hideTrash();
+    clearGapPreview();
     dragEl=null; pressThumb=null; pressFrom=-1; dragging=false; overTrash=false;
   }
 
