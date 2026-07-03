@@ -7668,22 +7668,12 @@ async function saveCalendarAvailability(dateKey, status){
     }
   }catch(e){ console.log("[calendar_events] save exception:", e); }
 }
-/* 週一括切り替え用。複数日をまとめて反映する(部分ユニークインデックスをon_conflict対象にしたupsert) */
+/* 週一括切り替え用。upsert(on_conflict)は部分ユニークインデックス(type='availability'限定)を
+   対象に解決できず400エラーになったため、1日ずつsaveCalendarAvailability(SELECT→INSERT/UPDATE)を
+   呼ぶ確実な方式に統一する。件数は最大7件程度のため直列awaitでも実用上問題ない */
 async function saveCalendarAvailabilityBulk(keys, status){
   if(!window.SB || !isSignedIn() || !keys.length) return;
-  const uid = authUser().id;
-  try{
-    if(status){
-      const rows = keys.map(k=>({ user_id: uid, date: k, type: "availability", status }));
-      const { error } = await window.SB.from("calendar_events")
-        .upsert(rows, { onConflict: "user_id,date,type" });
-      if(error) console.log("[calendar_events] bulk upsert error:", error.message);
-    }else{
-      const { error } = await window.SB.from("calendar_events")
-        .delete().eq("user_id", uid).eq("type", "availability").in("date", keys);
-      if(error) console.log("[calendar_events] bulk delete error:", error.message);
-    }
-  }catch(e){ console.log("[calendar_events] bulk exception:", e); }
+  for(const k of keys){ await saveCalendarAvailability(k, status); }
 }
 
 /* 旅行で重視する要素(プロフィールで設定)。旧スポットのデフォルト選択肢を流用 */
