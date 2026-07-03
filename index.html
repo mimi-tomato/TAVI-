@@ -741,6 +741,10 @@
     box-shadow:0 0 0 2px #fff, 0 0 24px rgba(0,0,0,.6)}
   .crop-frame img{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
   .crop-hint{text-align:center;color:rgba(255,255,255,.6);font-size:0.75rem;padding:0 20px 20px}
+  /* プロフィール写真クロップ:円形マスク(フレーム内に円い穴を空けたように見せる。実データは正方形のまま保存する) */
+  .avatar-crop-mask{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none}
+  /* #avatarCropFrameのみ対象。flexboxの自動縮小でJS指定の正方形サイズが崩れないようにする(投稿画像側の.crop-frameには影響させない) */
+  #avatarCropFrame{flex-shrink:0}
   .pcmp-submit{margin-left:auto;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:8px 20px;font-weight:800;font-size:0.875rem;cursor:pointer}
   .pcmp-text{width:100%;min-height:130px;border:1px solid var(--line);border-radius:12px;padding:12px;
     font-size:0.9375rem;font-family:inherit;color:var(--ink);background:var(--card);resize:vertical;line-height:1.6;box-sizing:border-box}
@@ -1421,6 +1425,8 @@ const I18N = {
     "x.toast.photoSet":"プロフィール画像を設定しました",
     "x.toast.idTaken":"そのIDは既に使われています",
     "x.toast.profileSaved":"プロフィールを保存しました",
+    "x.toast.uploadFailed":"写真のアップロードに失敗しました",
+    "x.toast.saveFailed":"保存に失敗しました",
     "x.toast.reqCanceled":"リクエストを取り消しました",
     "x.toast.reqDeleted":"リクエストを削除しました",
     "x.toast.noSelfReact":"自分のメッセージにはリアクションできません",
@@ -1798,6 +1804,8 @@ const I18N = {
     "x.toast.photoSet":"Profile photo updated",
     "x.toast.idTaken":"That ID is already taken",
     "x.toast.profileSaved":"Profile saved",
+    "x.toast.uploadFailed":"Failed to upload the photo",
+    "x.toast.saveFailed":"Failed to save",
     "x.toast.reqCanceled":"Request canceled",
     "x.toast.reqDeleted":"Request deleted",
     "x.toast.noSelfReact":"You can't react to your own message",
@@ -2040,11 +2048,19 @@ async function ensureProfile(){
     const { error } = await window.SB.from("profiles")
       .upsert(row, { onConflict: "id", ignoreDuplicates: true });
     if(error) console.log("[profiles] ensure error:", error.message);
-    // 現在のuser_idを取得して保持(既存ユーザーの場合、upsertでは書き込まれないため改めて取得)
+    // 現在のprofiles行を取得してMEへ反映する(既存ユーザーの場合、upsertでは書き込まれないため改めて取得。
+    // display_name/bio/birthday/avatar_urlはプロフィール編集で更新されうるため、毎回ここで最新化する)
     const { data: myProf, error: gpe } = await window.SB
-      .from("profiles").select("user_id").eq("id", u.id).maybeSingle();
+      .from("profiles").select("user_id, display_name, bio, birthday, avatar_url, avatar_url_full").eq("id", u.id).maybeSingle();
     if(gpe){ console.log("[profiles] fetch own error:", gpe.message); }
     myUserId = (myProf && myProf.user_id) || uid || "";
+    if(myProf){
+      ME.name = myProf.display_name || name || ME.name;
+      ME.bio = myProf.bio || "";
+      ME.birthday = myProf.birthday || "";
+      ME.photo = myProf.avatar_url || null;
+      ME.photoFull = myProf.avatar_url_full || null;
+    }
   }catch(e){ console.log("[profiles] ensure exception:", e); }
 }
 
@@ -4065,7 +4081,9 @@ function resetAll(){Object.assign(S,{step:0,mode:"undecided",roomName:"",limitDa
 function TAIWAN_IMG_OK(){ try{ return (typeof COUNTRY_IMG!=="undefined"&&COUNTRY_IMG["台湾"])?COUNTRY_IMG["台湾"]:null; }catch(e){ return null; } }
 
 /* 自分のプロフィール */
-let ME = { id:"tomato", name:"Tomato", avatar:"🍅", photo:null,
+/* photo=アイコン表示用(200px角)、photoFull=長押し拡大表示用(800px角)。
+   どちらもSupabase Storage(avatarsバケット)のURLで、ログイン時にensureProfile()がprofilesテーブルから読み込む */
+let ME = { id:"tomato", name:"Tomato", avatar:"🍅", photo:null, photoFull:null,
   bio:"旅と写真とラーメンが好き。", birthday:"5/12", affiliation:"〇〇大学 経営学部",
   private:false };
 
@@ -4344,6 +4362,8 @@ const IMG_HQ_MAX  = 1600;   // 最高画質ボタン使用時の長辺上限
 const IMG_MID_MAX = 800;    // 投稿一覧などの通常表示用
 const IMG_THUMB_MAX = 200;  // サムネイル(低速時・プレースホルダ用)
 const IMG_QUALITY = 0.82;   // JPEG品質(0〜1)
+const AVATAR_ICON_MAX = 200; // プロフィール写真:アイコン表示用の長辺上限
+const AVATAR_FULL_MAX = 800; // プロフィール写真:長押し拡大表示用の長辺上限(投稿画像の拡大用1080pxより控えめ。アイコン用途のため)
 
 /* 画像ファイル(またはdata URL)を、指定した長辺以内・JPEGへ圧縮してBlobを返す。
    Canvasに再描画して書き出すため、位置情報などのEXIFメタデータは自動的に失われる */
@@ -4377,16 +4397,17 @@ async function buildImageVariants(source, hq){
   return { thumb, mid, full };
 }
 
-/* Supabase Storage(post-images)へ1つのBlobをアップロードし、公開URLを返す */
-async function uploadImageBlob(blob, pathHint){
+/* Supabase Storageへ1つのBlobをアップロードし、公開URLを返す。bucket省略時はpost-images(投稿画像用) */
+async function uploadImageBlob(blob, pathHint, bucket){
+  bucket = bucket || "post-images";
   if(!window.SB || !isSignedIn()) return null;
   const uid = authUser().id;
   const path = `${uid}/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${pathHint}.jpg`;
-  const { error } = await window.SB.storage.from("post-images").upload(path, blob, {
+  const { error } = await window.SB.storage.from(bucket).upload(path, blob, {
     contentType: "image/jpeg", upsert: false
   });
   if(error){ console.log("[storage] upload error:", error.message); return null; }
-  const { data } = window.SB.storage.from("post-images").getPublicUrl(path);
+  const { data } = window.SB.storage.from(bucket).getPublicUrl(path);
   return data ? data.publicUrl : null;
 }
 
@@ -5979,13 +6000,13 @@ function screenProfile(){
       </button>
     </div>
     <div class="prof-top" style="margin-top:-6px">
-      <div class="pava ${ME.photo?'img':''}" style="${avatarStyle(ME)};margin:0 auto 10px">${avatarInner(ME)}</div>
+      <div class="pava ${ME.photo?'img':''}" style="${avatarStyle(ME)}${ME.photo?';cursor:pointer':''};margin:0 auto 10px" ${ME.photo?`onclick="openFullImage('${esc(ME.photoFull||ME.photo)}')"`:''}>${avatarInner(ME)}</div>
       <div class="pn">${esc(ME.name)} ${ME.private?lockIc():''}</div>
       <div class="pm">@${esc(ME.id)}</div>
       ${ME.bio?`<div class="prof-bio">${esc(ME.bio)}</div>`:`<div class="prof-bio" style="color:var(--ink-soft)">${t('x.prof.addBio')}</div>`}
       <div class="follow-line"><span class="fl-link" onclick="openFollowList('following')"><b>${followingCnt}</b> ${t('x.prof.following')}</span> ・ <span class="fl-link" onclick="openFollowList('followers')"><b>${followerCnt}</b> ${t('x.prof.followers')}</span></div>
       ${meta.length?`<div class="prof-meta">${meta.join("")}</div>`:""}
-      <button class="edit-prof-btn" onclick="goFwd('editprofile')"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""> ${t('x.prof.editProfile')}</button>
+      <button class="edit-prof-btn" onclick="openEditProfile()"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""> ${t('x.prof.editProfile')}</button>
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 4px 8px">
@@ -6015,12 +6036,143 @@ function screenProfile(){
     </div>
   </div>`;
 }
+/* ===== プロフィール写真:選択→クロップ(1:1・円形マスク)→保存時にまとめてアップロード =====
+   投稿画像とは異なり、クロップ確定の時点ではまだSupabaseへアップロードしない。プレビューは
+   即時反映するが、実際のアップロード・profilesテーブルへの保存は「保存」ボタン押下時(saveProfile)に
+   他の項目(名前・自己紹介・誕生日)とまとめて行う。以前は選択した瞬間に保存済みのようなtoastが
+   出るのに実際はSupabaseへ保存されておらず、再起動すると消える不具合があったための対応 */
+let avatarDraft = { rawImage:null, crop:null, croppedDataUrl:null };
 function pickProfilePhoto(){ const i=document.getElementById("profPhotoInput"); if(i)i.click(); }
 function onProfilePhoto(e){
   const f=e.target.files&&e.target.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{ ME.photo=r.result; toast(t("x.toast.photoSet")); renderApp(); };
+  r.onload=()=>{ avatarDraft.rawImage=r.result; openAvatarCropScreen(); };
   r.readAsDataURL(f);
+  e.target.value=""; // 同じファイルを連続選択してもchangeイベントが発火するようにリセット
+}
+/* プロフィール写真の位置調整画面(1:1固定・円形マスクで見せる)。
+   計算ロジック(cropMinScale/cropOffsetLimits/clampCropOffsetPx)は投稿画像のクロップと共通関数を使うが、
+   DOM要素のIDは投稿画像側(#cropImg等)と分け、postDraftには一切触れない専用の画面にする */
+function openAvatarCropScreen(){
+  const src = avatarDraft.rawImage; if(!src) return;
+  const initial = avatarDraft.crop || { scale:1, offsetXRatio:0, offsetYRatio:0 };
+  const wrap=document.createElement("div");
+  wrap.className="crop-overlay";
+  wrap.id="avatarCropOverlay";
+  wrap.innerHTML=`
+    <div class="crop-bar">
+      <span class="crop-title">${t("post.adjustCrop")}</span>
+      <button class="crop-done" onclick="closeAvatarCropScreen()">${t("post.cropDone")}</button>
+    </div>
+    <div class="crop-stage" id="avatarCropStage">
+      <div class="crop-frame" id="avatarCropFrame">
+        <img id="avatarCropImg" src="${src}" alt="" draggable="false" oncontextmenu="return false" style="visibility:hidden">
+        <div class="avatar-crop-mask"></div>
+      </div>
+    </div>
+    <div class="crop-hint">${t("post.cropGestureHint")}</div>`;
+  document.body.appendChild(wrap);
+  document.body.classList.add("no-scroll");
+  sizeAvatarCropFrame(wrap);
+  const resizeFrame = ()=>sizeAvatarCropFrame(wrap);
+  window.addEventListener("resize", resizeFrame);
+  window.addEventListener("orientationchange", resizeFrame);
+  wrap._frameResizeFn = resizeFrame;
+  const img = wrap.querySelector("#avatarCropImg");
+  const start = ()=>setupAvatarCropGesture(wrap, initial);
+  if(img.complete && img.naturalWidth) start();
+  else img.addEventListener("load", start, {once:true});
+}
+/* クロップ枠を正方形(1:1)で、ステージの内側(padding除く)に収まる最大サイズに設定する */
+function sizeAvatarCropFrame(wrap){
+  const stage = wrap.querySelector("#avatarCropStage");
+  const frame = wrap.querySelector("#avatarCropFrame");
+  const cs = getComputedStyle(stage);
+  const padX = (parseFloat(cs.paddingLeft)||0) + (parseFloat(cs.paddingRight)||0);
+  const padY = (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0);
+  const stageRect = stage.getBoundingClientRect();
+  const side = Math.min(stageRect.width - padX, stageRect.height - padY);
+  frame.style.width = Math.round(side) + "px";
+  frame.style.height = Math.round(side) + "px";
+}
+/* setupCropGesture(投稿画像用)と同じピンチ/パン操作ロジックを、アバター専用のDOM(#avatarCropImg等)に対して行う */
+function setupAvatarCropGesture(wrap, initial){
+  const img = wrap.querySelector("#avatarCropImg");
+  const frame = wrap.querySelector("#avatarCropFrame");
+  const naturalW = img.naturalWidth, naturalH = img.naturalHeight;
+  const frameRect = frame.getBoundingClientRect();
+  const minScale = cropMinScale(naturalW, naturalH, frameRect.width, frameRect.height);
+  let scale = Math.max(minScale, (initial.scale||1) * minScale);
+  let offX = (initial.offsetXRatio||0) * naturalW * scale;
+  let offY = (initial.offsetYRatio||0) * naturalH * scale;
+  let pinchStartDist=0, pinchStartScale=1;
+  let panning=false, panStartX=0, panStartY=0, panStartOffX=0, panStartOffY=0;
+  function dist(t0,t1){ return Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY); }
+  function apply(){
+    const r = frame.getBoundingClientRect();
+    const limits = cropOffsetLimits(naturalW, naturalH, r.width, r.height, scale);
+    offX = clampCropOffsetPx(offX, limits.maxX);
+    offY = clampCropOffsetPx(offY, limits.maxY);
+    img.style.visibility = "visible";
+    img.style.width = (naturalW*scale) + "px";
+    img.style.height = (naturalH*scale) + "px";
+    img.style.position = "absolute";
+    img.style.left = "50%"; img.style.top = "50%";
+    img.style.transform = `translate(calc(-50% - ${offX.toFixed(1)}px), calc(-50% - ${offY.toFixed(1)}px))`;
+  }
+  apply();
+  wrap._cropResult = ()=>({
+    scale: scale/minScale,
+    offsetXRatio: (offX/scale)/naturalW, offsetYRatio: (offY/scale)/naturalH
+  });
+  wrap.addEventListener("touchstart",(e)=>{
+    if(e.touches.length===2){
+      e.preventDefault();
+      pinchStartDist = dist(e.touches[0], e.touches[1]);
+      pinchStartScale = scale;
+      panning=false;
+    }else if(e.touches.length===1){
+      panning=true;
+      panStartX=e.touches[0].clientX; panStartY=e.touches[0].clientY;
+      panStartOffX=offX; panStartOffY=offY;
+    }
+  }, {passive:false});
+  wrap.addEventListener("touchmove",(e)=>{
+    if(e.touches.length===2 && pinchStartDist>0){
+      e.preventDefault();
+      const d = dist(e.touches[0], e.touches[1]);
+      scale = Math.min(minScale*4, Math.max(minScale, pinchStartScale * (d/pinchStartDist)));
+      apply();
+    }else if(e.touches.length===1 && panning){
+      e.preventDefault();
+      const dx = e.touches[0].clientX - panStartX, dy = e.touches[0].clientY - panStartY;
+      offX = panStartOffX - dx;
+      offY = panStartOffY - dy;
+      apply();
+    }
+  }, {passive:false});
+  wrap.addEventListener("touchend",(e)=>{
+    if(e.touches.length===0){ panning=false; pinchStartDist=0; }
+  });
+}
+/* クロップ確定。高品質な正方形切り出し結果をavatarDraftに保持し、編集画面のプレビューにも反映する
+   (実際のSupabaseへのアップロードは保存ボタン押下時=saveProfileでまとめて行う) */
+async function closeAvatarCropScreen(){
+  const wrap = document.getElementById("avatarCropOverlay");
+  if(wrap && wrap._cropResult){
+    avatarDraft.crop = wrap._cropResult();
+    try{
+      avatarDraft.croppedDataUrl = await extractCroppedImageDataUrl(avatarDraft.rawImage, 1, avatarDraft.crop);
+      ME.photo = avatarDraft.croppedDataUrl; // 保存前のプレビュー表示
+    }catch(e){ console.log("[avatar] crop extract error:", e); }
+  }
+  if(wrap && wrap._frameResizeFn){
+    window.removeEventListener("resize", wrap._frameResizeFn);
+    window.removeEventListener("orientationchange", wrap._frameResizeFn);
+  }
+  if(wrap) wrap.remove();
+  document.body.classList.remove("no-scroll");
+  renderApp();
 }
 
 /* ---- 設定画面 ---- */
@@ -6076,7 +6228,7 @@ function screenSettings(){
         <div style="flex:1"><div class="st" style="margin:0">${t("settings.private")}</div>
           <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${t("settings.private.sub")}</div></div>
         <div class="switch ${ME.private?'on':''}" onclick="togglePrivate()"><i></i></div></div>
-      <div class="item" onclick="goFwd('editprofile')"><span class="si"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""></span><span class="st">${t("settings.editProfile")}</span><span style="color:var(--ink-soft)">›</span></div>
+      <div class="item" onclick="openEditProfile()"><span class="si"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""></span><span class="st">${t("settings.editProfile")}</span><span style="color:var(--ink-soft)">›</span></div>
       ${isSignedIn()?`<div class="item" style="cursor:default"><span class="si">📧</span><div style="flex:1"><div class="st" style="margin:0">${t("settings.signedInAs")}</div><div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${esc(authUser().email||"")}</div></div></div>
       <div class="item" onclick="confirmSignOut()"><span class="si">🚪</span><span class="st" style="color:#e0245e">${t("settings.signOut")}</span></div>`:``}
     </div>
@@ -6111,10 +6263,28 @@ function togglePrivate(){
 }
 
 /* ---- プロフィール編集画面 ---- */
+/* 編集画面に入る前のME.photo/photoFullを保持しておき、保存せず離脱した場合に元へ戻す
+   (avatarDraftはクロップ確定時点でME.photoへプレビューを反映するため、保存ボタンを押さないまま
+   画面を離れると「見た目だけ変わって実データは変わっていない」というズレが起きるのを防ぐ) */
+let profileEditBackup = null;
+function openEditProfile(){
+  profileEditBackup = { photo: ME.photo, photoFull: ME.photoFull };
+  avatarDraft = { rawImage:null, crop:null, croppedDataUrl:null };
+  goFwd('editprofile');
+}
+function cancelEditProfile(){
+  if(profileEditBackup){
+    ME.photo = profileEditBackup.photo;
+    ME.photoFull = profileEditBackup.photoFull;
+    profileEditBackup = null;
+  }
+  avatarDraft = { rawImage:null, crop:null, croppedDataUrl:null };
+  goBack('profile');
+}
 function screenEditProfile(){
   return `<div class="page">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <button class="room-back" onclick="goBack('profile')"><span class="back-arrow">←</span></button>
+      <button class="room-back" onclick="cancelEditProfile()"><span class="back-arrow">←</span></button>
       <h2 style="margin:0;font-size:19px;color:var(--ink)">${t('x.edit.title')}</h2>
     </div>
     <div style="text-align:center;margin:8px 0 4px">
@@ -6232,12 +6402,51 @@ async function saveProfile(){
       if(!ok) return;
     }
   }
-  ME.name=nm.trim()||ME.name;
-  ME.bio=((document.getElementById("edBio")||{}).value||"").trim().slice(0,30);
+  const newName = nm.trim()||ME.name;
+  const newBio = ((document.getElementById("edBio")||{}).value||"").trim().slice(0,30);
   // ⑤誕生日:月・日の両方が選ばれていれば "M/D"、未選択なら空に
   const bm=(document.getElementById("edBMonth")||{}).value||"";
   const bd=(document.getElementById("edBDay")||{}).value||"";
-  ME.birthday = (bm&&bd) ? `${bm}/${bd}` : "";
+  const newBirthday = (bm&&bd) ? `${bm}/${bd}` : "";
+
+  // プロフィール写真が選び直されていれば、ここでアイコン用(200px)・拡大表示用(800px)をまとめてアップロードする
+  let newAvatarUrl=null, newAvatarUrlFull=null;
+  if(avatarDraft.croppedDataUrl){
+    const [iconBlob, fullBlob] = await Promise.all([
+      compressImageToBlob(avatarDraft.croppedDataUrl, AVATAR_ICON_MAX, IMG_QUALITY),
+      compressImageToBlob(avatarDraft.croppedDataUrl, AVATAR_FULL_MAX, IMG_QUALITY)
+    ]);
+    [newAvatarUrl, newAvatarUrlFull] = await Promise.all([
+      uploadImageBlob(iconBlob, "avatar_icon", "avatars"),
+      uploadImageBlob(fullBlob, "avatar_full", "avatars")
+    ]);
+    if(!newAvatarUrl || !newAvatarUrlFull){
+      toast(t("x.toast.uploadFailed"));
+      return;
+    }
+  }
+
+  // Supabaseのprofilesテーブルへ実際に保存する(以前はここが抜けており、再起動すると内容が消える不具合があった)
+  if(window.SB && isSignedIn()){
+    const row = { display_name: newName, bio: newBio, birthday: newBirthday };
+    if(newAvatarUrl){ row.avatar_url = newAvatarUrl; row.avatar_url_full = newAvatarUrlFull; }
+    const { error } = await window.SB.from("profiles").update(row).eq("id", authUser().id);
+    if(error){
+      console.log("[profiles] save error:", error.message);
+      toast(t("x.toast.saveFailed"));
+      return;
+    }
+  }
+
+  ME.name = newName;
+  ME.bio = newBio;
+  ME.birthday = newBirthday;
+  if(newAvatarUrl){
+    ME.photo = newAvatarUrl;
+    ME.photoFull = newAvatarUrlFull;
+    avatarDraft = { rawImage:null, crop:null, croppedDataUrl:null };
+  }
+  profileEditBackup = null; // 保存が確定したので、離脱時のロールバック対象から外す
   toast(t("x.toast.profileSaved"));
   goView("profile");
 }
@@ -6405,7 +6614,7 @@ function screenUserProfile(){
       <button class="room-back" onclick="goBackFromProfile()"><span class="back-arrow">←</span></button>
     </div>
     <div class="other-cover"></div>
-    <div class="other-ava" style="${avatarStyle(p)}">${avatarInner(p)}</div>
+    <div class="other-ava" style="${avatarStyle(p)}${p.photo?';cursor:pointer':''}" ${p.photo?`onclick="openFullImage('${esc(p.photoFull||p.photo)}')"`:''}>${avatarInner(p)}</div>
     <div style="text-align:center;margin-top:8px">
       <div class="pn">${esc(p.name)} ${p.private?`<img src="${dark?UI_IMG.lock_white:UI_IMG.lock_black}" class="lock-ic" alt="${t('x.alt.private')}">`:''} ${p.online?`<span style="font-size:11px;color:var(--ok)">${t('x.oprof.online')}</span>`:''}</div>
       <div class="pm">@${esc(p.id)}</div>
