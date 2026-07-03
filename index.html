@@ -1276,6 +1276,7 @@ const I18N = {
     "pin.add":"ピン留め", "pin.remove":"ピン留めを解除",
     "settings.title":"設定", "settings.account":"アカウント", "settings.private":"非公開アカウント",
     "settings.private.sub":"オンにすると、フォローは承認制になります", "settings.editProfile":"プロフィールを編集",
+    "settings.blockedUsers":"ブロック済みアカウント", "settings.unblock":"解除", "settings.blockedUsersEmpty":"ブロック中のアカウントはありません",
     "settings.display":"表示・通知", "settings.dark":"ダークモード", "settings.accent":"アクセントカラー",
     "settings.notif":"通知を受け取る", "settings.openNotif":"お知らせを見る",
     "settings.lang":"言語 / Language", "settings.fontSize":"文字サイズ", "settings.fontSize.sm":"小", "settings.fontSize.md":"標準", "settings.fontSize.lg":"大", "settings.other":"その他", "settings.about":"このアプリについて",
@@ -1486,6 +1487,12 @@ const I18N = {
     "x.notif.all":"すべてのお知らせ",
     "x.notif.followReqBanner":"フォローリクエストが{n}件あります",
     "x.notif.followReqEmpty":"フォローリクエストはありません",
+    "x.notif.msg.like":"{name}さんがあなたの投稿にいいねしました",
+    "x.notif.msg.comment":"{name}さんがあなたの投稿にコメントしました",
+    "x.notif.msg.mention":"{name}さんがあなたをメンションしました",
+    "x.notif.msg.follow":"{name}さんにフォローされました",
+    "x.notif.msg.followRequest":"{name}さんからフォローリクエストが届いています",
+    "x.notif.msg.followAccept":"{name}さんとフォローが成立しました",
     "x.common.showMore":"もっと見る",
     "x.notif.title":"お知らせ",
     "x.prof.addBio":"自己紹介を追加しましょう",
@@ -1516,13 +1523,15 @@ const I18N = {
     "x.common.save":"保存する",
     "x.oprof.reqSent":"リクエスト送信済み（取消）",
     "x.oprof.follow":"＋ フォローする",
-    "x.oprof.incomingReq":"あなたにフォローリクエストが届いています",
+    "x.oprof.incomingReq":"フォローリクエストが届いています",
     "x.oprof.private":"このアカウントは非公開です",
-    "x.oprof.privateNote":"フォローが承認されると、旅行で重視することなどが見られます。",
+    "x.oprof.privateNote":"フォローが承認されることで、投稿などが見られます。",
     "x.oprof.factors":"🧭 旅行で重視すること",
     "x.oprof.blocked":"このユーザーをブロック中です",
     "x.oprof.blockedNote":"解除すると、また検索やフォローができるようになります。",
+    "x.oprof.notFound":"ユーザーが見つかりません",
     "x.oprof.unblock":"ブロックを解除する",
+    "x.oprof.unblockFromSettings":"ブロックの解除は「設定 → ブロック済みアカウント」から行えます。",
     "x.oprof.more":"⋯ その他の操作",
     "x.oprof.removeFollower":"フォロワーから削除",
     "x.oprof.online":"● オンライン",
@@ -1680,6 +1689,7 @@ const I18N = {
     "pin.add":"Pin", "pin.remove":"Unpin",
     "settings.title":"Settings", "settings.account":"Account", "settings.private":"Private account",
     "settings.private.sub":"When on, new followers need your approval", "settings.editProfile":"Edit profile",
+    "settings.blockedUsers":"Blocked accounts", "settings.unblock":"Unblock", "settings.blockedUsersEmpty":"No blocked accounts",
     "settings.display":"Display & notifications", "settings.dark":"Dark mode", "settings.accent":"Accent color",
     "settings.notif":"Get notifications", "settings.openNotif":"View notifications",
     "settings.lang":"Language / 言語", "settings.fontSize":"Text size", "settings.fontSize.sm":"Small", "settings.fontSize.md":"Default", "settings.fontSize.lg":"Large", "settings.other":"More", "settings.about":"About this app",
@@ -1874,6 +1884,12 @@ const I18N = {
     "x.notif.all":"All notifications",
     "x.notif.followReqBanner":"{n} follow request(s)",
     "x.notif.followReqEmpty":"No follow requests",
+    "x.notif.msg.like":"{name} liked your post",
+    "x.notif.msg.comment":"{name} commented on your post",
+    "x.notif.msg.mention":"{name} mentioned you",
+    "x.notif.msg.follow":"{name} started following you",
+    "x.notif.msg.followRequest":"{name} sent you a follow request",
+    "x.notif.msg.followAccept":"{name} accepted your follow request",
     "x.common.showMore":"Show more",
     "x.notif.title":"Notifications",
     "x.prof.addBio":"Add a bio",
@@ -1904,13 +1920,15 @@ const I18N = {
     "x.common.save":"Save",
     "x.oprof.reqSent":"Requested (tap to cancel)",
     "x.oprof.follow":"＋ Follow",
-    "x.oprof.incomingReq":"Sent you a follow request",
+    "x.oprof.incomingReq":"Follow request received",
     "x.oprof.private":"This account is private",
-    "x.oprof.privateNote":"Once your follow is approved, you can see what they value when traveling and more.",
+    "x.oprof.privateNote":"Once your follow is approved, you can see their posts and more.",
     "x.oprof.factors":"🧭 What they value when traveling",
     "x.oprof.blocked":"You're blocking this user",
     "x.oprof.blockedNote":"Unblock to search and follow them again.",
+    "x.oprof.notFound":"User not found",
     "x.oprof.unblock":"Unblock",
+    "x.oprof.unblockFromSettings":"You can unblock from Settings → Blocked accounts.",
     "x.oprof.more":"⋯ More actions",
     "x.oprof.removeFollower":"Remove follower",
     "x.oprof.online":"● Online",
@@ -2276,6 +2294,44 @@ function upsertPeopleFromProfile(prof){
   return merged;
 }
 /* ログイン完了時に呼ぶ。自分に関係するfollows行を全部取得し、相手のprofilesも合わせてPEOPLEへ反映する */
+/* ===== ブロック機能の共通基盤 =====
+   ブロックは特定の画面・機能に閉じた実装にせず、アプリ全体が参照する共通ルールとして扱う。
+   新しい機能(投稿・コメント・DM・検索・通知等)を追加する際は、必ずisBlockedRelation()を通すこと。
+   BLOCKED_BY_ME: 自分がブロックした相手のuuid集合。BLOCKING_ME: 自分をブロックしている相手のuuid集合
+   (blocksのSELECTポリシーは双方向参照可能なため、後者も取得できる。ただし「ブロックされている」ことは
+   UI上には一切明示しない─Instagramに近い仕様として、検索や表示から結果的に消えるだけにとどめる) */
+let BLOCKED_BY_ME = new Set();
+let BLOCKING_ME = new Set();
+/* ブロック済みアカウント一覧画面の表示専用データ。PEOPLE配列とは意図的に分離しており、
+   アイコン・表示名・ユーザー名のみを持つ(プロフィールへの遷移は行わない設計のため詳細情報を持たせない) */
+let BLOCKED_LIST = [];
+async function loadBlocks(){
+  if(!window.SB || !isSignedIn()) return;
+  const uid = authUser().id;
+  try{
+    const { data, error } = await window.SB.from("blocks")
+      .select("blocker_id, blocked_id")
+      .or(`blocker_id.eq.${uid},blocked_id.eq.${uid}`);
+    if(error){ console.log("[blocks] load error:", error.message); return; }
+    BLOCKED_BY_ME = new Set((data||[]).filter(r=>r.blocker_id===uid).map(r=>r.blocked_id));
+    BLOCKING_ME = new Set((data||[]).filter(r=>r.blocked_id===uid).map(r=>r.blocker_id));
+    const blockedIds = [...BLOCKED_BY_ME];
+    if(blockedIds.length){
+      const { data: profs, error: pe } = await window.SB.from("profiles")
+        .select("id, user_id, display_name, avatar_url").in("id", blockedIds);
+      if(pe){ console.log("[profiles] load blocked error:", pe.message); }
+      BLOCKED_LIST = (profs||[]).map(p=>({ id:p.id, userId:p.user_id||"", name:p.display_name||t("post.noName"), photo:p.avatar_url||null }));
+    }else{
+      BLOCKED_LIST = [];
+    }
+  }catch(e){ console.log("[blocks] load exception:", e); }
+}
+/* ブロック関係にあるか(方向を問わない)。全機能はこの関数を経由して判定する共通ルール */
+function isBlockedRelation(userId){ return BLOCKED_BY_ME.has(userId) || BLOCKING_ME.has(userId); }
+/* 自分が能動的にブロックしたか(相手にブロックされているだけの場合はfalse)。
+   自分のブロック管理画面(解除ボタン等)の表示分岐にのみ使う */
+function hasBlockedUser(userId){ return BLOCKED_BY_ME.has(userId); }
+
 async function loadFollowState(){
   if(!window.SB || !isSignedIn()) return;
   const uid = authUser().id;
@@ -2319,7 +2375,9 @@ async function loadPosts(){
     if(error){ console.log("[posts] load error:", error.message); return; }
     const me = authUser();
     // RLSで既に絞られている想定だが、多層防御として自分以外のprivate投稿は表示側でも除外
-    const rows = (data||[]).filter(r=> r.visibility!=="private" || (me && r.author_id===me.id));
+    // あわせて、ブロック関係にある相手の投稿も除外する(共通ルール。isBlockedRelationを経由)
+    const rows = (data||[]).filter(r=> r.visibility!=="private" || (me && r.author_id===me.id))
+      .filter(r=> !isBlockedRelation(r.author_id));
     // 投稿者idの一覧でprofilesをまとめて取得し、アプリ側で組み合わせる
     const authorIds = [...new Set(rows.map(r=>r.author_id))];
     let profMap = {};
@@ -2572,8 +2630,9 @@ async function authResetPassword(email){
 
 /* 認証状態が変わったときにモジュールから呼ばれる */
 window.onAuthChanged = async function(user){
-  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、投稿一覧・空き予定・フォロー状態を取得
-  if(user){ await ensureProfile(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); }
+  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、各種データを取得する。
+  // loadBlocksは投稿フィルタで使うため、loadPostsより先に呼ぶ
+  if(user){ await ensureProfile(); await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); }
   if(typeof renderApp === "function") renderApp();
 };
 
@@ -4211,19 +4270,37 @@ function canDM(p){ return p && !p.blocked && (isMutual(p) || (p.iFollow && !p.pr
 function friendsList(){ return PEOPLE.filter(p=>isMutual(p)); }
 
 /* ブロック:相互のフォローを外し、検索・DM・既読を不能に(履歴は残す) */
-function blockUser(id){
+async function blockUser(id){
   const p=findPerson(id); if(!p)return;
   if(!confirm(`${p.name}をブロックしますか？\n・お互いのフォローが外れます\n・検索やメッセージができなくなります\n・これまでのチャット履歴は残ります`))return;
   p.blocked=true; p.iFollow=false; p.followsMe=false; p.reqIncoming=false; p.reqOutgoing=false;
-  if(p.friends){ const i=p.friends.indexOf(ME.id); if(i>=0)p.friends.splice(i,1); }
+  BLOCKED_BY_ME.add(id);
   toast(`${p.name}をブロックしました`);
   renderApp();
+  if(window.SB && isSignedIn()){
+    const uid = authUser().id;
+    const { error } = await window.SB.from("blocks").insert({ blocker_id: uid, blocked_id: id });
+    if(error) console.log("[blocks] insert error:", error.message);
+    // フォロー関係(双方向)も解除する
+    const { error: fe } = await window.SB.from("follows")
+      .delete().or(`and(follower_id.eq.${uid},followee_id.eq.${id}),and(follower_id.eq.${id},followee_id.eq.${uid})`);
+    if(fe) console.log("[follows] delete on block error:", fe.message);
+  }
 }
-function unblockUser(id){
-  const p=findPerson(id); if(!p)return;
-  p.blocked=false;
+async function unblockUser(id){
+  // PEOPLE配列(プロフィール画面経由)、またはBLOCKED_LIST(ブロック済みアカウント一覧経由)のどちらかから名前を引く
+  const p = findPerson(id) || BLOCKED_LIST.find(x=>x.id===id);
+  if(!p) return;
+  if(p.blocked!==undefined) p.blocked=false;
+  BLOCKED_BY_ME.delete(id);
+  BLOCKED_LIST = BLOCKED_LIST.filter(x=>x.id!==id);
   toast(`${p.name}のブロックを解除しました`);
   renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("blocks")
+      .delete().eq("blocker_id", authUser().id).eq("blocked_id", id);
+    if(error) console.log("[blocks] delete error:", error.message);
+  }
 }
 /* フォロワーから削除:相手の自分へのフォローだけ外す */
 async function removeFollower(id){
@@ -4543,19 +4620,13 @@ const GROUPS = [
 let activeGid = null;       // 開いている旅グループ
 let activeChatId = null;    // 開いている個別チャット(友達ID)
 
-let NOTIFS = [
-  {ic:"🗳️", a:"「3年ゼミ 卒業旅行」でスポット投票が始まりました", b:"あなたの回答を待っています", when:"5分前", ts:Date.now()-5*60000, unread:true, target:{type:"room", gid:"g1"}},
-  {ic:"💬", a:"あおいさんからメッセージが届きました", b:"伏見稲荷は外せない！", when:"3分前", ts:Date.now()-3*60000, unread:true, target:{type:"dm", fid:"aoi"}},
-  {ic:"⏰", a:"「サークル夏合宿」の行き先投票は明日締切です", b:"まだ回答していません", when:"1時間前", ts:Date.now()-3600000, unread:true, target:{type:"room", gid:"g2"}},
-  {ic:"✅", a:"「家族旅行2026」の日程候補がしぼられました", b:"確認してください", when:"昨日", ts:Date.now()-26*3600000, unread:false, target:{type:"room", gid:"g3"}},
-  {ic:"🤝", a:"そうたさんと相互フォローになりました", b:"新しい友だちです", when:"3日前", ts:Date.now()-3*86400000, unread:false, target:{type:"profile", pid:"sora"}},
-  {ic:"🏅", a:"バッジ「世界へ一歩」を獲得しました", b:"プロフィールのバッジを確認しよう", when:"10日前", ts:Date.now()-10*86400000, unread:false, target:{type:"badges"}},
-  {ic:"📅", a:"「サークル夏合宿」が作成されました", b:"メンバーを招待しましょう", when:"20日前", ts:Date.now()-20*86400000, unread:false, target:{type:"room", gid:"g2"}},
-  {ic:"🎉", a:"TAVI。へようこそ", b:"まずはプロフィールを整えましょう", when:"45日前", ts:Date.now()-45*86400000, unread:false, target:{type:"editprofile"}},
-];
+/* 通知一覧。Supabaseのnotificationsテーブルから loadNotifications() で満たされる(ログイン完了時に自動取得)。
+   グループ(旅行計画)関連の通知は GROUPS 自体がまだSupabase化されていないため今回のスコープ外 */
+let NOTIFS = [];
 function pushNotif(n){ if(n.ts==null)n.ts=Date.now(); NOTIFS.unshift(n); }
 function openNotif(i){
-  const n=NOTIFS[i]; if(!n)return; n.unread=false;
+  const n=NOTIFS[i]; if(!n)return;
+  if(n.unread){ n.unread=false; markNotificationRead(n.id); }
   const t=n.target||{};
   if(t.type==="dm"){ const p=findPerson(t.fid); if(p&&canDM(p)) openDM(t.fid); else { profileBackView='notify'; if(p)openProfile(t.fid); else goView("chat"); } }
   else if(t.type==="room"){ const g=GROUPS.find(x=>x.id===t.gid&&x.joined); if(g) openRoom(t.gid); else { toast(t("x.toast.groupNotFound")); goView("home"); } }
@@ -4564,6 +4635,7 @@ function openNotif(i){
   else if(t.type==="profile"){ if(t.pid){ profileBackView='notify'; openProfile(t.pid); } else { goView("editprofile"); } }
   else if(t.type==="request"){ profileBackView='notify'; openProfile(t.pid); }
   else if(t.type==="badges"){ goView("profile"); }
+  else if(t.type==="post"){ goTab("post"); }
   else { goView("home"); }
 }
 
@@ -5020,7 +5092,7 @@ function likeBurst(id){
   const wasLiked=p.likedByMe;
   if(!wasLiked){
     if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
-    p.likedByMe=true; p.likeCount=(p.likeCount||0)+1; if(!p.mine) pushPostNotif("like",p);
+    p.likedByMe=true; p.likeCount=(p.likeCount||0)+1; if(!p.mine) createNotification(p.authorId, "like", {postId:p.id});
   }
   const card=document.querySelector(`.post-card[data-pid="${id}"]`);
   const wrap=card?card.querySelector(".post-carousel.full"):null;
@@ -5077,7 +5149,7 @@ function togglePostLike(id){
   if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
   const wasLiked=p.likedByMe;
   if(wasLiked){ p.likedByMe=false; p.likeCount=Math.max(0,(p.likeCount||0)-1); }
-  else { p.likedByMe=true; p.likeCount=(p.likeCount||0)+1; if(!p.mine) pushPostNotif("like",p); }
+  else { p.likedByMe=true; p.likeCount=(p.likeCount||0)+1; if(!p.mine) createNotification(p.authorId, "like", {postId:p.id}); }
   // 押した投稿のボタンだけ部分更新(全体再描画しないのでアニメが他に波及しない)
   const card=document.querySelector(`.post-card[data-pid="${id}"]`);
   if(card){
@@ -5113,7 +5185,7 @@ async function addPostComment(id){
   const ok = await saveCommentToSupabase(id, txt.slice(0,300));
   if(!ok) return;
   postCommentDraft[id]="";
-  if(!p.mine) pushPostNotif("comment",p,txt);
+  if(!p.mine) createNotification(p.authorId, "comment", {postId:p.id});
   await loadCommentsFor([id]);
   rerenderPost();
 }
@@ -5289,10 +5361,6 @@ function focusCommentInput(id){
   setTimeout(()=>{ const el=document.getElementById("cmtin_"+id); if(el){ el.focus(); el.scrollIntoView({block:"center",behavior:"smooth"}); } },40);
 }
 function rerenderPost(){ if(S.view==="post"){ const sc=$("#screen"); if(sc)sc.innerHTML=screenPost(); applyAllPostCrops(); applyAllPostTextClamps(); } }
-function pushPostNotif(kind,p,txt){
-  const verb = kind==="like" ? t("notif.likedYourPost") : t("notif.commentedYourPost",{text:(txt||"").slice(0,20)});
-  NOTIFS.unshift({id:"nt_"+Date.now(), unread:true, who:"Tomato", avatar:(ME&&ME.avatar)||"🍅", text:verb, ago:t("time.justNow")});
-}
 /* ①カルーセルのスライド移動 */
 const carouselPos={};
 function carouselMove(id,dir,len){
@@ -6433,6 +6501,7 @@ function screenSettings(){
           <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${t("settings.private.sub")}</div></div>
         <div class="switch ${ME.private?'on':''}" onclick="togglePrivate()"><i></i></div></div>
       <div class="item" onclick="openEditProfile()"><span class="si"><img src="${dark?TAB_ICONS.pen_white:TAB_ICONS.pen_black}" class="pen-ic" alt=""></span><span class="st">${t("settings.editProfile")}</span><span style="color:var(--ink-soft)">›</span></div>
+      <div class="item" onclick="goFwd('blockedusers')"><span class="si">🚫</span><span class="st">${t("settings.blockedUsers")}</span><span style="color:var(--ink-soft)">›</span></div>
       ${isSignedIn()?`<div class="item" style="cursor:default"><span class="si">📧</span><div style="flex:1"><div class="st" style="margin:0">${t("settings.signedInAs")}</div><div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${esc(authUser().email||"")}</div></div></div>
       <div class="item" onclick="confirmSignOut()"><span class="si">🚪</span><span class="st" style="color:#e0245e">${t("settings.signOut")}</span></div>`:``}
     </div>
@@ -6456,6 +6525,23 @@ function screenSettings(){
     <div class="setting">
       <div class="item" onclick="goFwd('about')"><span class="si">ⓘ</span><span class="st">${t("settings.about")}</span><span style="color:var(--ink-soft)">›</span></div>
     </div>
+  </div>`;
+}
+/* ブロック済みアカウント一覧。ブロック解除はここからのみ行う。
+   アイコン・表示名・ユーザー名・解除ボタンのみを表示し、プロフィール画面へは遷移させない
+   (ブロックした側が取得できる情報を最小限にとどめる設計上の制約) */
+function screenBlockedUsers(){
+  const body = BLOCKED_LIST.length ? BLOCKED_LIST.map(p=>`<div class="listcard">
+      <div class="lic" style="${p.photo?`background-image:url('${esc(p.photo)}');background-size:cover;background-position:center;font-size:0`:''}">${p.photo?'':'🙂'}</div>
+      <div class="lt"><div class="a">${esc(p.name)}</div><div class="b">@${esc(p.userId)}</div></div>
+      <button class="mini-btn danger" onclick="unblockUser('${p.id}')">${t('settings.unblock')}</button>
+    </div>`).join("") : `<p class="muted" style="text-align:center;margin-top:24px">${t('settings.blockedUsersEmpty')}</p>`;
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="goBack('settings')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t("settings.blockedUsers")}</h2>
+    </div>
+    ${body}
   </div>`;
 }
 let notifEnabled=true;
@@ -6701,7 +6787,7 @@ function screenFollowList(){
     const sub = isMutual(p) ? "フォロー中・相互" : (p.iFollow ? "フォロー中" : (p.followsMe?"フォロワー":""));
     return `<div class="friend-li" onclick="profileBackView='followlist';openProfile('${p.id}')" style="cursor:pointer">
       <div class="av" style="${avatarStyle(p)};background:${p.photo?'transparent':'var(--chip)'}">${avatarInner(p)}</div>
-      <div class="fi"><div class="nm">${esc(p.name)}${p.private?' '+lockIc():''}</div><div class="id">@${esc(p.id)}</div></div>
+      <div class="fi"><div class="nm">${esc(p.name)}${p.private?' '+lockIc():''}</div><div class="id">@${esc(p.userId)}</div></div>
       ${sub?`<span class="fl-sub">${sub}</span>`:''}
     </div>`;
   }).join("") : `<p class="muted" style="text-align:center;margin-top:30px">${kind==="following"?"まだ誰もフォローしていません。":"まだフォロワーがいません。"}</p>`;
@@ -6719,10 +6805,23 @@ function screenFollowList(){
   </div>`;
 }
 function goBackFromProfile(){ goBack(profileBackView); }
+/* プロフィールが見つからない場合の一般的な表示。ブロック関係にある場合もこれを使い、
+   ブロックされている事実は一切明示しない(Instagramに近い仕様) */
+function screenUserNotFound(){
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0">
+      <button class="room-back" onclick="goBackFromProfile()"><span class="back-arrow">←</span></button>
+    </div>
+    <div class="feed-empty" style="margin-top:60px"><div class="ic">🔍</div>${t('x.oprof.notFound')}</div>
+  </div>`;
+}
 
 function screenUserProfile(){
   const dark=document.documentElement.getAttribute("data-theme")==="dark";
-  const p=findPerson(profileViewId); if(!p) return screenChat();
+  // 相手が自分をブロックしているだけ(自分は相手をブロックしていない)場合は、ブロックされたことを
+  // 一切明示せず「見つかりません」と同じ表示にする(Instagramに近い仕様。共通ルールとしてisBlockedRelationを使う)
+  if(isBlockedRelation(profileViewId) && !hasBlockedUser(profileViewId)) return screenUserNotFound();
+  const p=findPerson(profileViewId); if(!p) return screenUserNotFound();
   const mutual=mutualFriends(p);
   // 相手のフォロー数・フォロワー数(試作データ。p.following/p.followers があれば優先、なければ friends 配列から擬似算出)
   const pFollowing = (p.following!=null)? p.following : ((p.friends||[]).length + (p.iFollow?1:0));
@@ -6786,8 +6885,8 @@ function screenUserProfile(){
        ${(p.prefs&&p.prefs.length)?`<h3 class="sub" style="margin:18px 4px 8px">${t('x.oprof.factors')}</h3>
        <div class="spot-grid">${p.prefs.map(f=>`<div class="spot sel" style="cursor:default">${esc(itemLabel(f))}</div>`).join("")}</div>`:""}`;
 
-  // ブロック中はメニューのみ表示する制限ビュー
-  if(p.blocked){
+  // ブロック中はメニューのみ表示する制限ビュー(PEOPLE配列のローカルフラグではなく、グローバルなブロック状態を正とする)
+  if(hasBlockedUser(profileViewId)){
     return `<div class="page">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:0">
         <button class="room-back" onclick="goBackFromProfile()"><span class="back-arrow">←</span></button>
@@ -6796,14 +6895,14 @@ function screenUserProfile(){
       <div class="other-ava" style="${avatarStyle(p)}">${avatarInner(p)}</div>
       <div style="text-align:center;margin-top:8px">
         <div class="pn">${esc(p.name)}</div>
-        <div class="pm">@${esc(p.id)}</div>
+        <div class="pm">@${esc(p.userId)}</div>
       </div>
       <div class="mutual" style="flex-direction:column;text-align:center;padding:26px 16px;margin-top:14px">
         <div style="font-size:34px">🚫</div>
         <div class="mt" style="text-align:center;margin-top:6px">${t('x.oprof.blocked')}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px">${t('x.oprof.blockedNote')}</div>
       </div>
-      <button class="btn ghost" style="width:100%;margin-top:14px" onclick="unblockUser('${p.id}')">${t('x.oprof.unblock')}</button>
+      <p class="hint center" style="margin-top:14px">${t('x.oprof.unblockFromSettings')}</p>
     </div>`;
   }
 
@@ -6828,7 +6927,7 @@ function screenUserProfile(){
     <div class="other-ava" style="${avatarStyle(p)}${p.photo?';cursor:pointer':''}" ${p.photo?`onclick="openFullImage('${esc(p.photoFull||p.photo)}')"`:''}>${avatarInner(p)}</div>
     <div style="text-align:center;margin-top:8px">
       <div class="pn">${esc(p.name)} ${p.private?`<img src="${dark?UI_IMG.lock_white:UI_IMG.lock_black}" class="lock-ic" alt="${t('x.alt.private')}">`:''} ${p.online?`<span style="font-size:11px;color:var(--ok)">${t('x.oprof.online')}</span>`:''}</div>
-      <div class="pm">@${esc(p.id)}</div>
+      <div class="pm">@${esc(p.userId)}</div>
       ${p.followsMe&&!isMutual(p)?`<div style="font-size:11.5px;color:var(--accent);font-weight:700;margin-top:4px">${t('x.oprof.followsYou')}</div>`:""}
       ${!locked&&p.bio?`<div class="prof-bio">${esc(p.bio)}</div>`:""}
       ${!locked&&meta.length?`<div class="prof-meta">${meta.join("")}</div>`:""}
@@ -6849,6 +6948,7 @@ async function follow(id){ const p=findPerson(id); if(!p)return;
     const { error } = await window.SB.from("follows")
       .insert({ follower_id: authUser().id, followee_id: id, status: "accepted" });
     if(error) console.log("[follows] follow error:", error.message);
+    else createNotification(id, "follow");
   }
 }
 async function unfollow(id){ const p=findPerson(id); if(!p)return;
@@ -6867,6 +6967,7 @@ async function sendRequest(id){ const p=findPerson(id); if(!p)return;
     const { error } = await window.SB.from("follows")
       .insert({ follower_id: authUser().id, followee_id: id, status: "pending" });
     if(error) console.log("[follows] sendRequest error:", error.message);
+    else createNotification(id, "follow_request");
   }
 }
 async function cancelRequest(id){ const p=findPerson(id); if(!p)return;
@@ -6880,12 +6981,12 @@ async function cancelRequest(id){ const p=findPerson(id); if(!p)return;
 /* 相手から来たリクエストを承認/拒否 */
 async function acceptRequest(id){ const p=findPerson(id); if(!p)return;
   p.reqIncoming=false; p.followsMe=true;
-  pushNotif({ic:"🤝", a:`${p.name}さんと相互フォローになりました`, b:"新しい友だちです", when:"たった今", unread:true, target:{type:"profile", pid:id}});
   toast(`${p.name}のリクエストを承認しました`); checkBadgeAwards(); renderApp();
   if(window.SB && isSignedIn()){
     const { error } = await window.SB.from("follows")
       .update({ status: "accepted" }).eq("follower_id", id).eq("followee_id", authUser().id);
     if(error) console.log("[follows] acceptRequest error:", error.message);
+    else createNotification(id, "follow_accept");
   }
 }
 async function declineRequest(id){ const p=findPerson(id); if(!p)return;
@@ -7568,7 +7669,7 @@ function personRow(p){
   else btn=`<button class="mini-btn solid" onclick="event.stopPropagation();follow('${p.id}')">${t('x.add.follow')}</button>`;
   return `<div class="friend-li" onclick="profileBackView='addfriend';openProfile('${p.id}')" style="cursor:pointer">
     <div class="av" style="${avatarStyle(p)}">${avatarInner(p)}${p.online?'<span class="on-dot"></span>':''}</div>
-    <div class="fi"><div class="nm">${esc(p.name)}${p.private?' '+lockIc():''}</div><div class="id">@${esc(p.id)}</div></div>
+    <div class="fi"><div class="nm">${esc(p.name)}${p.private?' '+lockIc():''}</div><div class="id">@${esc(p.userId)}</div></div>
     ${btn}
   </div>`;
 }
@@ -7576,7 +7677,7 @@ function suggestRow(p,mutualCnt){
   let btn;
   if(p.private) btn=`<button class="mini-btn solid" onclick="event.stopPropagation();sendRequest('${p.id}')">${lockIcOnAccent()} 申請</button>`;
   else btn=`<button class="mini-btn solid" onclick="event.stopPropagation();follow('${p.id}')">${t('x.add.follow')}</button>`;
-  const sub = mutualCnt>0 ? `共通の友だち ${mutualCnt}人` : `@${esc(p.id)}`;
+  const sub = mutualCnt>0 ? `共通の友だち ${mutualCnt}人` : `@${esc(p.userId)}`;
   return `<div class="friend-li" onclick="profileBackView='addfriend';openProfile('${p.id}')" style="cursor:pointer">
     <div class="av" style="${avatarStyle(p)}">${avatarInner(p)}${p.online?'<span class="on-dot"></span>':''}</div>
     <div class="fi"><div class="nm">${esc(p.name)}${p.private?' '+lockIc():''}</div><div class="id">${sub}</div></div>
@@ -7641,7 +7742,7 @@ async function searchById(){
     if(error){ console.log("[profiles] search error:", error.message); searchResult=null; }
     else{
       const hit = (data||[])[0];
-      searchResult = (hit && hit.id!==authUser().id) ? upsertPeopleFromProfile(hit) : null;
+      searchResult = (hit && hit.id!==authUser().id && !isBlockedRelation(hit.id)) ? upsertPeopleFromProfile(hit) : null;
     }
   }catch(e){ console.log("[profiles] search exception:", e); searchResult=null; }
   const box=document.getElementById("searchResult");
@@ -7735,6 +7836,68 @@ let MYCAL = {};                // { "2026-07-15":"full", ... }
 let myCalYear=2026, myCalMonth=7;
 
 /* Supabaseのcalendar_events(type='availability')からMYCALを読み込む。ログイン完了時に呼ぶ */
+/* 通知作成(いいね・コメント・フォロー等のアクション発生時に呼ぶ共通ヘルパー)。
+   自分自身へのアクション(自分の投稿に自分でいいね等)は通知を作らない */
+async function createNotification(recipientId, type, extra){
+  if(!window.SB || !isSignedIn() || !recipientId) return;
+  if(recipientId === authUser().id) return;
+  if(isBlockedRelation(recipientId)) return; // ブロック関係にある相手には通知しない(共通ルール)
+  try{
+    const row = { recipient_id: recipientId, actor_id: authUser().id, type };
+    if(extra && extra.postId) row.post_id = extra.postId;
+    if(extra && extra.commentId) row.comment_id = extra.commentId;
+    const { error } = await window.SB.from("notifications").insert(row);
+    if(error) console.log("[notifications] insert error:", error.message);
+  }catch(e){ console.log("[notifications] insert exception:", e); }
+}
+const NOTIF_ICON = { like:"❤️", comment:"💬", mention:"📣", follow:"🤝", follow_request:"🔒", follow_accept:"✅" };
+/* ログイン完了時に自分宛ての通知を取得し、NOTIFSを作り直す。actorのprofilesも合わせてPEOPLEへ反映する */
+async function loadNotifications(){
+  if(!window.SB || !isSignedIn()) return;
+  try{
+    const { data, error } = await window.SB.from("notifications")
+      .select("id, actor_id, type, post_id, comment_id, read, created_at")
+      .eq("recipient_id", authUser().id)
+      .order("created_at", { ascending:false }).limit(100);
+    if(error){ console.log("[notifications] load error:", error.message); return; }
+    const rows = data||[];
+    const actorIds = [...new Set(rows.map(r=>r.actor_id))];
+    let profMap = {};
+    if(actorIds.length){
+      const { data: profs, error: pe } = await window.SB.from("profiles")
+        .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private").in("id", actorIds);
+      if(pe) console.log("[profiles] load actors error:", pe.message);
+      (profs||[]).forEach(p=>{ profMap[p.id]=p; upsertPeopleFromProfile(p); });
+    }
+    NOTIFS = rows.map(r=>{
+      const actor = profMap[r.actor_id] || {};
+      const name = actor.display_name || t("post.noName");
+      let aText = "";
+      if(r.type==="like") aText = t("x.notif.msg.like",{name});
+      else if(r.type==="comment") aText = t("x.notif.msg.comment",{name});
+      else if(r.type==="mention") aText = t("x.notif.msg.mention",{name});
+      else if(r.type==="follow") aText = t("x.notif.msg.follow",{name});
+      else if(r.type==="follow_request") aText = t("x.notif.msg.followRequest",{name});
+      else if(r.type==="follow_accept") aText = t("x.notif.msg.followAccept",{name});
+      const isProfileType = (r.type==="follow"||r.type==="follow_request"||r.type==="follow_accept");
+      return {
+        id: r.id, ic: NOTIF_ICON[r.type]||"🔔", a: aText, b: "",
+        when: computeAgo(new Date(r.created_at).getTime()), ts: new Date(r.created_at).getTime(),
+        unread: !r.read,
+        target: isProfileType ? {type:"profile", pid:r.actor_id} : {type:"post"}
+      };
+    });
+    console.log("[notifications] loaded", NOTIFS.length, "items");
+  }catch(e){ console.log("[notifications] load exception:", e); }
+}
+async function markNotificationRead(id){
+  if(!window.SB || !isSignedIn() || !id) return;
+  try{
+    const { error } = await window.SB.from("notifications").update({ read:true }).eq("id", id);
+    if(error) console.log("[notifications] markRead error:", error.message);
+  }catch(e){ console.log("[notifications] markRead exception:", e); }
+}
+
 async function loadCalendarAvailability(){
   if(!window.SB || !isSignedIn()){ console.log("[calendar_events] load skipped (not signed in or SB missing)"); return; }
   try{
@@ -8656,6 +8819,7 @@ function renderApp(){
   else if(S.view==="report"){ sc.innerHTML=screenReport(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
+  else if(S.view==="blockedusers") html=screenBlockedUsers();
   else if(S.view==="notify")  html=screenNotify();
   else if(S.view==="followrequests") html=screenFollowRequests();
   else if(S.view==="profile"){ sc.innerHTML=screenProfile(); if(profileTab==="calendar") drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
