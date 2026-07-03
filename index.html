@@ -805,8 +805,9 @@
   .gcard.s-min .min-done{max-width:none}
 
   .prof-top{text-align:center;padding:18px 0 8px}
-  .prof-top .pava{width:84px;height:84px;border-radius:50%;background:var(--accent);
-    display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.125rem;font-weight:800;margin:0 auto 10px}
+  .pava{width:84px;height:84px;border-radius:50%;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.125rem;font-weight:800}
+  .prof-top .pava{margin:0 auto 10px}
   .prof-top .pn{font-size:1.25rem;font-weight:800;color:var(--ink)} .prof-top .pm{font-size:0.8125rem;color:var(--ink-soft);margin-top:3px}
   .lock-ic{height:17px;width:auto;vertical-align:-2px}
   .lock-ic.lock-btn{height:15px;vertical-align:-3px;margin-right:1px}
@@ -1516,6 +1517,11 @@ const I18N = {
     "x.notif.msg.follow":"{name}さんにフォローされました",
     "x.notif.msg.followRequest":"{name}さんからフォローリクエストが届いています",
     "x.notif.msg.followAccept":"{name}さんとフォローが成立しました",
+    "x.notif.msg.message":"{name}さんからメッセージが届きました",
+    "x.chat.sendFailed":"メッセージの送信に失敗しました",
+    "x.chat.read":"既読",
+    "settings.chatManage":"チャットを管理", "settings.readReceipts":"既読の表示",
+    "settings.readReceipts.sub":"オフにすると、自分の既読を相手に表示しません",
     "x.common.showMore":"もっと見る",
     "x.notif.title":"お知らせ",
     "x.prof.addBio":"自己紹介を追加しましょう",
@@ -1935,6 +1941,11 @@ const I18N = {
     "x.notif.msg.follow":"{name} started following you",
     "x.notif.msg.followRequest":"{name} sent you a follow request",
     "x.notif.msg.followAccept":"{name} accepted your follow request",
+    "x.notif.msg.message":"{name} sent you a message",
+    "x.chat.sendFailed":"Failed to send message",
+    "x.chat.read":"Read",
+    "settings.chatManage":"Manage chat", "settings.readReceipts":"Read receipts",
+    "settings.readReceipts.sub":"When off, others won't see when you've read their messages",
     "x.common.showMore":"Show more",
     "x.notif.title":"Notifications",
     "x.prof.addBio":"Add a bio",
@@ -2167,7 +2178,7 @@ async function ensureProfile(){
     // 現在のprofiles行を取得してMEへ反映する(既存ユーザーの場合、upsertでは書き込まれないため改めて取得。
     // display_name/bio/birthday/avatar_urlはプロフィール編集で更新されうるため、毎回ここで最新化する)
     const { data: myProf, error: gpe } = await window.SB
-      .from("profiles").select("user_id, display_name, bio, birthday, avatar_url, avatar_url_full, is_private, is_deactivated").eq("id", u.id).maybeSingle();
+      .from("profiles").select("user_id, display_name, bio, birthday, avatar_url, avatar_url_full, is_private, is_deactivated, show_read_receipts").eq("id", u.id).maybeSingle();
     if(gpe){ console.log("[profiles] fetch own error:", gpe.message); }
     myUserId = (myProf && myProf.user_id) || uid || "";
     if(myProf){
@@ -2178,6 +2189,7 @@ async function ensureProfile(){
       ME.photoFull = myProf.avatar_url_full || null;
       ME.private = !!myProf.is_private;
       ME.deactivated = !!myProf.is_deactivated;
+      ME.showReadReceipts = myProf.show_read_receipts!==false;
     }
   }catch(e){ console.log("[profiles] ensure exception:", e); }
 }
@@ -4306,7 +4318,7 @@ function TAIWAN_IMG_OK(){ try{ return (typeof COUNTRY_IMG!=="undefined"&&COUNTRY
    どちらもSupabase Storage(avatarsバケット)のURLで、ログイン時にensureProfile()がprofilesテーブルから読み込む */
 let ME = { id:"tomato", name:"Tomato", avatar:"🍅", photo:null, photoFull:null,
   bio:"旅と写真とラーメンが好き。", birthday:"5/12", affiliation:"〇〇大学 経営学部",
-  private:false };
+  private:false, showReadReceipts:true };
 
 /* 全ユーザー(自分以外)。Supabaseのprofiles/followsから取得した実データのローカルキャッシュとして運用する。
    検索でヒットした相手、フォロー関係にある相手が動的に積まれていく。
@@ -6593,6 +6605,7 @@ function screenSettings(){
       <div class="item"><span class="si">🔔</span><span class="st">${t("settings.notif")}</span>
         <div class="switch ${notifEnabled?'on':''}" onclick="toggleNotif()"><i></i></div></div>
       <div class="item" onclick="openNotify()"><span class="si">📩</span><span class="st">${t("settings.openNotif")}</span><span style="color:var(--ink-soft)">›</span></div>
+      <div class="item" onclick="goFwd('chatManage')"><span class="si">💬</span><span class="st">${t("settings.chatManage")}</span><span style="color:var(--ink-soft)">›</span></div>
     </div>
 
     <h3 class="sub" style="margin:16px 4px 8px">${t("settings.other")}</h3>
@@ -6605,6 +6618,29 @@ function screenSettings(){
       <div class="item" onclick="openAccountManage()"><span class="si">👤</span><span class="st" style="color:#e0245e">${t("settings.accountManage")}</span><span style="color:var(--ink-soft)">›</span></div>
     </div>
   </div>`;
+}
+/* チャット管理画面。今回は「既読の表示」設定のみ */
+function screenChatManage(){
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="goBack('settings')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t("settings.chatManage")}</h2>
+    </div>
+    <div class="setting">
+      <div class="item"><span class="si">👁️</span>
+        <div style="flex:1"><div class="st" style="margin:0">${t("settings.readReceipts")}</div>
+          <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${t("settings.readReceipts.sub")}</div></div>
+        <div class="switch ${ME.showReadReceipts?'on':''}" onclick="toggleReadReceipts()"><i></i></div></div>
+    </div>
+  </div>`;
+}
+async function toggleReadReceipts(){
+  ME.showReadReceipts = !ME.showReadReceipts;
+  renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("profiles").update({ show_read_receipts: ME.showReadReceipts }).eq("id", authUser().id);
+    if(error) console.log("[profiles] show_read_receipts save error:", error.message);
+  }
 }
 /* ===== アカウント管理(利用解除/削除) =====
    4段階の共通フロー: ①影響表示 → ②パスワード再確認 → ③最終確認 → ④実行
@@ -7259,48 +7295,226 @@ function startNewTrip(){
 /* =====================================================================
    擬似チャット(ローカル完結) ― 個別DM / グループチャット
    ===================================================================== */
-const DM = {
-  "aoi":[
-    {who:"あおい", t:"今度の旅、楽しみだね！", mine:false, ago:"3分前", unread:true},
-  ],
-  "yuki":[
-    {who:"ゆうき", t:"スポット投票したよ〜", mine:false, ago:"昨日"},
-    {who:"Tomato", t:"ありがとう！あとで見るね", mine:true, ago:"昨日"},
-  ],
-};
+/* DM(個人チャット)。実データはSupabaseのconversations/conversation_members/messagesから取得する。
+   DM[otherId] = そのユーザーとの会話のメッセージ配列(表示用にローカルへ保持)
+   DM_CONV_ID[otherId] = 会話(conversation)のuuid。一度解決したら使い回す */
+let DM = {};
+let DM_CONV_ID = {};
+/* 開いているDM相手の既読状態。相手のlast_read_atと、相手のshow_read_receipts設定を both 見て、
+   既読マークを出すかどうかを判定する(自分の設定は自分のメッセージの既読開示可否、相手の設定は相手のメッセージの話ではなく
+   相手が「自分の既読を見せる/見せない」を選んでいるかどうかを指す) */
+let dmOtherReadState = { lastReadAt:null, showReceipts:true };
+let dmRealtimeChannel = null;
 let chatTab="dm";          // チャット一覧の表示(dm=個別 / group=グループ)
 let pendingTyping=false;
 
-/* 定型の自動返信(相手から来たように見せる) */
+/* 定型の自動返信(グループチャットのモック専用。DMでは使わない) */
 const AUTO_REPLIES = [
   "いいね！賛成〜","了解！","たしかにそれありかも","あとで投票しておくね",
   "おお、楽しみ！","どこでもいいよ〜","それで決まり！","ナイス提案👍","えーいいなあ","予算的にも大丈夫そう",
 ];
 function autoReply(){ return AUTO_REPLIES[Math.floor(Math.random()*AUTO_REPLIES.length)]; }
 
-function openDM(fid){ const p=findPerson(fid);
-  if(p&&!canDM(p)){ toast(p.private?"相互フォローでないとメッセージできません":"フォローするとメッセージできます"); profileBackView='chat'; openProfile(fid); return; }
-  commitRoom(); activeChatId=fid; (DM[fid]||[]).forEach(m=>m.unread=false); S.view="dm"; renderApp(); }
+/* 既に存在する2人のDM会話(kind='dm')を探す。無ければnullを返す(新規作成はgetOrCreateDMConversationで行う) */
+async function findExistingDMConversation(otherId){
+  if(DM_CONV_ID[otherId]) return DM_CONV_ID[otherId];
+  if(!window.SB || !isSignedIn()) return null;
+  try{
+    const uid = authUser().id;
+    const { data: myConvs, error: e1 } = await window.SB.from("conversation_members").select("conversation_id").eq("user_id", uid);
+    if(e1){ console.log("[chat] find my conv error:", e1.message); return null; }
+    const convIds = (myConvs||[]).map(r=>r.conversation_id);
+    if(!convIds.length) return null;
+    const { data: otherMemberships, error: e2 } = await window.SB.from("conversation_members")
+      .select("conversation_id").eq("user_id", otherId).in("conversation_id", convIds);
+    if(e2){ console.log("[chat] find shared conv error:", e2.message); return null; }
+    if(!otherMemberships || !otherMemberships.length) return null;
+    const candIds = otherMemberships.map(r=>r.conversation_id);
+    const { data: dmConvs, error: e3 } = await window.SB.from("conversations").select("id").eq("kind","dm").in("id", candIds);
+    if(e3){ console.log("[chat] find dm conv error:", e3.message); return null; }
+    if(dmConvs && dmConvs.length){ DM_CONV_ID[otherId]=dmConvs[0].id; return dmConvs[0].id; }
+    return null;
+  }catch(e){ console.log("[chat] find conv exception:", e); return null; }
+}
+/* 既存の会話があればそれを使い、無ければ新規に2人だけの会話を作る */
+async function getOrCreateDMConversation(otherId){
+  const existing = await findExistingDMConversation(otherId);
+  if(existing) return existing;
+  if(!window.SB || !isSignedIn()) return null;
+  try{
+    const uid = authUser().id;
+    const { data: newConv, error: e1 } = await window.SB.from("conversations").insert({ kind:"dm" }).select("id").maybeSingle();
+    if(e1 || !newConv){ console.log("[chat] create conv error:", e1&&e1.message); return null; }
+    const { error: e2 } = await window.SB.from("conversation_members").insert([
+      { conversation_id:newConv.id, user_id:uid },
+      { conversation_id:newConv.id, user_id:otherId }
+    ]);
+    if(e2){ console.log("[chat] add members error:", e2.message); }
+    DM_CONV_ID[otherId] = newConv.id;
+    return newConv.id;
+  }catch(e){ console.log("[chat] create conv exception:", e); return null; }
+}
+/* メッセージ一覧を取得し、画面を開いてメッセージが表示された時点で自分のlast_read_atを1回だけ更新する。
+   ブロック関係の有無に関わらず常に更新する(履歴の整合性を保つため。表示制御は既読の"表示"設定側で行う) */
+async function loadDMMessages(otherId){
+  DM[otherId] = [];
+  if(!window.SB || !isSignedIn()) return;
+  const convId = await getOrCreateDMConversation(otherId);
+  if(!convId) return;
+  try{
+    const { data, error } = await window.SB.from("messages")
+      .select("id, sender_id, text, image_url, image_url_full, created_at").eq("conversation_id", convId)
+      .order("created_at", { ascending:true });
+    if(error){ console.log("[chat] load messages error:", error.message); return; }
+    const uid = authUser().id;
+    DM[otherId] = (data||[]).map(m=>({
+      id:m.id, mine:m.sender_id===uid, t:m.text||"", img:m.image_url||null, imgFull:m.image_url_full||null,
+      ts:new Date(m.created_at).getTime(), ago:computeAgo(new Date(m.created_at).getTime())
+    }));
+    const rows = data||[];
+    const latest = rows.length ? rows[rows.length-1].created_at : new Date().toISOString();
+    const { error: ue } = await window.SB.from("conversation_members")
+      .update({ last_read_at: latest }).eq("conversation_id", convId).eq("user_id", uid);
+    if(ue) console.log("[chat] update last_read_at error:", ue.message);
+    await loadDMOtherReadState(convId, otherId);
+  }catch(e){ console.log("[chat] load messages exception:", e); }
+}
+/* 相手の既読状態(last_read_at)と、相手が既読表示をONにしているかを取得する */
+async function loadDMOtherReadState(convId, otherId){
+  dmOtherReadState = { lastReadAt:null, showReceipts:true };
+  if(!window.SB || !isSignedIn()) return;
+  try{
+    const { data: memberRow } = await window.SB.from("conversation_members")
+      .select("last_read_at").eq("conversation_id", convId).eq("user_id", otherId).maybeSingle();
+    const { data: profRow } = await window.SB.from("profiles")
+      .select("show_read_receipts").eq("id", otherId).maybeSingle();
+    dmOtherReadState = {
+      lastReadAt: memberRow ? memberRow.last_read_at : null,
+      showReceipts: profRow ? (profRow.show_read_receipts!==false) : true
+    };
+  }catch(e){ console.log("[chat] load other read state exception:", e); }
+}
+/* リアルタイム購読。相手からの新着メッセージをその場で反映する */
+function subscribeDMRealtime(convId, otherId){
+  if(!window.SB) return;
+  if(dmRealtimeChannel){ try{ window.SB.removeChannel(dmRealtimeChannel); }catch(e){} dmRealtimeChannel=null; }
+  dmRealtimeChannel = window.SB.channel(`dm-${convId}`)
+    .on("postgres_changes", { event:"INSERT", schema:"public", table:"messages", filter:`conversation_id=eq.${convId}` }, (payload)=>{
+      const row = payload.new; const uid = authUser().id;
+      if(row.sender_id===uid) return; // 自分の送信はローカルで追加済みのため二重に足さない
+      DM[otherId] = DM[otherId]||[];
+      DM[otherId].push({ id:row.id, mine:false, t:row.text||"", img:row.image_url||null, imgFull:row.image_url_full||null, ts:new Date(row.created_at).getTime(), ago:nowTime() });
+      if(S.view==="dm" && activeChatId===otherId) renderDMBody(true);
+    })
+    .subscribe();
+}
+/* DM一覧画面用。自分が参加する全DM会話について、相手のプロフィールと最新メッセージ1件を取得する。
+   会話数が多くなった場合はRPC関数化する余地があるが、個人開発の現段階ではこの実装で足りる */
+let chatSummariesLoaded = false;
+async function loadDMSummaries(){
+  if(!window.SB || !isSignedIn()) return;
+  const uid = authUser().id;
+  try{
+    const { data: myMemberships, error: e1 } = await window.SB.from("conversation_members").select("conversation_id").eq("user_id", uid);
+    if(e1){ console.log("[chat] load summaries error:", e1.message); return; }
+    const convIds = (myMemberships||[]).map(r=>r.conversation_id);
+    if(!convIds.length) return;
+    const { data: dmConvs, error: e2 } = await window.SB.from("conversations").select("id").eq("kind","dm").in("id", convIds);
+    if(e2 || !dmConvs || !dmConvs.length) return;
+    const dmConvIds = dmConvs.map(c=>c.id);
+    const { data: allMembers, error: e3 } = await window.SB.from("conversation_members").select("conversation_id, user_id").in("conversation_id", dmConvIds);
+    if(e3){ console.log("[chat] load members error:", e3.message); return; }
+    const convToOther = {};
+    (allMembers||[]).forEach(m=>{ if(m.user_id!==uid) convToOther[m.conversation_id]=m.user_id; });
+    const otherIds = [...new Set(Object.values(convToOther))];
+    if(otherIds.length){
+      const { data: profs } = await window.SB.from("profiles")
+        .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private, is_deactivated").in("id", otherIds);
+      (profs||[]).forEach(p=>upsertPeopleFromProfile(p));
+    }
+    for(const convId of dmConvIds){
+      const otherId = convToOther[convId];
+      if(!otherId) continue;
+      DM_CONV_ID[otherId] = convId;
+      const { data: lastMsgs } = await window.SB.from("messages")
+        .select("id, sender_id, text, image_url, created_at")
+        .eq("conversation_id", convId).order("created_at",{ascending:false}).limit(1);
+      if(lastMsgs && lastMsgs.length && !(DM[otherId] && DM[otherId].length)){
+        const m = lastMsgs[0];
+        DM[otherId] = [{ id:m.id, mine:m.sender_id===uid, t:m.text||"", img:m.image_url||null,
+          ts:new Date(m.created_at).getTime(), ago:computeAgo(new Date(m.created_at).getTime()) }];
+      }
+    }
+  }catch(e){ console.log("[chat] load summaries exception:", e); }
+}
+
+async function openDM(fid){
+  const p=findPerson(fid);
+  const existingConv = await findExistingDMConversation(fid);
+  // 新規に会話を始める場合のみcanDM(フォロー関係)を要求する。既存の会話(ブロック中含む)は履歴閲覧のため常に開ける
+  if(p && !canDM(p) && !existingConv){
+    toast(p.private?"相互フォローでないとメッセージできません":"フォローするとメッセージできます");
+    profileBackView='chat'; openProfile(fid); return;
+  }
+  commitRoom(); activeChatId=fid; S.view="dm"; renderApp();
+  await loadDMMessages(fid);
+  renderDMBody(true);
+  const convId = existingConv || DM_CONV_ID[fid] || await getOrCreateDMConversation(fid);
+  if(convId) subscribeDMRealtime(convId, fid);
+}
 function openGroupChat(gid){ commitRoom(); activeGid=gid; const g=GROUPS.find(x=>x.id===gid); if(g)(g.chat||[]).forEach(c=>c.unread=false); S.view="groupchat"; renderApp(); }
 
 function chatScrollBottom(){ const b=document.getElementById("chatBody"); if(b) b.scrollTop=b.scrollHeight; }
 
-function sendDM(){
+async function sendDM(){
   const ta=document.getElementById("chatInput"); if(!ta)return;
   let txt=ta.value.trim(); if(!txt)return;
   if(txt.length>CHAT_MAX){ txt=txt.slice(0,CHAT_MAX); toast(t("chat.tooLong",{n:CHAT_MAX})); }
-  const fid=activeChatId; const f=findPerson(fid);
-  if(!DM[fid]) DM[fid]=[];
-  DM[fid].push({id:newMsgId(), ts:Date.now(), who:"Tomato", t:txt, mine:true, ago:nowTime(), replyTo:replyDraft?{...replyDraft}:null});
-  clearReplyDraft();
+  const fid=activeChatId;
+  // ブロック関係にある場合は、原因を伝えず一般的な送信失敗として扱う(共通ルール:isBlockedRelation経由)
+  if(isBlockedRelation(fid)){ toast(t("x.chat.sendFailed")); return; }
+  if(!window.SB || !isSignedIn()){ toast(t("x.chat.sendFailed")); return; }
+  const convId = await getOrCreateDMConversation(fid);
+  if(!convId){ toast(t("x.chat.sendFailed")); return; }
   ta.value=""; ta.style.height="42px";
-  renderDMBody(true);
-  pendingTyping=true; renderDMBody(true);
-  setTimeout(()=>{
-    pendingTyping=false;
-    DM[fid].push({id:newMsgId(), ts:Date.now(), who:f?f.name:"相手", t:autoReply(), mine:false, ago:nowTime()});
-    if(S.view==="dm"&&activeChatId===fid) renderDMBody(true);
-  }, 900+Math.random()*700);
+  try{
+    const uid = authUser().id;
+    const { data, error } = await window.SB.from("messages")
+      .insert({ conversation_id:convId, sender_id:uid, text:txt }).select("id, created_at").maybeSingle();
+    if(error){ console.log("[chat] send error:", error.message); toast(t("x.chat.sendFailed")); return; }
+    DM[fid] = DM[fid]||[];
+    DM[fid].push({ id:data.id, mine:true, t:txt, img:null, ts:new Date(data.created_at).getTime(), ago:nowTime() });
+    renderDMBody(true);
+    createNotification(fid, "message", {});
+  }catch(e){ console.log("[chat] send exception:", e); toast(t("x.chat.sendFailed")); }
+}
+/* DMへの写真送信。post-imagesと同じ圧縮方式(mid相当)でchat-imagesバケットへアップロードする */
+async function sendDMPhoto(dataUrl){
+  const fid=activeChatId;
+  if(isBlockedRelation(fid)){ toast(t("x.chat.sendFailed")); return; }
+  if(!window.SB || !isSignedIn()){ toast(t("x.chat.sendFailed")); return; }
+  const convId = await getOrCreateDMConversation(fid);
+  if(!convId){ toast(t("x.chat.sendFailed")); return; }
+  try{
+    // バブル内の通常表示は軽量な800px、タップ拡大時のみ1600px(投稿画像の最高画質と同じ基準)を読み込む
+    const [midBlob, fullBlob] = await Promise.all([
+      compressImageToBlob(dataUrl, IMG_MID_MAX, IMG_QUALITY),
+      compressImageToBlob(dataUrl, IMG_HQ_MAX, IMG_QUALITY)
+    ]);
+    const [midUrl, fullUrl] = await Promise.all([
+      uploadImageBlob(midBlob, "chat_mid", "chat-images"),
+      uploadImageBlob(fullBlob, "chat_full", "chat-images")
+    ]);
+    if(!midUrl || !fullUrl){ toast(t("x.chat.sendFailed")); return; }
+    const uid = authUser().id;
+    const { data, error } = await window.SB.from("messages")
+      .insert({ conversation_id:convId, sender_id:uid, text:"", image_url:midUrl, image_url_full:fullUrl }).select("id, created_at").maybeSingle();
+    if(error){ console.log("[chat] send photo error:", error.message); toast(t("x.chat.sendFailed")); return; }
+    DM[fid] = DM[fid]||[];
+    DM[fid].push({ id:data.id, mine:true, t:"", img:midUrl, imgFull:fullUrl, ts:new Date(data.created_at).getTime(), ago:nowTime() });
+    renderDMBody(true);
+    createNotification(fid, "message", {});
+  }catch(e){ console.log("[chat] send photo exception:", e); toast(t("x.chat.sendFailed")); }
 }
 function sendGroupChat(){
   const ta=document.getElementById("chatInput"); if(!ta)return;
@@ -7346,17 +7560,15 @@ function toggleMsgExpand(id){
 }
 function msgHTML(m){
   ensureMsgId(m);
-  // 送信取り消し済み:中央に淡色表示で残す
-  if(m.unsent){
-    return `<div class="sys-msg unsent"><span>${m.mine?"メッセージの送信を取り消しました":(esc(m.who||"相手")+"がメッセージの送信を取り消しました")}</span></div>`;
-  }
-  const press=`oncontextmenu="event.preventDefault();openMsgMenu('dm','${m.id}',event.clientX,event.clientY)" ontouchstart="msgTouchStart(event,'dm','${m.id}')" ontouchend="msgTouchEnd()" ontouchmove="msgTouchEnd()"`;
-  const reply = m.replyTo ? `<div class="reply-quote ${m.mine?'me':'them'}"><span class="rq-name">${esc(m.replyTo.who||"")}</span><span class="rq-text">${m.replyTo.img?"写真":esc((m.replyTo.t||"")).slice(0,50)}</span></div>` : "";
   const body = m.img
-    ? `<div class="bub ${m.mine?'me':'them'} img-bub" ${press}><img src="${m.img}" alt="${t('x.alt.photo')}"></div>`
-    : `<div class="bub ${m.mine?'me':'them'}" ${press}>${msgText(m)}</div>`;
-  if(m.mine) return `<div class="bub-wrap me">${reply}${body}<div class="bub-time">${esc(m.ago||"")}</div></div>`;
-  return `<div class="bub-wrap them"><div class="bub-name">${esc(m.who||"")}</div>${reply}${body}<div class="bub-time">${esc(m.ago||"")}</div></div>`;
+    ? `<div class="bub ${m.mine?'me':'them'} img-bub" onclick="openFullImage('${esc(m.imgFull||m.img)}')"><img src="${esc(m.img)}" alt="${t('x.alt.photo')}"></div>`
+    : `<div class="bub ${m.mine?'me':'them'}">${msgText(m)}</div>`;
+  // 自分の送信メッセージのみ既読マークの対象。相手が既読表示をONにしていて、かつ相手のlast_read_atが
+  // このメッセージの送信時刻以降であれば「既読」を表示する
+  const readHtml = (m.mine && dmOtherReadState.showReceipts && dmOtherReadState.lastReadAt && new Date(dmOtherReadState.lastReadAt).getTime() >= m.ts)
+    ? `<span class="read-mark">${t('x.chat.read')}</span>` : "";
+  if(m.mine) return `<div class="bub-wrap me">${body}<div class="bub-time">${readHtml}<span class="msg-clock">${esc(m.ago||"")}</span></div></div>`;
+  return `<div class="bub-wrap them">${body}<div class="bub-time">${esc(m.ago||"")}</div></div>`;
 }
 /* 長押し検出(モバイル):500msで操作メニューを開く */
 let _touchTimer=null;
@@ -7371,15 +7583,7 @@ function onChatPhoto(e,kind){
   const r=new FileReader();
   r.onload=()=>{
     if(kind==="dm"){
-      const fid=activeChatId; if(!DM[fid])DM[fid]=[];
-      DM[fid].push({id:newMsgId(), ts:Date.now(), who:"Tomato", img:r.result, t:"[写真]", mine:true, ago:nowTime()});
-      renderDMBody(true);
-      pendingTyping=true; renderDMBody(true);
-      setTimeout(()=>{ pendingTyping=false;
-        const fr=findPerson(fid);
-        DM[fid].push({id:newMsgId(), ts:Date.now(), who:fr?fr.name:"相手", t:"いい写真！📸", mine:false, ago:nowTime()});
-        if(S.view==="dm"&&activeChatId===fid) renderDMBody(true);
-      }, 900+Math.random()*600);
+      sendDMPhoto(r.result);
     } else {
       const g=GROUPS.find(x=>x.id===activeGid); if(!g)return;
       g.chat.push({id:newMsgId(), ts:Date.now(), who:"Tomato", img:r.result, t:"[写真]", mine:true, ago:nowTime(), reactions:{}, readBy:0});
@@ -7398,9 +7602,7 @@ function onChatPhoto(e,kind){
 function renderDMBody(scroll){
   const b=document.getElementById("chatBody"); if(!b)return;
   const log=DM[activeChatId]||[];
-  b.innerHTML = `<div class="daydiv">${t('x.chat.today')}</div>` + log.map(msgHTML).join("")
-    + (pendingTyping?`<div class="typing"><i></i><i></i><i></i></div>`:"");
-  renderReplyBar();
+  b.innerHTML = log.map(msgHTML).join("");
   if(scroll) chatScrollBottom();
 }
 /* グループチャット用メッセージ(リアクション+既読つき) */
@@ -7491,7 +7693,7 @@ function screenChat(){
     const log=DM[f.id]||[]; const last=log[log.length-1];
     const un=log.filter(m=>m.unread).length;
     return `<div class="chatrow" onclick="openDM('${f.id}')">
-      <div class="av" style="${avatarStyle(f)}" onclick="event.stopPropagation();profileBackView='chat';openProfile('${f.id}')">${avatarInner(f)}${f.online?'<span class="on-dot"></span>':''}</div>
+      <div class="av" style="${avatarStyle(f)}" onclick="event.stopPropagation();profileBackView='chat';openProfile('${f.id}')">${avatarInner(f)}</div>
       <div class="ct"><div class="nm">${esc(f.name)}</div>
         <div class="ms">${last?esc((last.mine?"自分: ":"")+last.t):"トークを始めましょう"}</div></div>
       <div class="rt"><div class="tm">${last?esc(last.ago):""}</div>${un?`<div class="badge">${un}</div>`:""}</div>
@@ -7526,12 +7728,14 @@ function screenChat(){
 
 /* ---- 個別チャット画面 ---- */
 function screenDM(){
-  const f=findPerson(activeChatId); if(!f||!canDM(f)) return screenChat();
+  const f=findPerson(activeChatId);
+  const hasConv = !!DM_CONV_ID[activeChatId];
+  if(!f || (!canDM(f) && !hasConv)) return screenChat();
   return `<div class="chat-screen">
     <div class="chat-head">
       <button class="bk" onclick="goBack('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
       <div class="av" onclick="profileBackView='dm';openProfile('${f.id}')" style="${avatarStyle(f)};cursor:pointer">${avatarInner(f)}</div>
-      <div class="ti" onclick="profileBackView='dm';openProfile('${f.id}')" style="cursor:pointer"><div class="nm">${esc(f.name)}</div><div class="sub">${f.online?"🟢 オンライン":"最終ログイン 1時間前"}</div></div>
+      <div class="ti" onclick="profileBackView='dm';openProfile('${f.id}')" style="cursor:pointer"><div class="nm">${esc(f.name)}</div></div>
       <button class="ic" onclick="profileBackView='dm';openProfile('${f.id}')" title="${t('x.title.profile')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 12 0v1"></path></svg></button>
     </div>
     <div class="chat-body" id="chatBody"></div>
@@ -8091,7 +8295,7 @@ async function createNotification(recipientId, type, extra){
     if(error) console.log("[notifications] insert error:", error.message);
   }catch(e){ console.log("[notifications] insert exception:", e); }
 }
-const NOTIF_ICON = { like:"❤️", comment:"💬", mention:"📣", follow:"🤝", follow_request:"🔒", follow_accept:"✅" };
+const NOTIF_ICON = { like:"❤️", comment:"💬", mention:"📣", follow:"🤝", follow_request:"🔒", follow_accept:"✅", message:"✉️" };
 /* ログイン完了時に自分宛ての通知を取得し、NOTIFSを作り直す。actorのprofilesも合わせてPEOPLEへ反映する */
 async function loadNotifications(){
   if(!window.SB || !isSignedIn()) return;
@@ -8120,12 +8324,13 @@ async function loadNotifications(){
       else if(r.type==="follow") aText = t("x.notif.msg.follow",{name});
       else if(r.type==="follow_request") aText = t("x.notif.msg.followRequest",{name});
       else if(r.type==="follow_accept") aText = t("x.notif.msg.followAccept",{name});
+      else if(r.type==="message") aText = t("x.notif.msg.message",{name});
       const isProfileType = (r.type==="follow"||r.type==="follow_request"||r.type==="follow_accept");
       return {
         id: r.id, ic: NOTIF_ICON[r.type]||"🔔", a: aText, b: "",
         when: computeAgo(new Date(r.created_at).getTime()), ts: new Date(r.created_at).getTime(),
         unread: !r.read,
-        target: isProfileType ? {type:"profile", pid:r.actor_id} : {type:"post"}
+        target: isProfileType ? {type:"profile", pid:r.actor_id} : r.type==="message" ? {type:"dm", fid:r.actor_id} : {type:"post"}
       };
     });
     console.log("[notifications] loaded", NOTIFS.length, "items");
@@ -9061,7 +9266,13 @@ function renderApp(){
   if(S.view==="home")    html=screenHome();
   else if(S.view==="post"){ html=screenPost(); sc.innerHTML=html; applyAllPostCrops(); applyAllPostTextClamps(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="search")  html=screenSearch();
-  else if(S.view==="chat")    html=screenChat();
+  else if(S.view==="chat"){
+    html=screenChat();
+    if(!chatSummariesLoaded){
+      chatSummariesLoaded = true;
+      loadDMSummaries().then(()=>{ if(S.view==="chat"){ const sc2=document.getElementById("screen"); if(sc2) sc2.innerHTML=screenChat(); } });
+    }
+  }
   else if(S.view==="calendar"){ sc.innerHTML=screenCalendar(); drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="addfriend") html=screenAddFriend();
   else if(S.view==="editprofile"){ sc.innerHTML=screenEditProfile(); updateBioCount(); window.scrollTo({top:0,behavior:"auto"}); return; }
@@ -9070,6 +9281,7 @@ function renderApp(){
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
   else if(S.view==="blockedusers") html=screenBlockedUsers();
+  else if(S.view==="chatManage") html=screenChatManage();
   else if(S.view==="accountManage") html=screenAccountManage();
   else if(S.view==="accountAction1") html=screenAccountAction1();
   else if(S.view==="accountAction2") html=screenAccountAction2();
