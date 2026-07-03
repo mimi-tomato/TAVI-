@@ -66,6 +66,7 @@
     padding:12px 18px;border-radius:11px;transition:.15s}
   .btn.primary{background:var(--accent);color:#fff} .btn.primary:hover{background:var(--accent-deep)}
   .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)} .btn.ghost:hover{border-color:#c7cedb}
+  .btn.danger{background:#e0245e;color:#fff} .btn.danger:hover{background:#c01e4f}
   .btn:disabled{opacity:.45;cursor:not-allowed} .btn.block{width:100%}
   .btn-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap} .btn-row .btn{flex:1}
   .seg-toggle{display:flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff}
@@ -783,7 +784,7 @@
   .pcmp-loc-sub{display:flex;align-items:center;gap:6px;padding:0 2px;font-size:0.8125rem;color:var(--ink)}
   .loc-overlay{position:fixed;inset:0;z-index:240;background:var(--bg);display:flex;flex-direction:column}
   .loc-bar{display:flex;align-items:center;gap:8px;padding:14px 16px 8px}
-  .loc-search-input{margin:0 16px 10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;
+  input.loc-search-input{display:block;box-sizing:border-box;width:calc(100% - 32px);margin:0 16px 10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;
     font-size:0.9375rem;font-family:inherit;color:var(--ink);background:var(--card)}
   .loc-current-btn{display:flex;align-items:center;gap:8px;margin:0 16px 10px;padding:11px 14px;
     border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);
@@ -1280,6 +1281,28 @@ const I18N = {
     "settings.display":"表示・通知", "settings.dark":"ダークモード", "settings.accent":"アクセントカラー",
     "settings.notif":"通知を受け取る", "settings.openNotif":"お知らせを見る",
     "settings.lang":"言語 / Language", "settings.fontSize":"文字サイズ", "settings.fontSize.sm":"小", "settings.fontSize.md":"標準", "settings.fontSize.lg":"大", "settings.other":"その他", "settings.about":"このアプリについて",
+    "settings.accountManage":"アカウントの管理",
+    "x.acct.deactivateTitle":"アカウントの利用解除", "x.acct.deactivateSub":"データは残したまま、一時的に利用を止めます",
+    "x.acct.deleteTitle":"アカウントの削除", "x.acct.deleteSub":"アカウントと関連データを完全に削除します",
+    "x.acct.step1Title":"以下の情報にアクセスできなくなります", "x.acct.step1Note":"続ける前に、影響範囲を確認してください。",
+    "x.acct.followers":"フォロワー", "x.acct.posts":"投稿", "x.acct.trips":"旅計画",
+    "x.acct.step2Title":"本人確認", "x.acct.step2Note":"セキュリティのため、次へ進むにはパスワードを再入力してください。",
+    "x.acct.password":"パスワード", "x.acct.passwordPh":"パスワードを入力",
+    "x.acct.forgotPassword":"パスワードを忘れた場合",
+    "x.acct.passwordRequired":"パスワードを入力してください", "x.acct.passwordWrong":"パスワードが違います",
+    "x.acct.resetSent":"パスワードリセットメールを送信しました",
+    "x.acct.step3TitleDeactivate":"アカウントを利用解除しますか？",
+    "x.acct.step3NoteDeactivate":"アカウントを利用解除します。利用解除中はプロフィールや投稿は他のユーザーから閲覧できず、ご自身もデータへアクセスできません。",
+    "x.acct.step3TitleDelete":"アカウントを削除しますか？",
+    "x.acct.step3NoteDelete":"このボタンを押すとアカウントが完全に削除されます。この操作は取り消せません。",
+    "x.acct.confirmDeactivate":"アカウントを利用解除", "x.acct.confirmDelete":"アカウントを完全に削除",
+    "x.acct.deleted":"アカウントを削除しました", "x.acct.deleteFailed":"アカウントの削除に失敗しました",
+    "x.acct.deactivateComingSoon":"利用解除機能は近日公開予定です",
+    "x.acct.deactivated":"アカウントを利用解除しました", "x.acct.deactivateFailed":"利用解除に失敗しました",
+    "x.acct.reactivateTitle":"アカウントは利用解除中です",
+    "x.acct.reactivateNote":"利用解除中はプロフィールや投稿にアクセスできません。利用を再開しますか？",
+    "x.acct.reactivateBtn":"利用を再開する", "x.acct.reactivated":"利用を再開しました",
+    "x.common.cancel":"キャンセル", "x.common.next":"次へ",
     "about.text":"TAVI。― 旅の合意形成プランナー（試作版）",
     "toast.followed":"{name}をフォローしました", "toast.unfollowed":"{name}のフォローを解除しました",
     "toast.requested":"{name}にフォローリクエストを送りました",
@@ -1693,6 +1716,28 @@ const I18N = {
     "settings.display":"Display & notifications", "settings.dark":"Dark mode", "settings.accent":"Accent color",
     "settings.notif":"Get notifications", "settings.openNotif":"View notifications",
     "settings.lang":"Language / 言語", "settings.fontSize":"Text size", "settings.fontSize.sm":"Small", "settings.fontSize.md":"Default", "settings.fontSize.lg":"Large", "settings.other":"More", "settings.about":"About this app",
+    "settings.accountManage":"Manage account",
+    "x.acct.deactivateTitle":"Deactivate account", "x.acct.deactivateSub":"Temporarily stop using the app, keeping your data",
+    "x.acct.deleteTitle":"Delete account", "x.acct.deleteSub":"Permanently delete your account and all related data",
+    "x.acct.step1Title":"You'll lose access to the following", "x.acct.step1Note":"Please review the impact before continuing.",
+    "x.acct.followers":"Followers", "x.acct.posts":"Posts", "x.acct.trips":"Trip plans",
+    "x.acct.step2Title":"Verify it's you", "x.acct.step2Note":"For security, please re-enter your password to continue.",
+    "x.acct.password":"Password", "x.acct.passwordPh":"Enter your password",
+    "x.acct.forgotPassword":"Forgot your password?",
+    "x.acct.passwordRequired":"Please enter your password", "x.acct.passwordWrong":"Incorrect password",
+    "x.acct.resetSent":"Password reset email sent",
+    "x.acct.step3TitleDeactivate":"Deactivate your account?",
+    "x.acct.step3NoteDeactivate":"Your account will be deactivated. While deactivated, your profile and posts won't be visible to others, and you won't be able to access your own data either.",
+    "x.acct.step3TitleDelete":"Delete your account?",
+    "x.acct.step3NoteDelete":"Pressing this button will permanently delete your account. This action cannot be undone.",
+    "x.acct.confirmDeactivate":"Deactivate account", "x.acct.confirmDelete":"Permanently delete account",
+    "x.acct.deleted":"Account deleted", "x.acct.deleteFailed":"Failed to delete account",
+    "x.acct.deactivateComingSoon":"Account deactivation is coming soon",
+    "x.acct.deactivated":"Account deactivated", "x.acct.deactivateFailed":"Failed to deactivate account",
+    "x.acct.reactivateTitle":"Your account is deactivated",
+    "x.acct.reactivateNote":"While deactivated, you can't access your profile or posts. Reactivate now?",
+    "x.acct.reactivateBtn":"Reactivate account", "x.acct.reactivated":"Account reactivated",
+    "x.common.cancel":"Cancel", "x.common.next":"Next",
     "about.text":"TAVI。― a trip planner that helps everyone agree (beta)",
     "toast.followed":"Following {name}", "toast.unfollowed":"Unfollowed {name}",
     "toast.requested":"Follow request sent to {name}",
@@ -2122,7 +2167,7 @@ async function ensureProfile(){
     // 現在のprofiles行を取得してMEへ反映する(既存ユーザーの場合、upsertでは書き込まれないため改めて取得。
     // display_name/bio/birthday/avatar_urlはプロフィール編集で更新されうるため、毎回ここで最新化する)
     const { data: myProf, error: gpe } = await window.SB
-      .from("profiles").select("user_id, display_name, bio, birthday, avatar_url, avatar_url_full, is_private").eq("id", u.id).maybeSingle();
+      .from("profiles").select("user_id, display_name, bio, birthday, avatar_url, avatar_url_full, is_private, is_deactivated").eq("id", u.id).maybeSingle();
     if(gpe){ console.log("[profiles] fetch own error:", gpe.message); }
     myUserId = (myProf && myProf.user_id) || uid || "";
     if(myProf){
@@ -2132,6 +2177,7 @@ async function ensureProfile(){
       ME.photo = myProf.avatar_url || null;
       ME.photoFull = myProf.avatar_url_full || null;
       ME.private = !!myProf.is_private;
+      ME.deactivated = !!myProf.is_deactivated;
     }
   }catch(e){ console.log("[profiles] ensure exception:", e); }
 }
@@ -2288,7 +2334,8 @@ function upsertPeopleFromProfile(prof){
     name: prof.display_name || t("post.noName"),
     photo: prof.avatar_url || null,
     photoFull: prof.avatar_url_full || null,
-    private: !!prof.is_private
+    private: !!prof.is_private,
+    deactivated: !!prof.is_deactivated
   };
   if(idx>=0) PEOPLE[idx]=merged; else PEOPLE.push(merged);
   return merged;
@@ -2344,7 +2391,7 @@ async function loadFollowState(){
     let profMap = {};
     if(relatedIds.length){
       const { data: profs, error: pe } = await window.SB.from("profiles")
-        .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private").in("id", relatedIds);
+        .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private, is_deactivated").in("id", relatedIds);
       if(pe){ console.log("[profiles] load related error:", pe.message); }
       (profs||[]).forEach(p=>{ profMap[p.id]=p; });
     }
@@ -2383,13 +2430,14 @@ async function loadPosts(){
     let profMap = {};
     if(authorIds.length){
       const { data: profs, error: pe } = await window.SB
-        .from("profiles").select("id, user_id, display_name, avatar_url").in("id", authorIds);
+        .from("profiles").select("id, user_id, display_name, avatar_url, is_deactivated").in("id", authorIds);
       if(pe){ console.log("[profiles] load error:", pe.message); }
       (profs||[]).forEach(p=>{ profMap[p.id]=p; });
     }
     POSTS.length = 0;
     rows.forEach(row=>{
       const prof = profMap[row.author_id] || {};
+      if(prof.is_deactivated) return; // 利用解除中のユーザーの投稿は表示しない(共通ルール)
       POSTS.push({
         id: row.id, who: prof.display_name || t("post.noName"),
         userId: prof.user_id || "",
@@ -2632,7 +2680,16 @@ async function authResetPassword(email){
 window.onAuthChanged = async function(user){
   // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、各種データを取得する。
   // loadBlocksは投稿フィルタで使うため、loadPostsより先に呼ぶ
-  if(user){ await ensureProfile(); await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); }
+  if(user){
+    await ensureProfile();
+    if(ME.deactivated){
+      // 利用解除中は本人も自分のデータへアクセスできない状態にする。他の読み込みは一切行わず、
+      // 利用再開の可否を確認する専用画面だけを表示する
+      S.view = "reactivate";
+    }else{
+      await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications();
+    }
+  }
   if(typeof renderApp === "function") renderApp();
 };
 
@@ -6172,8 +6229,16 @@ function logoSrc(){
 /* ===== プロフィール:バッジ/重視する条件のアコーディオン状態 ===== */
 let profileAccOpen = { badges:false, factors:false };  // 中身(グリッド)の開閉
 let profileInfoTip = null;                              // 説明文(ⓘ)を表示中のキー。'badges'|'factors'|null
-function toggleProfileAcc(key){ profileAccOpen[key] = !profileAccOpen[key]; renderApp(); }
-function toggleProfileInfoTip(key){ profileInfoTip = (profileInfoTip===key) ? null : key; renderApp(); }
+function toggleProfileAcc(key){ profileAccOpen[key] = !profileAccOpen[key]; rerenderProfileInPlace(); }
+function toggleProfileInfoTip(key){ profileInfoTip = (profileInfoTip===key) ? null : key; rerenderProfileInPlace(); }
+/* プロフィール画面内の軽微な状態変更(アコーディオン開閉・ⓘボタン)専用の再描画。
+   renderApp()経由だと画面遷移時と同じ扱いでトップへ強制スクロールされてしまうため、
+   スクロール位置を変えずにDOMだけを更新する */
+function rerenderProfileInPlace(){
+  if(S.view!=="profile") return;
+  const sc=document.getElementById("screen");
+  if(sc){ sc.innerHTML=screenProfile(); if(profileTab==="calendar") drawMyCal(); }
+}
 /* ===== プロフィール4タブ(My Posts/Reposts/My Map/My Calendar) ===== */
 let profileTab = "posts"; // "posts" | "reposts" | "map" | "calendar"
 function setProfileTab(tab){
@@ -6444,7 +6509,16 @@ async function closeAvatarCropScreen(){
   }
   if(wrap) wrap.remove();
   document.body.classList.remove("no-scroll");
-  renderApp();
+  // プロフィール編集画面が開いている間は、記入中の他の入力欄を壊さないよう写真プレビューだけを部分更新する。
+  // renderApp()で全体再描画すると、input要素がME(保存前は未更新)の値で作り直され、記入中の内容が消えてしまうため
+  const avaEl = document.querySelector(".pava-edit .pava");
+  if(avaEl){
+    avaEl.classList.toggle("img", !!ME.photo);
+    avaEl.setAttribute("style", avatarStyle(ME));
+    avaEl.innerHTML = avatarInner(ME);
+  }else{
+    renderApp();
+  }
 }
 
 /* ---- 設定画面 ---- */
@@ -6525,7 +6599,173 @@ function screenSettings(){
     <div class="setting">
       <div class="item" onclick="goFwd('about')"><span class="si">ⓘ</span><span class="st">${t("settings.about")}</span><span style="color:var(--ink-soft)">›</span></div>
     </div>
+
+    <h3 class="sub" style="margin:16px 4px 8px">${t("settings.accountManage")}</h3>
+    <div class="setting">
+      <div class="item" onclick="openAccountManage()"><span class="si">👤</span><span class="st" style="color:#e0245e">${t("settings.accountManage")}</span><span style="color:var(--ink-soft)">›</span></div>
+    </div>
   </div>`;
+}
+/* ===== アカウント管理(利用解除/削除) =====
+   4段階の共通フロー: ①影響表示 → ②パスワード再確認 → ③最終確認 → ④実行
+   accountActionTypeで'deactivate'|'delete'を切り替え、画面のテンプレートは共通化する。
+   「利用解除」は今回は選択画面・フローの骨組みまでで、実際の無効化処理(is_deactivated切替・ログイン時分岐)は次のステップで実装する */
+let accountActionType = null; // 'deactivate' | 'delete'
+let accountActionError = "";
+function openAccountManage(){ goFwd('accountManage'); }
+function screenAccountManage(){
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="goBack('settings')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t('settings.accountManage')}</h2>
+    </div>
+    <div class="setting">
+      <div class="item" onclick="startAccountAction('deactivate')"><span class="si">⏸️</span>
+        <div style="flex:1"><div class="st" style="margin:0">${t('x.acct.deactivateTitle')}</div>
+          <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${t('x.acct.deactivateSub')}</div></div>
+        <span style="color:var(--ink-soft)">›</span></div>
+      <div class="item" onclick="startAccountAction('delete')"><span class="si">🗑️</span>
+        <div style="flex:1"><div class="st" style="margin:0;color:#e0245e">${t('x.acct.deleteTitle')}</div>
+          <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${t('x.acct.deleteSub')}</div></div>
+        <span style="color:var(--ink-soft)">›</span></div>
+    </div>
+  </div>`;
+}
+function startAccountAction(type){
+  accountActionType = type;
+  accountActionError = "";
+  goFwd('accountAction1');
+}
+function cancelAccountAction(){ accountActionType=null; accountActionError=""; goBack('settings'); }
+/* Step1: 何にアクセスできなくなるかを示す(フォロワー数・投稿数・旅計画数) */
+function screenAccountAction1(){
+  const followerCnt = PEOPLE.filter(p=>p.followsMe).length;
+  const postCnt = POSTS.filter(p=>p.mine).length;
+  const tripCnt = GROUPS.filter(g=>g.joined).length;
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="cancelAccountAction()"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t('x.acct.step1Title')}</h2>
+    </div>
+    <p class="hint" style="margin:0 4px 16px">${t('x.acct.step1Note')}</p>
+    <div class="setting">
+      <div class="item" style="cursor:default"><span class="si">👥</span><span class="st">${t('x.acct.followers')}</span><span style="color:var(--ink-soft)">${followerCnt}</span></div>
+      <div class="item" style="cursor:default"><span class="si">📝</span><span class="st">${t('x.acct.posts')}</span><span style="color:var(--ink-soft)">${postCnt}</span></div>
+      <div class="item" style="cursor:default"><span class="si">🗺️</span><span class="st">${t('x.acct.trips')}</span><span style="color:var(--ink-soft)">${tripCnt}</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn ghost" style="flex:1" onclick="cancelAccountAction()">${t('x.common.cancel')}</button>
+      <button class="btn primary" style="flex:1" onclick="goFwd('accountAction2')">${t('x.common.next')}</button>
+    </div>
+  </div>`;
+}
+/* Step2: パスワード再入力による本人確認 */
+function screenAccountAction2(){
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="cancelAccountAction()"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t('x.acct.step2Title')}</h2>
+    </div>
+    <p class="hint" style="margin:0 4px 16px">${t('x.acct.step2Note')}</p>
+    <label class="fld">${t('x.acct.password')}</label>
+    <input type="password" id="acctPwInput" placeholder="${t('x.acct.passwordPh')}" style="width:100%" onkeydown="if(event.key==='Enter')verifyAccountPassword()">
+    ${accountActionError?`<p style="color:#e0245e;font-size:12.5px;margin:6px 4px 0">${esc(accountActionError)}</p>`:''}
+    <p class="hint" style="margin:10px 4px 0;text-align:right;cursor:pointer;color:var(--accent)" onclick="requestAccountPasswordReset()">${t('x.acct.forgotPassword')}</p>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn ghost" style="flex:1" onclick="cancelAccountAction()">${t('x.common.cancel')}</button>
+      <button class="btn primary" style="flex:1" onclick="verifyAccountPassword()">${t('x.common.next')}</button>
+    </div>
+  </div>`;
+}
+async function verifyAccountPassword(){
+  const pw = (document.getElementById("acctPwInput")||{}).value||"";
+  if(!pw){ accountActionError = t('x.acct.passwordRequired'); renderApp(); return; }
+  if(!window.SB || !isSignedIn()){ accountActionError = t('x.auth.noConn'); renderApp(); return; }
+  try{
+    const email = authUser().email;
+    const { error } = await window.SB.auth.signInWithPassword({ email, password: pw });
+    if(error){ accountActionError = t('x.acct.passwordWrong'); renderApp(); return; }
+    accountActionError = "";
+    goFwd('accountAction3');
+  }catch(e){ console.log("[account] password verify exception:", e); accountActionError = t('x.auth.noConn'); renderApp(); }
+}
+async function requestAccountPasswordReset(){
+  if(!window.SB || !isSignedIn()) return;
+  try{
+    const email = authUser().email;
+    const { error } = await window.SB.auth.resetPasswordForEmail(email);
+    if(error){ toast(t('x.auth.noConn')); return; }
+    toast(t('x.acct.resetSent'));
+  }catch(e){ console.log("[account] reset exception:", e); }
+}
+/* Step3: 操作種別ごとの最終確認 */
+function screenAccountAction3(){
+  const isDelete = accountActionType === 'delete';
+  const title = isDelete ? t('x.acct.step3TitleDelete') : t('x.acct.step3TitleDeactivate');
+  const note = isDelete ? t('x.acct.step3NoteDelete') : t('x.acct.step3NoteDeactivate');
+  const btnLabel = isDelete ? t('x.acct.confirmDelete') : t('x.acct.confirmDeactivate');
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="cancelAccountAction()"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${title}</h2>
+    </div>
+    <div class="mutual" style="flex-direction:column;text-align:center;padding:26px 16px">
+      <div style="font-size:34px">${isDelete?'🗑️':'⏸️'}</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:10px;line-height:1.7">${note}</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn ghost" style="flex:1" onclick="cancelAccountAction()">${t('x.common.cancel')}</button>
+      <button class="btn ${isDelete?'danger':'primary'}" style="flex:1" onclick="executeAccountAction()">${btnLabel}</button>
+    </div>
+  </div>`;
+}
+/* Step4: 実行。削除はRPC呼び出し→サインアウト→リロード。利用解除は次のステップで実装する */
+async function executeAccountAction(){
+  if(!window.SB || !isSignedIn()) return;
+  if(accountActionType === 'delete'){
+    try{
+      const { error } = await window.SB.rpc('delete_own_account');
+      if(error){ toast(t('x.acct.deleteFailed')); console.log("[account] delete error:", error.message); return; }
+      toast(t('x.acct.deleted'));
+      await window.SB.auth.signOut();
+      accountActionType = null;
+      window.location.reload();
+    }catch(e){ console.log("[account] delete exception:", e); toast(t('x.auth.noConn')); }
+  }else if(accountActionType === 'deactivate'){
+    try{
+      const { error } = await window.SB.from("profiles").update({ is_deactivated:true }).eq("id", authUser().id);
+      if(error){ toast(t('x.acct.deactivateFailed')); console.log("[account] deactivate error:", error.message); return; }
+      toast(t('x.acct.deactivated'));
+      await window.SB.auth.signOut();
+      accountActionType = null;
+      window.location.reload();
+    }catch(e){ console.log("[account] deactivate exception:", e); toast(t('x.auth.noConn')); }
+  }
+}
+/* 利用解除中に表示する専用画面。本人も自分のデータへ一切アクセスできないようにするため、
+   タブバー・トップバーを出さず、利用再開の可否確認だけを行う(renderApp内の専用ゲートから呼ばれる) */
+function screenReactivate(){
+  return `<div class="page" style="padding-top:60px">
+    <div style="text-align:center">
+      <div style="font-size:40px">⏸️</div>
+      <h2 style="margin:16px 4px 8px;color:var(--ink)">${t('x.acct.reactivateTitle')}</h2>
+      <p class="hint" style="margin:0 12px 24px;line-height:1.7">${t('x.acct.reactivateNote')}</p>
+    </div>
+    <button class="btn primary" style="width:100%" onclick="reactivateAccount()">${t('x.acct.reactivateBtn')}</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="confirmSignOut()">${t('settings.signOut')}</button>
+  </div>`;
+}
+async function reactivateAccount(){
+  if(!window.SB || !isSignedIn()) return;
+  try{
+    const { error } = await window.SB.from("profiles").update({ is_deactivated:false }).eq("id", authUser().id);
+    if(error){ toast(t('x.auth.noConn')); console.log("[account] reactivate error:", error.message); return; }
+    ME.deactivated = false;
+    toast(t('x.acct.reactivated'));
+    await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications();
+    S.view = "post";
+    renderApp();
+  }catch(e){ console.log("[account] reactivate exception:", e); toast(t('x.auth.noConn')); }
 }
 /* ブロック済みアカウント一覧。ブロック解除はここからのみ行う。
    アイコン・表示名・ユーザー名・解除ボタンのみを表示し、プロフィール画面へは遷移させない
@@ -6822,6 +7062,7 @@ function screenUserProfile(){
   // 一切明示せず「見つかりません」と同じ表示にする(Instagramに近い仕様。共通ルールとしてisBlockedRelationを使う)
   if(isBlockedRelation(profileViewId) && !hasBlockedUser(profileViewId)) return screenUserNotFound();
   const p=findPerson(profileViewId); if(!p) return screenUserNotFound();
+  if(p.deactivated) return screenUserNotFound(); // 利用解除中のアカウントも見つからない扱いにする(共通ルール)
   const mutual=mutualFriends(p);
   // 相手のフォロー数・フォロワー数(試作データ。p.following/p.followers があれば優先、なければ friends 配列から擬似算出)
   const pFollowing = (p.following!=null)? p.following : ((p.friends||[]).length + (p.iFollow?1:0));
@@ -6946,7 +7187,7 @@ async function follow(id){ const p=findPerson(id); if(!p)return;
   toast(t("toast.followed",{name:p.name})); checkBadgeAwards(); renderApp();
   if(window.SB && isSignedIn()){
     const { error } = await window.SB.from("follows")
-      .insert({ follower_id: authUser().id, followee_id: id, status: "accepted" });
+      .upsert({ follower_id: authUser().id, followee_id: id, status: "accepted" }, { onConflict: "follower_id,followee_id" });
     if(error) console.log("[follows] follow error:", error.message);
     else createNotification(id, "follow");
   }
@@ -6965,7 +7206,7 @@ async function sendRequest(id){ const p=findPerson(id); if(!p)return;
   p.reqOutgoing=true; toast(t("toast.requested",{name:p.name})); renderApp();
   if(window.SB && isSignedIn()){
     const { error } = await window.SB.from("follows")
-      .insert({ follower_id: authUser().id, followee_id: id, status: "pending" });
+      .upsert({ follower_id: authUser().id, followee_id: id, status: "pending" }, { onConflict: "follower_id,followee_id" });
     if(error) console.log("[follows] sendRequest error:", error.message);
     else createNotification(id, "follow_request");
   }
@@ -7737,12 +7978,12 @@ async function searchById(){
   if(!window.SB || !isSignedIn()){ searchResult=null; renderApp(); return; }
   try{
     const { data, error } = await window.SB.from("profiles")
-      .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private")
+      .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private, is_deactivated")
       .ilike("user_id", q).limit(1);
     if(error){ console.log("[profiles] search error:", error.message); searchResult=null; }
     else{
       const hit = (data||[])[0];
-      searchResult = (hit && hit.id!==authUser().id && !isBlockedRelation(hit.id)) ? upsertPeopleFromProfile(hit) : null;
+      searchResult = (hit && hit.id!==authUser().id && !isBlockedRelation(hit.id) && !hit.is_deactivated) ? upsertPeopleFromProfile(hit) : null;
     }
   }catch(e){ console.log("[profiles] search exception:", e); searchResult=null; }
   const box=document.getElementById("searchResult");
@@ -8783,6 +9024,15 @@ function renderApp(){
     window.scrollTo({top:0,behavior:"auto"});
     return;
   }
+  // ===== 利用解除ゲート: 利用解除中は他の画面を一切見せず、利用再開の可否確認だけを行う =====
+  if(ME.deactivated){
+    document.documentElement.setAttribute("data-theme", S.theme||"light");
+    $("#topbar").innerHTML="";
+    $("#tabbar").innerHTML="";
+    $("#screen").innerHTML=screenReactivate();
+    window.scrollTo({top:0,behavior:"auto"});
+    return;
+  }
   document.documentElement.setAttribute("data-theme", S.theme);
   applyAccent(S.accent);
   $("#topbar").innerHTML = topbarHTML();
@@ -8820,6 +9070,10 @@ function renderApp(){
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
   else if(S.view==="blockedusers") html=screenBlockedUsers();
+  else if(S.view==="accountManage") html=screenAccountManage();
+  else if(S.view==="accountAction1") html=screenAccountAction1();
+  else if(S.view==="accountAction2") html=screenAccountAction2();
+  else if(S.view==="accountAction3") html=screenAccountAction3();
   else if(S.view==="notify")  html=screenNotify();
   else if(S.view==="followrequests") html=screenFollowRequests();
   else if(S.view==="profile"){ sc.innerHTML=screenProfile(); if(profileTab==="calendar") drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
