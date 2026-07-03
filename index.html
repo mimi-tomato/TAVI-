@@ -986,6 +986,19 @@
   .follow-tabs .ft{flex:1;border:1px solid var(--line);background:var(--card);border-radius:11px;
     padding:10px;font-size:0.8125rem;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit}
   .follow-tabs .ft.on{background:var(--accent);color:var(--on-accent,#fff);border-color:var(--accent)}
+  /* ===== プロフィール4タブ(My Posts/Reposts/My Map/My Calendar) ===== */
+  .prof-tabbar{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:14px 0 0}
+  .prof-tab{flex:1;background:transparent;border:0;padding:11px 4px;font-size:0.75rem;font-weight:700;
+    color:var(--ink-soft);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;
+    border-bottom:2px solid transparent;margin-bottom:-1px}
+  .prof-tab .pt-ic{font-size:1.0625rem}
+  .prof-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .prof-tabpane{padding-top:12px;min-height:200px}
+  /* My Posts: 3列Masonry(CSS columnsで実現。外部依存なし) */
+  .mypost-masonry{column-count:3;column-gap:3px}
+  .mypost-tile{break-inside:avoid;margin-bottom:3px;border-radius:6px;overflow:hidden;cursor:pointer;background:var(--field)}
+  .mypost-tile img{width:100%;display:block}
+  .prof-tabpane .empty-note{text-align:center;color:var(--ink-soft);font-size:0.8438rem;padding:48px 20px;line-height:1.7}
   .fsort-row{display:flex;gap:8px;margin-bottom:10px}
   .fsort-row .fsort{border:1px solid var(--line);background:var(--card);border-radius:999px;
     padding:6px 14px;font-size:0.7812rem;font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:inherit}
@@ -1105,6 +1118,21 @@
   .badge-item .bn{font-size:0.6562rem;font-weight:700;color:var(--ink);line-height:1.25}
   .badge-item.locked .bn{color:var(--ink-soft)}
   .badge-row-prof{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin:6px 0 2px}
+  /* ===== プロフィール:折りたたみ(バッジ/重視する条件) ===== */
+  .acc-sec{border-bottom:1px solid var(--line)}
+  .acc-head{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;cursor:pointer}
+  .acc-head-left{display:flex;align-items:center;gap:5px;min-width:0}
+  .acc-head-left h3{margin:0}
+  .acc-info-ic{width:16px;height:16px;border-radius:50%;border:1.3px solid var(--ink-soft);color:var(--ink-soft);
+    font-size:0.625rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto;cursor:pointer}
+  .acc-right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .acc-chevron{color:var(--ink-soft);font-size:0.9375rem;transition:transform .15s;display:inline-block}
+  .acc-chevron.open{transform:rotate(90deg)}
+  .acc-info-text{margin:0 4px 8px;font-size:0.75rem;color:var(--ink-soft);line-height:1.6}
+  .acc-body{padding-bottom:14px}
+  /* My Postsタブから遷移した際、タップした投稿を一瞬強調する */
+  @keyframes postJumpHighlight{0%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+  .post-card.jump-highlight{animation:postJumpHighlight 1.6s ease-out}
   .badge-mini{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.0625rem;
     background:linear-gradient(135deg,var(--accent),#9bb6ff);color:#fff}
 
@@ -1463,6 +1491,13 @@ const I18N = {
     "x.prof.myMap":"マイ地図（訪れた場所）",
     "x.prof.addSearchFriend":"友だちを追加・検索",
     "x.prof.settings":"設定",
+    "x.prof.tabPosts":"投稿",
+    "x.prof.tabReposts":"リポスト",
+    "x.prof.tabMap":"マイマップ",
+    "x.prof.tabCalendar":"マイカレンダー",
+    "x.prof.myPostsEmpty":"まだ写真付きの投稿がありません",
+    "x.prof.repostsComingSoon":"リポスト機能は近日公開予定です",
+    "x.prof.mapComingSoon":"マイマップ機能は近日公開予定です",
     "x.edit.title":"プロフィール編集",
     "x.edit.tapPhoto":"タップして画像を変更",
     "x.edit.userId":"ユーザーID",
@@ -1842,6 +1877,13 @@ const I18N = {
     "x.prof.myMap":"My map (places visited)",
     "x.prof.addSearchFriend":"Add / search friends",
     "x.prof.settings":"Settings",
+    "x.prof.tabPosts":"Posts",
+    "x.prof.tabReposts":"Reposts",
+    "x.prof.tabMap":"My Map",
+    "x.prof.tabCalendar":"My Calendar",
+    "x.prof.myPostsEmpty":"No photo posts yet",
+    "x.prof.repostsComingSoon":"Reposts is coming soon",
+    "x.prof.mapComingSoon":"My Map is coming soon",
     "x.edit.title":"Edit profile",
     "x.edit.tapPhoto":"Tap to change photo",
     "x.edit.userId":"User ID",
@@ -2468,8 +2510,8 @@ async function authResetPassword(email){
 
 /* 認証状態が変わったときにモジュールから呼ばれる */
 window.onAuthChanged = async function(user){
-  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、投稿一覧を取得
-  if(user){ await ensureProfile(); await loadPosts(); }
+  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、投稿一覧・空き予定を取得
+  if(user){ await ensureProfile(); await loadPosts(); await loadCalendarAvailability(); }
   if(typeof renderApp === "function") renderApp();
 };
 
@@ -4765,8 +4807,8 @@ function postCardHTML(p){
         <button class="pc-nav next" onclick="event.stopPropagation();carouselMove('${p.id}',1,${p.images.length})" ondblclick="event.stopPropagation()">›</button>
         <div class="pc-dots" id="pcd_${p.id}">${p.images.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join("")}</div>`:''}
       <div class="pc-top">
-        <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
-        <span class="post-who" ${p.mine?'':'style="cursor:pointer"'} onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
+        <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
+        <span class="post-who" style="cursor:pointer" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
         <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
         ${postMenuBtn(p)}
       </div>
@@ -4782,8 +4824,8 @@ function postCardHTML(p){
   }
   return `<div class="post-card text-post" data-pid="${p.id}">
     <div class="post-head">
-      <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
-      <span class="post-who" ${p.mine?'':'style="cursor:pointer"'} onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
+      <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
+      <span class="post-who" style="cursor:pointer" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
       <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
       ${postMenuBtn(p)}
     </div>
@@ -5998,6 +6040,69 @@ function logoSrc(){
   return S.accent==="#EC6800" ? UI_IMG.logo : UI_IMG.logo_white;
 }
 
+/* ===== プロフィール:バッジ/重視する条件のアコーディオン状態 ===== */
+let profileAccOpen = { badges:false, factors:false };  // 中身(グリッド)の開閉
+let profileInfoTip = null;                              // 説明文(ⓘ)を表示中のキー。'badges'|'factors'|null
+function toggleProfileAcc(key){ profileAccOpen[key] = !profileAccOpen[key]; renderApp(); }
+function toggleProfileInfoTip(key){ profileInfoTip = (profileInfoTip===key) ? null : key; renderApp(); }
+/* ===== プロフィール4タブ(My Posts/Reposts/My Map/My Calendar) ===== */
+let profileTab = "posts"; // "posts" | "reposts" | "map" | "calendar"
+function setProfileTab(tab){
+  if(profileTab===tab) return;
+  profileTab = tab;
+  renderApp();
+}
+/* 自分の投稿のうち画像付きのみ、新しい順(POSTSは既にcreated_at降順)で返す */
+function myPhotoPosts(){
+  return POSTS.filter(p=>p.mine && p.images && p.images.length);
+}
+/* 画像1枚目のサムネイルURLを取り出す。画像は{thumb,mid,full}形式(画像フェーズの3段階)、
+   または文字列(旧データ)の場合がありうるため両対応する */
+function firstImageThumb(p){
+  const img0 = p.images && p.images[0];
+  if(!img0) return "";
+  if(typeof img0 === "object") return img0.thumb || img0.mid || img0.full || "";
+  return img0;
+}
+function renderMyPostsTab(){
+  const items = myPhotoPosts();
+  if(!items.length) return `<p class="empty-note">${t('x.prof.myPostsEmpty')}</p>`;
+  const tiles = items.map(p=>{
+    const src = firstImageThumb(p);
+    if(!src) return "";
+    return `<div class="mypost-tile" onclick="openMyPostsFeed('${p.id}')"><img src="${esc(src)}" loading="lazy" alt=""></div>`;
+  }).join("");
+  return `<div class="mypost-masonry">${tiles}</div>`;
+}
+/* My Postsのタイルをタップした時の遷移先。自分の投稿だけが並ぶ専用フィード(通常の投稿カードと同じUI)を開き、
+   タップした投稿の位置までスクロールして一瞬ハイライトする */
+let myPostsFeedTarget = null;
+function openMyPostsFeed(postId){
+  myPostsFeedTarget = postId;
+  goFwd('myPostsFeed');
+}
+function screenMyPostsFeed(){
+  const mine = POSTS.filter(p=>p.mine).slice().sort((a,b)=>b.ts-a.ts);
+  const body = mine.length ? mine.map(postCardHTML).join("")
+    : `<div class="feed-empty"><div class="ic">📸</div>${t("post.empty")}</div>`;
+  return `<div class="page" style="padding-left:0;padding-right:0">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 14px;margin-bottom:4px">
+      <button class="room-back" onclick="goBack('profile')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:19px;color:var(--ink)">${t('x.prof.tabPosts')}</h2>
+    </div>
+    <div class="feed post-feed">${body}</div>
+  </div>`;
+}
+/* 対象投稿までスクロールし、一瞬ハイライトする(screenMyPostsFeed描画後にrenderAppから呼ぶ) */
+function scrollToMyPostsFeedTarget(){
+  if(!myPostsFeedTarget) return;
+  const el = document.querySelector(`[data-pid="${CSS.escape(myPostsFeedTarget)}"]`);
+  myPostsFeedTarget = null;
+  if(!el) return;
+  el.scrollIntoView({block:"center"});
+  el.classList.add("jump-highlight");
+  setTimeout(()=>el.classList.remove("jump-highlight"), 1700);
+}
 function screenProfile(){
   const dark=document.documentElement.getAttribute("data-theme")==="dark";
   const joined=GROUPS.filter(g=>g.joined);
@@ -6023,30 +6128,54 @@ function screenProfile(){
       <button class="edit-prof-btn" onclick="openEditProfile()"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""> ${t('x.prof.editProfile')}</button>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 4px 8px">
-      <h3 class="sub" style="margin:0">${t('x.prof.tripBadges')}</h3>
-      <button class="mini-btn" onclick="goFwd('badges')">${t('x.prof.editDisplay')}</button>
-    </div>
-    <p class="hint" style="margin:0 4px 10px">${t('x.prof.badgeNote')}</p>
-    <div class="badge-grid">
-      ${displayBadges().map(d=>{const b=d.badge;
-        return `<div class="badge-item ${d.got?'':'locked'}" onclick="showBadgeInfo('${b.id}')">
-          <div class="badge-ic" style="${d.got?`background:${BADGE_BG[b.bg]||BADGE_BG.blue}`:''}">${badgeIconInner(b)}</div>
-          <div class="bn">${esc(b.name)}</div></div>`;}).join("")}
-      ${countryBadges().map(cb=>`<div class="badge-item" onclick="toast('🌐 ${esc(cb.name)}：${esc(cb.country)}を${cb.visits}回訪問',3200)">
-          <div class="badge-ic" style="background:${BADGE_BG[cb.bg]}">🌐</div>
-          <div class="bn">${esc(cb.name)}</div></div>`).join("")}
+    <div class="acc-sec">
+      <div class="acc-head" onclick="toggleProfileAcc('badges')">
+        <div class="acc-head-left">
+          <h3 class="sub">${t('x.prof.tripBadges')}</h3>
+          <span class="acc-info-ic" onclick="event.stopPropagation();toggleProfileInfoTip('badges')">ⓘ</span>
+        </div>
+        <div class="acc-right">
+          <button class="mini-btn" onclick="event.stopPropagation();goFwd('badges')">${t('x.prof.editDisplay')}</button>
+          <span class="acc-chevron ${profileAccOpen.badges?'open':''}">›</span>
+        </div>
+      </div>
+      ${profileInfoTip==='badges' ? `<p class="acc-info-text">${t('x.prof.badgeNote')}</p>` : ''}
+      ${profileAccOpen.badges ? `<div class="acc-body"><div class="badge-grid">
+        ${displayBadges().map(d=>{const b=d.badge;
+          return `<div class="badge-item ${d.got?'':'locked'}" onclick="showBadgeInfo('${b.id}')">
+            <div class="badge-ic" style="${d.got?`background:${BADGE_BG[b.bg]||BADGE_BG.blue}`:''}">${badgeIconInner(b)}</div>
+            <div class="bn">${esc(b.name)}</div></div>`;}).join("")}
+        ${countryBadges().map(cb=>`<div class="badge-item" onclick="toast('🌐 ${esc(cb.name)}：${esc(cb.country)}を${cb.visits}回訪問',3200)">
+            <div class="badge-ic" style="background:${BADGE_BG[cb.bg]}">🌐</div>
+            <div class="bn">${esc(cb.name)}</div></div>`).join("")}
+      </div></div>` : ''}
     </div>
 
-    <h3 class="sub" style="margin:18px 4px 8px">${t('x.prof.factorsTitle')}</h3>
-    <p class="hint" style="margin:0 4px 10px">${t('x.prof.factorsNote')}</p>
-    <div class="spot-grid" style="margin-bottom:18px">${factors}</div>
+    <div class="acc-sec">
+      <div class="acc-head" onclick="toggleProfileAcc('factors')">
+        <div class="acc-head-left">
+          <h3 class="sub">${t('x.prof.factorsTitle')}</h3>
+          <span class="acc-info-ic" onclick="event.stopPropagation();toggleProfileInfoTip('factors')">ⓘ</span>
+        </div>
+        <div class="acc-right">
+          <span class="acc-chevron ${profileAccOpen.factors?'open':''}">›</span>
+        </div>
+      </div>
+      ${profileInfoTip==='factors' ? `<p class="acc-info-text">${t('x.prof.factorsNote')}</p>` : ''}
+      ${profileAccOpen.factors ? `<div class="acc-body"><div class="spot-grid">${factors}</div></div>` : ''}
+    </div>
 
-    <div class="setting">
-      <div class="item" onclick="goFwd('calendar')"><span class="si">🗓️</span><span class="st">${t('x.prof.myCalendar')}</span><span style="color:var(--ink-soft)">›</span></div>
-      <div class="item" onclick="goFwd('mymap')"><span class="si">🗺️</span><span class="st">${t('x.prof.myMap')}</span><span style="color:var(--ink-soft)">›</span></div>
-      <div class="item" onclick="goFwd('addfriend')"><span class="si">👥</span><span class="st">${t('x.prof.addSearchFriend')}</span><span style="color:var(--ink-soft)">›</span></div>
-      <div class="item" onclick="goFwd('settings')"><span class="si">⚙️</span><span class="st">${t('x.prof.settings')}</span><span style="color:var(--ink-soft)">›</span></div>
+    <div class="prof-tabbar">
+      <button class="prof-tab ${profileTab==='posts'?'on':''}" onclick="setProfileTab('posts')"><span class="pt-ic">▦</span>${t('x.prof.tabPosts')}</button>
+      <button class="prof-tab ${profileTab==='reposts'?'on':''}" onclick="setProfileTab('reposts')"><span class="pt-ic">↻</span>${t('x.prof.tabReposts')}</button>
+      <button class="prof-tab ${profileTab==='map'?'on':''}" onclick="setProfileTab('map')"><span class="pt-ic">📍</span>${t('x.prof.tabMap')}</button>
+      <button class="prof-tab ${profileTab==='calendar'?'on':''}" onclick="setProfileTab('calendar')"><span class="pt-ic">🗓️</span>${t('x.prof.tabCalendar')}</button>
+    </div>
+    <div class="prof-tabpane">
+      ${profileTab==='posts' ? renderMyPostsTab()
+        : profileTab==='reposts' ? `<p class="empty-note">${t('x.prof.repostsComingSoon')}</p>`
+        : profileTab==='map' ? `<p class="empty-note">${t('x.prof.mapComingSoon')}</p>`
+        : calendarBodyHTML()}
     </div>
   </div>`;
 }
@@ -7499,6 +7628,60 @@ function repeatTrip(gid){
 let MYCAL = {};                // { "2026-07-15":"full", ... }
 let myCalYear=2026, myCalMonth=7;
 
+/* Supabaseのcalendar_events(type='availability')からMYCALを読み込む。ログイン完了時に呼ぶ */
+async function loadCalendarAvailability(){
+  if(!window.SB || !isSignedIn()) return;
+  try{
+    const { data, error } = await window.SB.from("calendar_events")
+      .select("date, status").eq("user_id", authUser().id).eq("type", "availability");
+    if(error){ console.log("[calendar_events] load error:", error.message); return; }
+    MYCAL = {};
+    (data||[]).forEach(row=>{ if(row.status) MYCAL[row.date]=row.status; });
+  }catch(e){ console.log("[calendar_events] load exception:", e); }
+}
+/* 1日分の空き予定を保存(status=nullなら削除)。既存行の有無で INSERT/UPDATE を切り替える。
+   1件ずつの操作のため確実性を優先しSELECT→INSERT/UPDATEの2段階にしている */
+async function saveCalendarAvailability(dateKey, status){
+  if(!window.SB || !isSignedIn()) return;
+  const uid = authUser().id;
+  try{
+    if(status){
+      const { data: existing, error: se } = await window.SB.from("calendar_events")
+        .select("id").eq("user_id", uid).eq("date", dateKey).eq("type", "availability").maybeSingle();
+      if(se){ console.log("[calendar_events] select error:", se.message); return; }
+      if(existing){
+        const { error } = await window.SB.from("calendar_events").update({ status }).eq("id", existing.id);
+        if(error) console.log("[calendar_events] update error:", error.message);
+      }else{
+        const { error } = await window.SB.from("calendar_events")
+          .insert({ user_id: uid, date: dateKey, type: "availability", status });
+        if(error) console.log("[calendar_events] insert error:", error.message);
+      }
+    }else{
+      const { error } = await window.SB.from("calendar_events")
+        .delete().eq("user_id", uid).eq("date", dateKey).eq("type", "availability");
+      if(error) console.log("[calendar_events] delete error:", error.message);
+    }
+  }catch(e){ console.log("[calendar_events] save exception:", e); }
+}
+/* 週一括切り替え用。複数日をまとめて反映する(部分ユニークインデックスをon_conflict対象にしたupsert) */
+async function saveCalendarAvailabilityBulk(keys, status){
+  if(!window.SB || !isSignedIn() || !keys.length) return;
+  const uid = authUser().id;
+  try{
+    if(status){
+      const rows = keys.map(k=>({ user_id: uid, date: k, type: "availability", status }));
+      const { error } = await window.SB.from("calendar_events")
+        .upsert(rows, { onConflict: "user_id,date,type" });
+      if(error) console.log("[calendar_events] bulk upsert error:", error.message);
+    }else{
+      const { error } = await window.SB.from("calendar_events")
+        .delete().eq("user_id", uid).eq("type", "availability").in("date", keys);
+      if(error) console.log("[calendar_events] bulk delete error:", error.message);
+    }
+  }catch(e){ console.log("[calendar_events] bulk exception:", e); }
+}
+
 /* 旅行で重視する要素(プロフィールで設定)。旧スポットのデフォルト選択肢を流用 */
 const TRAVEL_FACTORS = ["主要な観光名所📍","グルメ🍽️","展望スポット🌃","自然・公園🌳","歴史的建造物🏛️","ショッピング🛍️","温泉・癒し♨️","フォトスポット📸","秘境・スリル🌋","アクティビティ・スポーツ🏄"];
 let MYPREFS = ["グルメ🍽️","温泉・癒し♨️"];   // 初期で2つ選択済み
@@ -8092,19 +8275,20 @@ function toggleFactor(f,el){
 const SLOT_CYCLE = [null,"full","day","night"];   // タップで巡回
 const SLOT_LABEL = {full:"終日", day:"昼", night:"夜"};
 
-function cycleMyCal(key){
+async function cycleMyCal(key){
   const cur=MYCAL[key]||null;
   const idx=SLOT_CYCLE.indexOf(cur);
   const next=SLOT_CYCLE[(idx+1)%SLOT_CYCLE.length];
   if(next) MYCAL[key]=next; else delete MYCAL[key];
-  drawMyCal();
+  drawMyCal(); // 先に画面へ反映(楽観的UI更新)。保存はバックグラウンドで行う
+  await saveCalendarAvailability(key, next);
 }
 function myCalMove(d){ myCalMonth+=d; if(myCalMonth>12){myCalMonth=1;myCalYear++;} if(myCalMonth<1){myCalMonth=12;myCalYear--;} drawMyCal(); }
 function myCalCount(){ return Object.keys(MYCAL).length; }
 
-function screenCalendar(){
-  return `<div class="page">
-    <h2 class="ph">${t('x.cal.title')}</h2>
+/* カレンダー本体(タイトル・戻るボタンを除く)。独立画面(screenCalendar)とプロフィールのMy Calendarタブの両方から使う */
+function calendarBodyHTML(){
+  return `
     <div class="mycal-help">
       ${t('x.cal.help1')}<br>
       ${t('x.cal.help2',{cycle:t('x.cal.cycle')})}
@@ -8123,7 +8307,12 @@ function screenCalendar(){
       <span class="lg"><span class="sw none"></span>${t('x.cal.none')}</span>
       <span class="lg"><b style="color:var(--accent)">▶</b>${t('x.cal.weekAllDay')}</span>
     </div>
-    <p class="hint center" id="myCalCount">登録した空き日：${myCalCount()}日</p>
+    <p class="hint center" id="myCalCount">登録した空き日：${myCalCount()}日</p>`;
+}
+function screenCalendar(){
+  return `<div class="page">
+    <h2 class="ph">${t('x.cal.title')}</h2>
+    ${calendarBodyHTML()}
   </div>`;
 }
 function drawMyCal(){
@@ -8159,7 +8348,7 @@ function drawMyCal(){
   $("#myCalBody").innerHTML=html;
   const cc=$("#myCalCount"); if(cc) cc.textContent=`登録した空き日：${myCalCount()}日`;
 }
-function toggleMyCalWeek(w){
+async function toggleMyCalWeek(w){
   const y=myCalYear,m=myCalMonth;
   const first=new Date(y,m-1,1).getDay(),days=new Date(y,m,0).getDate();
   let cells=[];for(let i=0;i<first;i++)cells.push(null);for(let d=1;d<=days;d++)cells.push(d);
@@ -8170,6 +8359,7 @@ function toggleMyCalWeek(w){
   const allFull=keys.length>0&&keys.every(k=>MYCAL[k]==="full");
   keys.forEach(k=>{ if(allFull)delete MYCAL[k]; else MYCAL[k]="full"; });
   drawMyCal();
+  await saveCalendarAvailabilityBulk(keys, allFull?null:"full");
 }
 
 /* ---- 最上位レンダラ ---- */
@@ -8362,11 +8552,12 @@ function renderApp(){
   else if(S.view==="calendar"){ sc.innerHTML=screenCalendar(); drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="addfriend") html=screenAddFriend();
   else if(S.view==="editprofile"){ sc.innerHTML=screenEditProfile(); updateBioCount(); window.scrollTo({top:0,behavior:"auto"}); return; }
+  else if(S.view==="myPostsFeed"){ sc.innerHTML=screenMyPostsFeed(); applyAllPostCrops(); applyAllPostTextClamps(); scrollToMyPostsFeedTarget(); return; }
   else if(S.view==="report"){ sc.innerHTML=screenReport(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
   else if(S.view==="notify")  html=screenNotify();
-  else if(S.view==="profile") html=screenProfile();
+  else if(S.view==="profile"){ sc.innerHTML=screenProfile(); if(profileTab==="calendar") drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="followlist") html=screenFollowList();
   else html=screenHome();
   sc.innerHTML=html;
