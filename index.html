@@ -4766,7 +4766,7 @@ function postCardHTML(p){
         <div class="pc-dots" id="pcd_${p.id}">${p.images.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join("")}</div>`:''}
       <div class="pc-top">
         <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
-        <span class="post-who">@${esc(p.userId||"")}</span>
+        <span class="post-who" ${p.mine?'':'style="cursor:pointer"'} onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
         <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
         ${postMenuBtn(p)}
       </div>
@@ -4783,7 +4783,7 @@ function postCardHTML(p){
   return `<div class="post-card text-post" data-pid="${p.id}">
     <div class="post-head">
       <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
-      <span class="post-who">@${esc(p.userId||"")}</span>
+      <span class="post-who" ${p.mine?'':'style="cursor:pointer"'} onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
       <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
       ${postMenuBtn(p)}
     </div>
