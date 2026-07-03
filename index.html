@@ -534,6 +534,12 @@
   .listcard .lt .b{font-size:0.7812rem;color:var(--ink-soft);margin-top:2px}
   .listcard .when{font-size:0.7188rem;color:var(--ink-soft);white-space:nowrap}
   .notif-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:0 0 9px}
+  /* 通知画面上部:フォロー申請への移行欄 */
+  .notif-req-banner{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--accent);
+    border-radius:14px;padding:13px 14px;margin-bottom:16px;cursor:pointer}
+  .notif-req-banner .nrb-ic{font-size:1.25rem;flex:0 0 auto}
+  .notif-req-banner .nrb-text{flex:1;font-size:0.875rem;font-weight:700;color:var(--ink)}
+  .notif-req-banner .nrb-arrow{color:var(--accent);font-size:1.125rem;flex:0 0 auto}
   /* ④チャット長文の「もっと見る」 */
   .more-toggle{display:inline-block;margin-top:4px;color:var(--accent);font-weight:700;cursor:pointer;font-size:0.8125rem}
   .bub.me .more-toggle{color:#fff;text-decoration:underline}
@@ -1478,6 +1484,8 @@ const I18N = {
     "x.notif.followReq":"フォローリクエスト",
     "x.notif.wantsFollow":"あなたをフォローしたいようです",
     "x.notif.all":"すべてのお知らせ",
+    "x.notif.followReqBanner":"フォローリクエストが{n}件あります",
+    "x.notif.followReqEmpty":"フォローリクエストはありません",
     "x.common.showMore":"もっと見る",
     "x.notif.title":"お知らせ",
     "x.prof.addBio":"自己紹介を追加しましょう",
@@ -1864,6 +1872,8 @@ const I18N = {
     "x.notif.followReq":"Follow request",
     "x.notif.wantsFollow":"wants to follow you",
     "x.notif.all":"All notifications",
+    "x.notif.followReqBanner":"{n} follow request(s)",
+    "x.notif.followReqEmpty":"No follow requests",
     "x.common.showMore":"Show more",
     "x.notif.title":"Notifications",
     "x.prof.addBio":"Add a bio",
@@ -2094,7 +2104,7 @@ async function ensureProfile(){
     // 現在のprofiles行を取得してMEへ反映する(既存ユーザーの場合、upsertでは書き込まれないため改めて取得。
     // display_name/bio/birthday/avatar_urlはプロフィール編集で更新されうるため、毎回ここで最新化する)
     const { data: myProf, error: gpe } = await window.SB
-      .from("profiles").select("user_id, display_name, bio, birthday, avatar_url, avatar_url_full").eq("id", u.id).maybeSingle();
+      .from("profiles").select("user_id, display_name, bio, birthday, avatar_url, avatar_url_full, is_private").eq("id", u.id).maybeSingle();
     if(gpe){ console.log("[profiles] fetch own error:", gpe.message); }
     myUserId = (myProf && myProf.user_id) || uid || "";
     if(myProf){
@@ -2103,6 +2113,7 @@ async function ensureProfile(){
       ME.birthday = myProf.birthday || "";
       ME.photo = myProf.avatar_url || null;
       ME.photoFull = myProf.avatar_url_full || null;
+      ME.private = !!myProf.is_private;
     }
   }catch(e){ console.log("[profiles] ensure exception:", e); }
 }
@@ -2242,6 +2253,57 @@ function computeAgo(ts){
   if(month < 12) return t("time.monthAgo").replace("{n}", month);
   const year = Math.floor(day/365);
   return t("time.yearAgo").replace("{n}", year);
+}
+
+/* Supabaseのprofiles行をPEOPLE配列へ反映する(既存要素があれば更新、無ければ追加)。
+   検索結果・フォロー状態読み込みの両方から呼ぶ共通ヘルパー */
+function upsertPeopleFromProfile(prof){
+  if(!prof || !prof.id) return null;
+  const idx = PEOPLE.findIndex(p=>p.id===prof.id);
+  const base = idx>=0 ? PEOPLE[idx] : {
+    iFollow:false, followsMe:false, reqIncoming:false, reqOutgoing:false, blocked:false, avatar:"🙂"
+  };
+  const merged = {
+    ...base,
+    id: prof.id,
+    userId: prof.user_id || "",
+    name: prof.display_name || t("post.noName"),
+    photo: prof.avatar_url || null,
+    photoFull: prof.avatar_url_full || null,
+    private: !!prof.is_private
+  };
+  if(idx>=0) PEOPLE[idx]=merged; else PEOPLE.push(merged);
+  return merged;
+}
+/* ログイン完了時に呼ぶ。自分に関係するfollows行を全部取得し、相手のprofilesも合わせてPEOPLEへ反映する */
+async function loadFollowState(){
+  if(!window.SB || !isSignedIn()) return;
+  const uid = authUser().id;
+  try{
+    const { data: rows, error } = await window.SB.from("follows")
+      .select("follower_id, followee_id, status")
+      .or(`follower_id.eq.${uid},followee_id.eq.${uid}`);
+    if(error){ console.log("[follows] load error:", error.message); return; }
+    const relatedIds = [...new Set((rows||[]).flatMap(r=>[r.follower_id, r.followee_id]).filter(id=>id!==uid))];
+    let profMap = {};
+    if(relatedIds.length){
+      const { data: profs, error: pe } = await window.SB.from("profiles")
+        .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private").in("id", relatedIds);
+      if(pe){ console.log("[profiles] load related error:", pe.message); }
+      (profs||[]).forEach(p=>{ profMap[p.id]=p; });
+    }
+    relatedIds.forEach(rid=>{
+      const prof = profMap[rid] || { id: rid, user_id:"", display_name:t("post.noName") };
+      const merged = upsertPeopleFromProfile(prof);
+      const outgoing = (rows||[]).find(r=>r.follower_id===uid && r.followee_id===rid);
+      const incoming = (rows||[]).find(r=>r.follower_id===rid && r.followee_id===uid);
+      merged.iFollow = !!(outgoing && outgoing.status==="accepted");
+      merged.followsMe = !!(incoming && incoming.status==="accepted");
+      merged.reqOutgoing = !!(outgoing && outgoing.status==="pending");
+      merged.reqIncoming = !!(incoming && incoming.status==="pending");
+    });
+    console.log("[follows] loaded", relatedIds.length, "related people");
+  }catch(e){ console.log("[follows] load exception:", e); }
 }
 
 /* Supabaseからposts一覧を取得しPOSTS配列を作り直す(いいね/コメントは次段まで初期値) */
@@ -2510,8 +2572,8 @@ async function authResetPassword(email){
 
 /* 認証状態が変わったときにモジュールから呼ばれる */
 window.onAuthChanged = async function(user){
-  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、投稿一覧・空き予定を取得
-  if(user){ await ensureProfile(); await loadPosts(); await loadCalendarAvailability(); }
+  // ログイン完了時(メール確認後の初回ログイン含む)にprofiles行を用意し、投稿一覧・空き予定・フォロー状態を取得
+  if(user){ await ensureProfile(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); }
   if(typeof renderApp === "function") renderApp();
 };
 
@@ -4130,44 +4192,16 @@ let ME = { id:"tomato", name:"Tomato", avatar:"🍅", photo:null, photoFull:null
   bio:"旅と写真とラーメンが好き。", birthday:"5/12", affiliation:"〇〇大学 経営学部",
   private:false };
 
-/* 全ユーザー(自分以外)。relation: フォロー関係を各自に持たせる
+/* 全ユーザー(自分以外)。Supabaseのprofiles/followsから取得した実データのローカルキャッシュとして運用する。
+   検索でヒットした相手、フォロー関係にある相手が動的に積まれていく。
+   要素の形: {id(=profiles.id/uuid), userId(表示用@ハンドル), name, photo(画像URL), avatar(絵文字。photoが無い場合の代替表示),
+             private, bio, birthday, iFollow, followsMe, reqIncoming, reqOutgoing, blocked}
    iFollow   … 自分がこの人をフォローしているか(相互/片方)
    followsMe … この人が自分をフォローしているか
    private   … 非公開アカウントか
    reqIncoming … この人から自分へフォローリクエストが来ているか
    reqOutgoing … 自分からこの人へフォローリクエスト送信中か */
-let PEOPLE = [
-  {id:"yuki", name:"ゆうき", avatar:"😺", online:true, private:false,
-   bio:"カフェ巡りとドライブが趣味です☕", birthday:"3/8", affiliation:"〇〇大学 文学部",
-   prefs:["グルメ🍽️","フォトスポット📸","ショッピング🛍️"], friends:["aoi","ken","miku"],
-   badges:["first","trips5","world1","fr5","album1"],
-   iFollow:true, followsMe:true, reqIncoming:false, reqOutgoing:false},
-  {id:"aoi",  name:"あおい", avatar:"🐧", online:false, private:false,
-   bio:"寺社と温泉が大好き。年に3回は旅に出ます。", birthday:"11/23", affiliation:"△△商事",
-   prefs:["温泉・癒し♨️","歴史的建造物🏛️","自然・公園🌳"], friends:["yuki","ken","sora"],
-   badges:["first","pref15","world3","eu1"],
-   iFollow:true, followsMe:true, reqIncoming:false, reqOutgoing:false},
-  {id:"ken",  name:"けんと", avatar:"🦊", online:true, private:false,
-   bio:"アウトドア派。登山とキャンプならどこでも。", birthday:"7/2", affiliation:"〇〇大学 理工学部",
-   prefs:["自然・公園🌳","秘境・スリル🌋","アクティビティ・スポーツ🏄"], friends:["yuki","aoi","haru"],
-   iFollow:true, followsMe:true, reqIncoming:false, reqOutgoing:false},
-  {id:"miku", name:"みく",   avatar:"🐰", online:true, private:false,
-   bio:"スイーツ巡りが生きがい🍰", birthday:"2/14", affiliation:"□□デザイン",
-   prefs:["グルメ🍽️","フォトスポット📸"], friends:["yuki","sora"],
-   iFollow:false, followsMe:false, reqIncoming:false, reqOutgoing:false},
-  {id:"sora", name:"そら",   avatar:"🐳", online:false, private:true,
-   bio:"海が好き。離島巡りが夢。", birthday:"8/30", affiliation:"〇〇大学 海洋学部",
-   prefs:["自然・公園🌳","展望スポット🌃"], friends:["aoi","miku"],
-   iFollow:false, followsMe:false, reqIncoming:false, reqOutgoing:false},
-  {id:"rui",  name:"るい",   avatar:"🐤", online:true, private:false,
-   bio:"美術館とライブが好き🎸", birthday:"4/19", affiliation:"◇◇音楽事務所",
-   prefs:["フォトスポット📸","主要な観光名所📍"], friends:["haru"],
-   iFollow:false, followsMe:true, reqIncoming:true, reqOutgoing:false},  // この人からリクエストが来ている
-  {id:"haru", name:"はると", avatar:"🐶", online:true, private:true,
-   bio:"食べ歩きと街歩きが趣味。", birthday:"9/5", affiliation:"〇〇大学 経済学部",
-   prefs:["グルメ🍽️","ショッピング🛍️","主要な観光名所📍"], friends:["ken","rui"],
-   iFollow:false, followsMe:false, reqIncoming:false, reqOutgoing:false},
-];
+let PEOPLE = [];
 function findPerson(id){ return PEOPLE.find(p=>p.id===id) || null; }
 /* 相互フォロー(=友達) */
 function isMutual(p){ return p && p.iFollow && p.followsMe && !p.blocked; }
@@ -4192,12 +4226,17 @@ function unblockUser(id){
   renderApp();
 }
 /* フォロワーから削除:相手の自分へのフォローだけ外す */
-function removeFollower(id){
+async function removeFollower(id){
   const p=findPerson(id); if(!p)return;
   if(!confirm(`${p.name}をフォロワーから削除しますか？\n（相手はあなたをフォローしなくなります）`))return;
   p.followsMe=false;
   toast(`${p.name}をフォロワーから削除しました`);
   renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("follows")
+      .delete().eq("follower_id", id).eq("followee_id", authUser().id);
+    if(error) console.log("[follows] removeFollower error:", error.message);
+  }
 }
 
 /* 旅行グループ。各グループが自前の roomState(合意形成の進行)と chat を持つ */
@@ -4962,8 +5001,17 @@ function commentHTML(p,c){
     ${canDel?`<button class="cmt-del" onclick="event.stopPropagation();deletePostComment('${p.id}','${c.id}')" aria-label="${t('post.delete')}">×</button>`:''}
   </div>`;
 }
-function openProfileByName(name){
-  const person=PEOPLE.find(x=>x.name===name||x.id===name);
+async function openProfileByName(userIdOrName){
+  let person = PEOPLE.find(x=>x.userId===userIdOrName || x.name===userIdOrName || x.id===userIdOrName);
+  if(!person && window.SB && isSignedIn()){
+    try{
+      const { data, error } = await window.SB.from("profiles")
+        .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private")
+        .eq("user_id", userIdOrName).maybeSingle();
+      if(error){ console.log("[profiles] openProfileByName error:", error.message); }
+      else if(data){ person = upsertPeopleFromProfile(data); }
+    }catch(e){ console.log("[profiles] openProfileByName exception:", e); }
+  }
   if(person){ openProfile(person.id); }
 }
 /* ③画像ダブルタップ: いいねを付け、中央にハートを飛ばす */
@@ -5889,19 +5937,13 @@ function renderSearchList(){
 
 /* ---- 通知 ---- */
 function screenNotify(){
-  // 届いているフォローリクエスト(相手→自分)
-  const reqs=PEOPLE.filter(p=>p.reqIncoming);
-  const reqHtml = reqs.length ? `
-    <h3 class="sub" style="margin:6px 4px 8px">${t('x.notif.followReq')}</h3>
-    ${reqs.map(p=>`<div class="listcard">
-      <div class="lic" style="${avatarStyle(p)};background:${p.photo?'transparent':'var(--chip)'}" onclick="profileBackView='notify';openProfile('${p.id}')">${avatarInner(p)}</div>
-      <div class="lt" onclick="profileBackView='notify';openProfile('${p.id}')" style="cursor:pointer"><div class="a">${esc(p.name)}</div><div class="b">${t('x.notif.wantsFollow')}</div></div>
-      <div style="display:flex;gap:6px">
-        <button class="mini-btn solid" onclick="acceptRequest('${p.id}')">${t('x.common.approve')}</button>
-        <button class="mini-btn danger" onclick="declineRequest('${p.id}')">${t('x.common.delete')}</button>
-      </div>
-    </div>`).join("")}
-    <h3 class="sub" style="margin:18px 4px 8px">${t('x.notif.all')}</h3>` : "";
+  // 届いているフォローリクエスト(相手→自分)の件数だけを移行欄(バナー)として示す。一覧本体は専用画面へ
+  const reqCount = PEOPLE.filter(p=>p.reqIncoming).length;
+  const reqHtml = reqCount ? `<div class="notif-req-banner" onclick="goFwd('followrequests')">
+    <span class="nrb-ic">🤝</span>
+    <span class="nrb-text">${t('x.notif.followReqBanner',{n:reqCount})}</span>
+    <span class="nrb-arrow">›</span>
+  </div>` : "";
 
   // ③時系列で見出しを分ける。境界は今日/昨日/過去7日間/過去30日間/もっと前
   const now=Date.now();
@@ -5950,6 +5992,25 @@ let notifShowMore=false;
 let notifyBackView="home";
 function openNotify(){ notifShowMore=false; notifyBackView = (S.view==="notify"||S.view==="dm"||S.view==="groupchat"||S.view==="room")?"home":S.view; pendingViewAnim="cut-in-right"; goView("notify"); }
 function goBackFromNotify(){ goBack(notifyBackView); }
+/* 通知画面の移行欄(バナー)から遷移する、フォロー申請専用の一覧画面 */
+function screenFollowRequests(){
+  const reqs = PEOPLE.filter(p=>p.reqIncoming);
+  const body = reqs.length ? reqs.map(p=>`<div class="listcard">
+      <div class="lic" style="${avatarStyle(p)};background:${p.photo?'transparent':'var(--chip)'}" onclick="profileBackView='notify';openProfile('${p.id}')">${avatarInner(p)}</div>
+      <div class="lt" onclick="profileBackView='notify';openProfile('${p.id}')" style="cursor:pointer"><div class="a">${esc(p.name)}</div><div class="b">${t('x.notif.wantsFollow')}</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="mini-btn solid" onclick="acceptRequest('${p.id}')">${t('x.common.approve')}</button>
+        <button class="mini-btn danger" onclick="declineRequest('${p.id}')">${t('x.common.delete')}</button>
+      </div>
+    </div>`).join("") : `<p class="muted" style="text-align:center;margin-top:24px">${t('x.notif.followReqEmpty')}</p>`;
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <button class="room-back" onclick="goBack('notify')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t('x.notif.followReq')}</h2>
+    </div>
+    ${body}
+  </div>`;
+}
 
 /* ---- プロフィール ---- */
 function avatarStyle(p){ return p.photo?`background-image:url('${p.photo}')`:""; }
@@ -6399,10 +6460,14 @@ function screenSettings(){
 }
 let notifEnabled=true;
 function toggleNotif(){ notifEnabled=!notifEnabled; renderApp(); }
-function togglePrivate(){
+async function togglePrivate(){
   ME.private=!ME.private;
   toast(ME.private?"アカウントを非公開にしました":"アカウントを公開にしました");
   renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("profiles").update({ is_private: ME.private }).eq("id", authUser().id);
+    if(error) console.log("[profiles] is_private save error:", error.message);
+  }
 }
 
 /* ---- プロフィール編集画面 ---- */
@@ -6777,28 +6842,60 @@ function screenUserProfile(){
 }
 
 /* フォロー操作 */
-function follow(id){ const p=findPerson(id); if(!p)return;
+async function follow(id){ const p=findPerson(id); if(!p)return;
   p.iFollow=true; p.reqOutgoing=false; p.followedAt=Date.now();
-  if(!p.friends)p.friends=[]; if(!p.friends.includes(ME.id))p.friends.push(ME.id);
-  toast(t("toast.followed",{name:p.name})); checkBadgeAwards(); renderApp(); }
-function unfollow(id){ const p=findPerson(id); if(!p)return;
+  toast(t("toast.followed",{name:p.name})); checkBadgeAwards(); renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("follows")
+      .insert({ follower_id: authUser().id, followee_id: id, status: "accepted" });
+    if(error) console.log("[follows] follow error:", error.message);
+  }
+}
+async function unfollow(id){ const p=findPerson(id); if(!p)return;
   if(!confirm(`${p.name}のフォローを解除しますか？`))return;
   p.iFollow=false;
-  if(p.friends)p.friends=p.friends.filter(x=>x!==ME.id);
-  toast(t("toast.unfollowed",{name:p.name})); renderApp(); }
-function sendRequest(id){ const p=findPerson(id); if(!p)return;
-  p.reqOutgoing=true; toast(t("toast.requested",{name:p.name}));
-  // 試作:非公開相手は一定確率で自動承認されたことにせず、手動承認を待つ
-  renderApp(); }
-function cancelRequest(id){ const p=findPerson(id); if(!p)return;
-  p.reqOutgoing=false; toast(t("x.toast.reqCanceled")); renderApp(); }
+  toast(t("toast.unfollowed",{name:p.name})); renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("follows")
+      .delete().eq("follower_id", authUser().id).eq("followee_id", id);
+    if(error) console.log("[follows] unfollow error:", error.message);
+  }
+}
+async function sendRequest(id){ const p=findPerson(id); if(!p)return;
+  p.reqOutgoing=true; toast(t("toast.requested",{name:p.name})); renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("follows")
+      .insert({ follower_id: authUser().id, followee_id: id, status: "pending" });
+    if(error) console.log("[follows] sendRequest error:", error.message);
+  }
+}
+async function cancelRequest(id){ const p=findPerson(id); if(!p)return;
+  p.reqOutgoing=false; toast(t("x.toast.reqCanceled")); renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("follows")
+      .delete().eq("follower_id", authUser().id).eq("followee_id", id);
+    if(error) console.log("[follows] cancelRequest error:", error.message);
+  }
+}
 /* 相手から来たリクエストを承認/拒否 */
-function acceptRequest(id){ const p=findPerson(id); if(!p)return;
+async function acceptRequest(id){ const p=findPerson(id); if(!p)return;
   p.reqIncoming=false; p.followsMe=true;
   pushNotif({ic:"🤝", a:`${p.name}さんと相互フォローになりました`, b:"新しい友だちです", when:"たった今", unread:true, target:{type:"profile", pid:id}});
-  toast(`${p.name}のリクエストを承認しました`); checkBadgeAwards(); renderApp(); }
-function declineRequest(id){ const p=findPerson(id); if(!p)return;
-  p.reqIncoming=false; toast(t("x.toast.reqDeleted")); renderApp(); }
+  toast(`${p.name}のリクエストを承認しました`); checkBadgeAwards(); renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("follows")
+      .update({ status: "accepted" }).eq("follower_id", id).eq("followee_id", authUser().id);
+    if(error) console.log("[follows] acceptRequest error:", error.message);
+  }
+}
+async function declineRequest(id){ const p=findPerson(id); if(!p)return;
+  p.reqIncoming=false; toast(t("x.toast.reqDeleted")); renderApp();
+  if(window.SB && isSignedIn()){
+    const { error } = await window.SB.from("follows")
+      .delete().eq("follower_id", id).eq("followee_id", authUser().id);
+    if(error) console.log("[follows] declineRequest error:", error.message);
+  }
+}
 
 /* ---- 新しい旅をつくる(ルームの作成フローへ) ---- */
 function startNewTrip(){
@@ -7532,12 +7629,21 @@ function renderSearchResultHtml(){
   if(searchResult===null) return `<div class="feed-empty" style="padding:24px"><div class="ic">🔍</div>${t('x.add.idNotFound')}</div>`;
   return `<h3 class="sub" style="margin:0 4px 8px">${t('x.add.results')}</h3>${personRow(searchResult)}`;
 }
-function searchById(){
+async function searchById(){
   const v=((document.getElementById("idInput")||{}).value||"").trim();
   if(!v){toast(t("x.toast.enterId"));return;}
   const q=idHandle(v).toLowerCase();   // 先頭@を除去
-  let p=PEOPLE.find(x=>!x.blocked && idHandle(x.id).toLowerCase()===q);
-  searchResult = p||null;
+  if(!window.SB || !isSignedIn()){ searchResult=null; renderApp(); return; }
+  try{
+    const { data, error } = await window.SB.from("profiles")
+      .select("id, user_id, display_name, avatar_url, avatar_url_full, is_private")
+      .ilike("user_id", q).limit(1);
+    if(error){ console.log("[profiles] search error:", error.message); searchResult=null; }
+    else{
+      const hit = (data||[])[0];
+      searchResult = (hit && hit.id!==authUser().id) ? upsertPeopleFromProfile(hit) : null;
+    }
+  }catch(e){ console.log("[profiles] search exception:", e); searchResult=null; }
   const box=document.getElementById("searchResult");
   if(box) box.innerHTML=renderSearchResultHtml();
   else renderApp();
@@ -8551,6 +8657,7 @@ function renderApp(){
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
   else if(S.view==="notify")  html=screenNotify();
+  else if(S.view==="followrequests") html=screenFollowRequests();
   else if(S.view==="profile"){ sc.innerHTML=screenProfile(); if(profileTab==="calendar") drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="followlist") html=screenFollowList();
   else html=screenHome();
