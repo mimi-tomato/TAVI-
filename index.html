@@ -566,6 +566,7 @@
   .post-card.text-post{padding-bottom:6px}
   .post-head{display:flex;align-items:center;gap:8px;padding:12px 14px;position:relative}
   .post-ava{width:34px;height:34px;border-radius:50%;background:var(--field);display:flex;align-items:center;justify-content:center;font-size:1.125rem;flex:0 0 auto;cursor:pointer}
+  .post-ava.img{background-size:cover;background-position:center;font-size:0}
   .post-who{font-weight:800;color:var(--ink);font-size:0.875rem}
   .post-ago{color:var(--ink-soft);font-size:0.75rem;margin-left:auto}
   .post-vis{font-size:0.75rem;margin-left:4px;opacity:.75}
@@ -4724,6 +4725,7 @@ function screenPost(){
 /* ①②③④投稿カード */
 function postCardHTML(p){
   const hasImg=p.images&&p.images.length;
+  const pav = personAvatarValue(p.avatar); // 投稿者アイコン(画像URL/絵文字どちらも対応)
   // 公開範囲アイコン: 全体公開(既定)は何も出さず、フォロワー限定/自分のみだけ小さく示す
   const visIcon = p.visibility==="private" ? `<span class="post-vis" title="${t('post.vis.private')}">🔒</span>`
     : p.visibility==="followers" ? `<span class="post-vis" title="${t('post.vis.followers')}">👥</span>` : '';
@@ -4763,7 +4765,7 @@ function postCardHTML(p){
         <button class="pc-nav next" onclick="event.stopPropagation();carouselMove('${p.id}',1,${p.images.length})" ondblclick="event.stopPropagation()">›</button>
         <div class="pc-dots" id="pcd_${p.id}">${p.images.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join("")}</div>`:''}
       <div class="pc-top">
-        <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${esc(p.avatar||"🙂")}</span>
+        <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
         <span class="post-who">@${esc(p.userId||"")}</span>
         <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
         ${postMenuBtn(p)}
@@ -4780,7 +4782,7 @@ function postCardHTML(p){
   }
   return `<div class="post-card text-post" data-pid="${p.id}">
     <div class="post-head">
-      <span class="post-ava" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${esc(p.avatar||"🙂")}</span>
+      <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?'':`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
       <span class="post-who">@${esc(p.userId||"")}</span>
       <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
       ${postMenuBtn(p)}
@@ -5910,6 +5912,18 @@ function goBackFromNotify(){ goBack(notifyBackView); }
 /* ---- プロフィール ---- */
 function avatarStyle(p){ return p.photo?`background-image:url('${p.photo}')`:""; }
 function avatarInner(p){ return p.photo?"":(p.avatar||"🙂"); }
+/* 投稿一覧(POSTS)用。ME/PEOPLEはphoto(画像URL)とavatar(絵文字)を別プロパティに持つが、
+   POSTSはprofiles.avatar_urlをそのままavatarへ入れる設計のため、値が画像URLか絵文字かをここで判定する。
+   コメント欄(commentHTML)でも同じ判定を個別に行っていたが、投稿一覧(post-ava)側は判定自体が
+   抜けていたため、プロフィール写真が画像URLになった際にURL文字列がそのまま表示される不具合があった */
+function personAvatarValue(avatarValue){
+  const isPhoto = avatarValue && /^https?:\/\//.test(avatarValue);
+  return {
+    clsSuffix: isPhoto ? " img" : "",
+    style: isPhoto ? `background-image:url('${esc(avatarValue)}')` : "",
+    inner: isPhoto ? "" : esc(avatarValue || "🙂")
+  };
+}
 /* ⑦非公開を示す鍵アイコン(テーマで黒/白を出し分け) */
 function lockIc(){ const dark=document.documentElement.getAttribute("data-theme")==="dark"; return `<img src="${dark?UI_IMG.lock_white:UI_IMG.lock_black}" class="lock-ic" alt="${t('x.alt.private')}">`; }
 /* ①アクセント色を背景に持つボタン上の鍵。文字色(--on-accent)に合わせて白/黒の鍵を返す。
@@ -6002,7 +6016,7 @@ function screenProfile(){
     <div class="prof-top" style="margin-top:-6px">
       <div class="pava ${ME.photo?'img':''}" style="${avatarStyle(ME)}${ME.photo?';cursor:pointer':''};margin:0 auto 10px" ${ME.photo?`onclick="openFullImage('${esc(ME.photoFull||ME.photo)}')"`:''}>${avatarInner(ME)}</div>
       <div class="pn">${esc(ME.name)} ${ME.private?lockIc():''}</div>
-      <div class="pm">@${esc(ME.id)}</div>
+      <div class="pm">@${esc(myUserId)}</div>
       ${ME.bio?`<div class="prof-bio">${esc(ME.bio)}</div>`:`<div class="prof-bio" style="color:var(--ink-soft)">${t('x.prof.addBio')}</div>`}
       <div class="follow-line"><span class="fl-link" onclick="openFollowList('following')"><b>${followingCnt}</b> ${t('x.prof.following')}</span> ・ <span class="fl-link" onclick="openFollowList('followers')"><b>${followerCnt}</b> ${t('x.prof.followers')}</span></div>
       ${meta.length?`<div class="prof-meta">${meta.join("")}</div>`:""}
@@ -6447,6 +6461,9 @@ async function saveProfile(){
     avatarDraft = { rawImage:null, crop:null, croppedDataUrl:null };
   }
   profileEditBackup = null; // 保存が確定したので、離脱時のロールバック対象から外す
+  // 表示中の投稿一覧(POSTS)は投稿取得時点のprofiles情報を保持したままなので、
+  // ここで再取得しないとID変更・表示名変更・写真変更が投稿カード側に反映されないまま残る
+  await loadPosts();
   toast(t("x.toast.profileSaved"));
   goView("profile");
 }
@@ -7351,8 +7368,8 @@ function screenAddFriend(){
   const body = addMode==="qr"
     ? `<div class="qr-card">
         <div style="font-size:13px;color:var(--ink-soft);font-weight:700;margin-bottom:4px">${t('x.add.yourQr')}</div>
-        <div class="qr-box">${qrSVG(ME.id)}</div>
-        <div class="myid" onclick="copyId()">@${esc(ME.id)} <span style="color:var(--accent)">${t('x.add.copy')}</span></div>
+        <div class="qr-box">${qrSVG(myUserId)}</div>
+        <div class="myid" onclick="copyId()">@${esc(myUserId)} <span style="color:var(--accent)">${t('x.add.copy')}</span></div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin:12px 0 0">${t('x.add.qrNote')}</p>
       </div>
       <div style="margin-top:18px">
@@ -7404,7 +7421,7 @@ function scanQR(){
   toast(`${pick.name}のQRを読み取りました`);
 }
 function copyId(){
-  try{ navigator.clipboard.writeText(ME.id); }catch(e){}
+  try{ navigator.clipboard.writeText(myUserId); }catch(e){}
   toast(t("x.toast.idCopied"));
 }
 /* ID文字列から決定的に簡易QR風の図形を生成(装飾。読み取りは不可) */
