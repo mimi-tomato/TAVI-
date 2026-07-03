@@ -4713,7 +4713,7 @@ function tabbarHTML(){
   const pAv = ME.photo
     ? `<span class="tab-ava img ${onP?'on':''}" style="background-image:url('${ME.photo}')"></span>`
     : `<span class="tab-ava ${onP?'on':''}">${esc(ME.avatar||"🙂")}</span>`;
-  const profileTab = `<button class="tab ${onP?'on':''}" onclick="goTab('profile')">
+  const profileTabBtn = `<button class="tab ${onP?'on':''}" onclick="goTab('profile')">
       <span class="tab-ic-wrap">${pAv}</span></button>`;
   // ②並び順: 投稿 / 旅計画 / チャット / 検索 / プロフィール
   //   投稿(post)=従来のホームアイコン, 旅計画(home)=ペンアイコン
@@ -4722,7 +4722,7 @@ function tabbarHTML(){
     ${imgTab('home','pen')}
     ${imgTab('chat','msg')}
     ${imgTab('addfriend','search')}
-    ${profileTab}
+    ${profileTabBtn}
   </div></div>`;
 }
 
@@ -6125,7 +6125,7 @@ function screenProfile(){
       ${ME.bio?`<div class="prof-bio">${esc(ME.bio)}</div>`:`<div class="prof-bio" style="color:var(--ink-soft)">${t('x.prof.addBio')}</div>`}
       <div class="follow-line"><span class="fl-link" onclick="openFollowList('following')"><b>${followingCnt}</b> ${t('x.prof.following')}</span> ・ <span class="fl-link" onclick="openFollowList('followers')"><b>${followerCnt}</b> ${t('x.prof.followers')}</span></div>
       ${meta.length?`<div class="prof-meta">${meta.join("")}</div>`:""}
-      <button class="edit-prof-btn" onclick="openEditProfile()"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""> ${t('x.prof.editProfile')}</button>
+      <button class="edit-prof-btn" onclick="openEditProfile()"><img src="${dark?TAB_ICONS.pen_white:TAB_ICONS.pen_black}" class="pen-ic" alt=""> ${t('x.prof.editProfile')}</button>
     </div>
 
     <div class="acc-sec">
@@ -6371,7 +6371,7 @@ function screenSettings(){
         <div style="flex:1"><div class="st" style="margin:0">${t("settings.private")}</div>
           <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${t("settings.private.sub")}</div></div>
         <div class="switch ${ME.private?'on':''}" onclick="togglePrivate()"><i></i></div></div>
-      <div class="item" onclick="openEditProfile()"><span class="si"><img src="${dark?UI_IMG.pen_white:UI_IMG.pen_black}" class="pen-ic" alt=""></span><span class="st">${t("settings.editProfile")}</span><span style="color:var(--ink-soft)">›</span></div>
+      <div class="item" onclick="openEditProfile()"><span class="si"><img src="${dark?TAB_ICONS.pen_white:TAB_ICONS.pen_black}" class="pen-ic" alt=""></span><span class="st">${t("settings.editProfile")}</span><span style="color:var(--ink-soft)">›</span></div>
       ${isSignedIn()?`<div class="item" style="cursor:default"><span class="si">📧</span><div style="flex:1"><div class="st" style="margin:0">${t("settings.signedInAs")}</div><div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">${esc(authUser().email||"")}</div></div></div>
       <div class="item" onclick="confirmSignOut()"><span class="si">🚪</span><span class="st" style="color:#e0245e">${t("settings.signOut")}</span></div>`:``}
     </div>
@@ -7630,19 +7630,20 @@ let myCalYear=2026, myCalMonth=7;
 
 /* Supabaseのcalendar_events(type='availability')からMYCALを読み込む。ログイン完了時に呼ぶ */
 async function loadCalendarAvailability(){
-  if(!window.SB || !isSignedIn()) return;
+  if(!window.SB || !isSignedIn()){ console.log("[calendar_events] load skipped (not signed in or SB missing)"); return; }
   try{
     const { data, error } = await window.SB.from("calendar_events")
       .select("date, status").eq("user_id", authUser().id).eq("type", "availability");
     if(error){ console.log("[calendar_events] load error:", error.message); return; }
     MYCAL = {};
     (data||[]).forEach(row=>{ if(row.status) MYCAL[row.date]=row.status; });
+    console.log("[calendar_events] loaded", (data||[]).length, "rows");
   }catch(e){ console.log("[calendar_events] load exception:", e); }
 }
 /* 1日分の空き予定を保存(status=nullなら削除)。既存行の有無で INSERT/UPDATE を切り替える。
    1件ずつの操作のため確実性を優先しSELECT→INSERT/UPDATEの2段階にしている */
 async function saveCalendarAvailability(dateKey, status){
-  if(!window.SB || !isSignedIn()) return;
+  if(!window.SB || !isSignedIn()){ console.log("[calendar_events] skipped (not signed in or SB missing)"); return; }
   const uid = authUser().id;
   try{
     if(status){
@@ -7652,15 +7653,18 @@ async function saveCalendarAvailability(dateKey, status){
       if(existing){
         const { error } = await window.SB.from("calendar_events").update({ status }).eq("id", existing.id);
         if(error) console.log("[calendar_events] update error:", error.message);
+        else console.log("[calendar_events] updated:", dateKey, status);
       }else{
         const { error } = await window.SB.from("calendar_events")
           .insert({ user_id: uid, date: dateKey, type: "availability", status });
         if(error) console.log("[calendar_events] insert error:", error.message);
+        else console.log("[calendar_events] inserted:", dateKey, status);
       }
     }else{
       const { error } = await window.SB.from("calendar_events")
         .delete().eq("user_id", uid).eq("date", dateKey).eq("type", "availability");
       if(error) console.log("[calendar_events] delete error:", error.message);
+      else console.log("[calendar_events] deleted:", dateKey);
     }
   }catch(e){ console.log("[calendar_events] save exception:", e); }
 }
