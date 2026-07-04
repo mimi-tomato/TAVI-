@@ -5614,7 +5614,7 @@ window.__carDragConsumed=false;
 /* ④画像下部の輝度を測り、明るければ文字を黒に切り替える(グラデと併用) */
 /* ①投稿作成画面を開く */
 function openPostCompose(){
-  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null };
+  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null, taggedIds:[] };
   goView("postcompose");
 }
 /* 投稿の公開範囲を切り替え(全体/フォロワー/自分のみ) */
