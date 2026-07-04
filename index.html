@@ -7410,6 +7410,11 @@ function subscribeDMRealtime(convId, otherId){
       DM[otherId].push({ id:row.id, mine:false, t:row.text||"", img:row.image_url||null, imgFull:row.image_url_full||null, ts:new Date(row.created_at).getTime(), ago:nowTime() });
       if(S.view==="dm" && activeChatId===otherId) renderDMBody(true);
     })
+    .on("postgres_changes", { event:"UPDATE", schema:"public", table:"conversation_members", filter:`conversation_id=eq.${convId}` }, (payload)=>{
+      if(payload.new.user_id !== otherId) return;
+      dmOtherReadState.lastReadAt = payload.new.last_read_at;
+      if(S.view==="dm" && activeChatId===otherId) renderDMBody(false);
+    })
     .subscribe();
 }
 /* DM一覧画面用。自分が参加する全DM会話について、相手のプロフィールと最新メッセージ1件を取得する。
@@ -7451,6 +7456,13 @@ async function loadDMSummaries(){
     }
   }catch(e){ console.log("[chat] load summaries exception:", e); }
 }
+/* タブがフォアグラウンドに戻ったとき、チャット一覧を自動更新する */
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="visible" && isSignedIn() && S.view==="chat"){
+    chatSummariesLoaded = false;
+    loadDMSummaries().then(()=>{ if(S.view==="chat"){ const sc2=document.getElementById("screen"); if(sc2) sc2.innerHTML=screenChat(); } });
+  }
+});
 
 async function openDM(fid){
   const p=findPerson(fid);
