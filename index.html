@@ -782,6 +782,9 @@
   .pcmp-loc-label{display:inline-flex;align-items:center;gap:6px;font-size:0.875rem;color:var(--ink-soft);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pcmp-loc-pin-ic{width:16px;height:16px;object-fit:contain;flex:0 0 auto}
   .pcmp-loc-sub{display:flex;align-items:center;gap:6px;padding:0 2px;font-size:0.8125rem;color:var(--ink)}
+  .pcmp-tag-sub{flex-wrap:wrap;gap:8px}
+  .pcmp-tag-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--chip);font-weight:700}
+  .pcmp-tag-chip i{font-style:normal;cursor:pointer;color:var(--ink-soft)}
   .loc-overlay{position:fixed;inset:0;z-index:240;background:var(--bg);display:flex;flex-direction:column}
   .loc-bar{display:flex;align-items:center;gap:8px;padding:14px 16px 8px}
   input.loc-search-input{display:block;box-sizing:border-box;width:calc(100% - 32px);margin:0 16px 10px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;
@@ -802,6 +805,13 @@
   .pc-location{position:absolute;left:14px;top:48px;z-index:2;color:#fff;font-size:0.75rem;font-weight:700;
     text-shadow:0 1px 3px rgba(0,0,0,.7);cursor:pointer}
   .tx-location{padding:0 14px 6px;color:var(--ink-soft);font-size:0.8125rem;font-weight:700;cursor:pointer}
+  /* 投稿カード内のタグ付け表示(画像投稿は位置情報と同じ重ね表示、テキスト投稿は通常フロー) */
+  .pc-tags{position:absolute;left:14px;z-index:2;color:#fff;font-size:0.75rem;font-weight:700;
+    text-shadow:0 1px 3px rgba(0,0,0,.7);cursor:pointer}
+  .tag-list-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;font-size:0.8438rem}
+  .tag-list-row:not(:last-child){border-bottom:1px solid var(--line)}
+  .tag-list-name{cursor:pointer;color:var(--ink);font-weight:700}
+  .tag-list-remove{background:transparent;border:0;color:var(--ink-soft);cursor:pointer;font-size:0.9375rem;padding:2px 6px;flex:0 0 auto}
   .gcard.s-min .min-done{max-width:none}
 
   .prof-top{text-align:center;padding:18px 0 8px}
@@ -1270,7 +1280,7 @@ const JP_PREF=[{"id":1,"name":"北海道","d":"M467.2,22.3 469.0,21.0 470.3,19.3
 const I18N = {
   ja: {
     "tab.home":"ホーム", "tab.chat":"チャット", "tab.search":"友達検索", "tab.profile":"プロフィール",
-    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.useCurrentLocation":"現在地を使う", "post.locNoGeo":"この端末は位置情報に対応していません", "post.locGeoDenied":"位置情報を取得できませんでした", "post.addLocation":"位置情報を追加", "post.locSearchPh":"場所を検索…", "post.locSearching":"検索中…", "post.locNoResults":"見つかりませんでした", "post.showMore":"…さらに表示", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
+    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.useCurrentLocation":"現在地を使う", "post.locNoGeo":"この端末は位置情報に対応していません", "post.locGeoDenied":"位置情報を取得できませんでした", "post.addLocation":"位置情報を追加", "post.locSearchPh":"場所を検索…", "post.locSearching":"検索中…", "post.locNoResults":"見つかりませんでした", "post.showMore":"…さらに表示", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.tagPeople":"タグ付けする", "post.tagPickerTitle":"タグ付け", "post.tagSearchPh":"名前で検索…", "post.tagNoFriends":"フォロー中のユーザーがいません", "post.taggedWith":"{names}とタグ付け", "post.untag":"タグ付けを解除", "post.untagged":"タグ付けを解除しました", "post.tagRemove":"削除", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
     "home.empty.sub":"右下の＋から新しい旅をつくろう。", "home.archived":"アーカイブ済み（{n}）",
     "home.sizeHint":"タップで表示サイズを切替", "home.newTrip":"新しい旅をつくる",
     "card.live":"進行中", "card.done":"確定済み", "card.prep":"準備中", "card.new":"新着", "card.archived":"アーカイブ",
@@ -1518,6 +1528,7 @@ const I18N = {
     "x.notif.msg.followRequest":"{name}さんからフォローリクエストが届いています",
     "x.notif.msg.followAccept":"{name}さんとフォローが成立しました",
     "x.notif.msg.message":"{name}さんからメッセージが届きました",
+    "x.notif.msg.tag":"{name}さんがあなたをタグ付けしました",
     "x.chat.sendFailed":"メッセージの送信に失敗しました",
     "x.chat.read":"既読",
     "settings.chatManage":"チャットを管理", "settings.readReceipts":"既読の表示",
@@ -1710,7 +1721,7 @@ const I18N = {
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
-    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.useCurrentLocation":"Use current location", "post.locNoGeo":"Location services are not supported on this device", "post.locGeoDenied":"Could not get your location", "post.addLocation":"Add location", "post.locSearchPh":"Search for a place…", "post.locSearching":"Searching…", "post.locNoResults":"No results found", "post.showMore":"…more", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
+    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.useCurrentLocation":"Use current location", "post.locNoGeo":"Location services are not supported on this device", "post.locGeoDenied":"Could not get your location", "post.addLocation":"Add location", "post.locSearchPh":"Search for a place…", "post.locSearching":"Searching…", "post.locNoResults":"No results found", "post.showMore":"…more", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.tagPeople":"Tag people", "post.tagPickerTitle":"Tag people", "post.tagSearchPh":"Search by name…", "post.tagNoFriends":"You're not following anyone yet", "post.taggedWith":"with {names}", "post.untag":"Remove tag", "post.untagged":"Tag removed", "post.tagRemove":"Remove", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
     "home.empty.sub":"Tap + below to start a new trip.", "home.archived":"Archived ({n})",
     "home.sizeHint":"Tap to change card size", "home.newTrip":"Start a new trip",
     "card.live":"In progress", "card.done":"Confirmed", "card.prep":"Getting ready", "card.new":"New", "card.archived":"Archived",
@@ -1942,6 +1953,7 @@ const I18N = {
     "x.notif.msg.followRequest":"{name} sent you a follow request",
     "x.notif.msg.followAccept":"{name} accepted your follow request",
     "x.notif.msg.message":"{name} sent you a message",
+    "x.notif.msg.tag":"{name} tagged you in a post",
     "x.chat.sendFailed":"Failed to send message",
     "x.chat.read":"Read",
     "settings.chatManage":"Manage chat", "settings.readReceipts":"Read receipts",
@@ -2462,25 +2474,60 @@ async function loadPosts(){
         ratio: row.image_ratio || "1/1",
         visibility: row.visibility || "public",
         location: row.location || null,
-        likedByMe:false, likeCount:0, comments:[],
+        likedByMe:false, likeCount:0, comments:[], tags:[],
         mine: !!(me && row.author_id===me.id)
       });
     });
-    if(POSTS.length){ await loadLikesFor(POSTS.map(p=>p.id)); await loadCommentsFor(POSTS.map(p=>p.id)); }
+    if(POSTS.length){ await loadLikesFor(POSTS.map(p=>p.id)); await loadCommentsFor(POSTS.map(p=>p.id)); await loadPostTagsFor(POSTS.map(p=>p.id)); }
     if(typeof rerenderPost === "function") rerenderPost();
   }catch(e){ console.log("[posts] load exception:", e); }
 }
 
 /* 投稿をSupabaseへ保存 */
-async function savePostToSupabase(text, visibility, imageObjs, ratio, location){
+/* postIdはクライアント側で事前生成する(insert().select()はconversations実装時と同じ理由でRLSと相性が悪いため使わない)。
+   taggedIdsがあればpost_tagsへも続けて登録する */
+async function savePostToSupabase(postId, text, visibility, imageObjs, ratio, location, taggedIds){
   if(!window.SB || !isSignedIn()) return false;
   const { error } = await window.SB.from("posts").insert({
-    author_id: authUser().id, text, visibility: visibility || "public",
+    id: postId, author_id: authUser().id, text, visibility: visibility || "public",
     image_urls: imageObjs || [], image_ratio: (imageObjs && imageObjs.length) ? (ratio||"1/1") : null,
     location: location || null
   });
   if(error){ console.log("[posts] insert error:", error.message); toast(error.message); return false; }
+  if(taggedIds && taggedIds.length){
+    const rows = taggedIds.map(uidv=>({ post_id: postId, tagged_user_id: uidv }));
+    const { error: te } = await window.SB.from("post_tags").insert(rows);
+    if(te) console.log("[post_tags] insert error:", te.message);
+    else taggedIds.forEach(uidv=>createNotification(uidv, "tag", {postId}));
+  }
   return true;
+}
+/* 投稿のタグ付け一覧をまとめて取得し、POSTSの各要素へ p.tags=[{id,name,userId,avatar}] を付与する */
+async function loadPostTagsFor(postIds){
+  if(!window.SB || !postIds.length) return;
+  try{
+    const { data, error } = await window.SB
+      .from("post_tags").select("post_id, tagged_user_id").in("post_id", postIds);
+    if(error){ console.log("[post_tags] load error:", error.message); return; }
+    const rows = data || [];
+    const taggedUserIds = [...new Set(rows.map(r=>r.tagged_user_id))];
+    let profMap = {};
+    if(taggedUserIds.length){
+      const { data: profs, error: pe } = await window.SB
+        .from("profiles").select("id, user_id, display_name, avatar_url").in("id", taggedUserIds);
+      if(pe) console.log("[profiles] load error:", pe.message);
+      (profs||[]).forEach(p=>{ profMap[p.id]=p; });
+    }
+    const byPost = {};
+    rows.forEach(r=>{
+      const prof = profMap[r.tagged_user_id]; if(!prof) return;
+      (byPost[r.post_id] = byPost[r.post_id]||[]).push({
+        id: r.tagged_user_id, name: prof.display_name || t("post.noName"),
+        userId: prof.user_id || "", avatar: prof.avatar_url || "🧳"
+      });
+    });
+    POSTS.forEach(p=>{ p.tags = byPost[p.id] || []; });
+  }catch(e){ console.log("[post_tags] load exception:", e); }
 }
 
 /* 投稿をSupabaseから削除(本人のみRLSで許可) */
@@ -2950,10 +2997,10 @@ function decorateMentionsClickable(text){
   const safe=esc(text||"");
   return safe.replace(/[@＠](All|all|[A-Za-z0-9._]+)/g, (m0,p1)=>{
     if(/^all$/i.test(p1)) return m0;   // 投稿では @All はメンション扱いしない
-    // id または name でPEOPLEを検索(自分=Tomato/トマトも考慮)
-    const person=PEOPLE.find(x=>x.id===p1 || x.name===p1);
+    // ハンドル(userId)を主に、旧互換としてidやnameでもPEOPLEを検索
+    const person=PEOPLE.find(x=>x.userId===p1 || x.id===p1 || x.name===p1);
     if(person){
-      return `<span class="mention link" onclick="event.stopPropagation();profileBackView='post';openProfile('${person.id}')">@${esc(person.name)}</span>`;
+      return `<span class="mention link" onclick="event.stopPropagation();profileBackView='post';openProfile('${person.id}')">@${esc(person.userId||person.name)}</span>`;
     }
     return `<span class="mention">@${esc(p1)}</span>`;
   });
@@ -2971,6 +3018,19 @@ function extractMentions(text){
   const out=[]; const re=/[@＠](All|all|[A-Za-z0-9._]+)/g; let mm;
   while((mm=re.exec(text||""))){ out.push(/^all$/i.test(mm[1])?"*":mm[1]); }
   return out;
+}
+/* 投稿・コメント本文の@ハンドルからメンション通知を作成する(共通ヘルパー)。
+   誤爆防止のため、対象はフォロー中(iFollow)かつブロック関係にない相手のみに限定する */
+function notifyMentionsIn(text, postId){
+  const tokens = extractMentions(text).filter(tok=>tok!=="*");
+  if(!tokens.length) return;
+  const notified = new Set();
+  followingCandidates().forEach(p=>{
+    if(!notified.has(p.id) && tokens.includes(p.userId)){
+      notified.add(p.id);
+      createNotification(p.id, "mention", {postId});
+    }
+  });
 }
 
 /* ===== 返信(引用リプライ)・送信取り消し・削除・コピー・メンション ===== */
@@ -4404,7 +4464,7 @@ let GID = 100;
 /* 投稿一覧。Supabaseのpostsテーブルから loadPosts() で満たされる(ログイン完了時に自動取得) */
 const POSTS = [];
 // 投稿作成ドラフト(本文・画像・1枚目比率)
-let postDraft = { text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null };
+let postDraft = { text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null, taggedIds:[] };
 /* 自分の画面からだけ隠した投稿のid集合(サーバーには保存しない。再読み込みで戻る) */
 const hiddenPostIds = new Set();
 /* ログイン中ユーザーのuser_id(ハンドル)。ensureProfileで取得・更新される */
@@ -4993,6 +5053,7 @@ function postCardHTML(p){
         ${postMenuBtn(p)}
       </div>
       ${p.location?`<div class="pc-location" onclick="event.stopPropagation();openLocationOnMap(${p.location.lat},${p.location.lng})">📍 ${esc(p.location.name)}</div>`:''}
+      ${(p.tags&&p.tags.length)?`<div class="pc-tags" style="top:${p.location?'70px':'48px'}" onclick="event.stopPropagation();openTaggedListPopup('${p.id}',event)">🏷️ ${esc(t("post.taggedWith",{names:p.tags.map(x=>x.name).join(curLang()==="ja"?"、":", ")}))}</div>`:''}
     </div>`;
     const textHTML = p.text?`<div class="post-text-block" data-pid="${p.id}">
       <div class="post-text clampable" id="ptext_${p.id}" data-clamp-full="2" data-clamp-collapsed="1">${decorateMentionsClickable(p.text)}</div>
@@ -5010,6 +5071,7 @@ function postCardHTML(p){
       ${postMenuBtn(p)}
     </div>
     ${p.location?`<div class="tx-location" onclick="event.stopPropagation();openLocationOnMap(${p.location.lat},${p.location.lng})">📍 ${esc(p.location.name)}</div>`:''}
+    ${(p.tags&&p.tags.length)?`<div class="tx-location" onclick="event.stopPropagation();openTaggedListPopup('${p.id}',event)">🏷️ ${esc(t("post.taggedWith",{names:p.tags.map(x=>x.name).join(curLang()==="ja"?"、":", ")}))}</div>`:''}
     ${p.text?`<div class="post-text-block" data-pid="${p.id}">
       <div class="post-text clampable" id="ptext_${p.id}" data-clamp-full="9" data-clamp-collapsed="9">${decorateMentionsClickable(p.text)}</div>
       <span class="post-text-more" id="ptextmore_${p.id}" style="display:none" onclick="event.stopPropagation();expandPostText('${p.id}')">${t("post.showMore")}</span>
@@ -5032,10 +5094,13 @@ function togglePostMenu(id, ev){
   const pop = document.createElement("div");
   pop.className = "post-menu-pop";
   pop.id = "pmenu_"+id;
+  const me = authUser();
+  const iAmTagged = !p.mine && me && (p.tags||[]).some(tg=>tg.id===me.id);
   pop.innerHTML = p.mine
     ? `<button onclick="event.stopPropagation();closeAllPostMenus();confirmDeletePost('${id}')">${t("post.delete")}</button>`
     : `<button onclick="event.stopPropagation();closeAllPostMenus();openReportScreen('${id}')">${t("post.report")}</button>
-       <button onclick="event.stopPropagation();closeAllPostMenus();hidePostLocally('${id}')">${t("post.hide")}</button>`;
+       <button onclick="event.stopPropagation();closeAllPostMenus();hidePostLocally('${id}')">${t("post.hide")}</button>
+       ${iAmTagged?`<button onclick="event.stopPropagation();closeAllPostMenus();removePostTag('${id}','${me.id}')">${t("post.untag")}</button>`:''}`;
   document.body.appendChild(pop);
   // ボタンの右下に配置。画面右端をはみ出さないよう調整
   const popW = pop.offsetWidth || 140;
@@ -5047,6 +5112,45 @@ function togglePostMenu(id, ev){
 }
 function closeAllPostMenus(){
   document.querySelectorAll(".post-menu-pop").forEach(el=>el.remove());
+}
+/* タグ付けされた人一覧のドロップダウン。投稿者本人は各行から×で解除でき、
+   タグ付けされた本人は自分の行だけ×で解除できる(その他の行は解除不可) */
+function openTaggedListPopup(id, ev){
+  closeAllPostMenus();
+  const p = POSTS.find(x=>x.id===id); if(!p || !p.tags || !p.tags.length) return;
+  const btn = ev.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const me = authUser();
+  const pop = document.createElement("div");
+  pop.className = "post-menu-pop";
+  pop.id = "tagListPop";
+  pop.innerHTML = p.tags.map(tg=>{
+    const canRemove = p.mine || (me && tg.id===me.id);
+    return `<div class="tag-list-row">
+      <span class="tag-list-name" onclick="event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(tg.userId||tg.name)}')">${esc(tg.name)}</span>
+      ${canRemove?`<button class="tag-list-remove" onclick="event.stopPropagation();removePostTag('${id}','${tg.id}')" aria-label="${t('post.tagRemove')}">✕</button>`:''}
+    </div>`;
+  }).join("");
+  document.body.appendChild(pop);
+  const popW = pop.offsetWidth || 160;
+  let left = rect.left;
+  if(left + popW > window.innerWidth - 6) left = window.innerWidth - popW - 6;
+  if(left < 6) left = 6;
+  pop.style.left = left + "px";
+  pop.style.top = (rect.bottom + 4) + "px";
+  setTimeout(()=>document.addEventListener("click",closeAllPostMenus,{once:true}),0);
+}
+/* タグを1件解除(投稿者本人、またはタグ付けされた本人のみRLSで許可される) */
+async function removePostTag(postId, taggedUserId){
+  if(!window.SB || !isSignedIn()) return;
+  const { error } = await window.SB.from("post_tags").delete()
+    .eq("post_id", postId).eq("tagged_user_id", taggedUserId);
+  if(error){ console.log("[post_tags] delete error:", error.message); return; }
+  const p = POSTS.find(x=>x.id===postId);
+  if(p) p.tags = (p.tags||[]).filter(tg=>tg.id!==taggedUserId);
+  closeAllPostMenus();
+  toast(t("post.untagged"));
+  rerenderPost();
 }
 /* 投稿を自分の画面からだけ非表示にする(サーバーには保存しない・軽量な機能) */
 function hidePostLocally(id){
@@ -5251,10 +5355,12 @@ async function addPostComment(id){
   const p=POSTS.find(x=>x.id===id); if(!p)return;
   const txt=(postCommentDraft[id]||"").trim(); if(!txt)return;
   if(!isSignedIn()){ toast(t("x.auth.noConn")); return; }
-  const ok = await saveCommentToSupabase(id, txt.slice(0,300));
+  const cmtText = txt.slice(0,300);
+  const ok = await saveCommentToSupabase(id, cmtText);
   if(!ok) return;
   postCommentDraft[id]="";
   if(!p.mine) createNotification(p.authorId, "comment", {postId:p.id});
+  notifyMentionsIn(cmtText, p.id);
   await loadCommentsFor([id]);
   rerenderPost();
 }
@@ -5548,7 +5654,7 @@ function screenPostCompose(){
       <button class="lang-btn ${postDraft.visibility==='followers'?'on':''}" onclick="setPostVisibility('followers')">${t("post.vis.followers")}</button>
       <button class="lang-btn ${postDraft.visibility==='private'?'on':''}" onclick="setPostVisibility('private')">${t("post.vis.private")}</button>
     </div>
-    <textarea id="postText" class="pcmp-text" maxlength="${POST_MAX_CHARS}" placeholder="${t("post.placeholder")}" oninput="onPostTextInput()">${esc(postDraft.text)}</textarea>
+    <textarea id="postText" class="pcmp-text" maxlength="${POST_MAX_CHARS}" placeholder="${t("post.placeholder")}" oninput="onPostTextInput();postMentionInput(this)">${esc(postDraft.text)}</textarea>
     <div class="pcmp-count"><span id="postCount">${postDraft.text.length}</span>/${POST_MAX_CHARS}</div>
     <div class="pcmp-section-label">－${t("post.addImgHeading")}</div>
     <div class="pcmp-hint">${t("post.imgHint",{n:POST_MAX_IMAGES})}<br>${t("post.imgDragHint")}</div>
@@ -5570,6 +5676,15 @@ function screenPostCompose(){
     ${postDraft.location?`<div class="pcmp-loc-sub">
       <img src="${pinSrc()}" class="pcmp-loc-pin-ic" alt="">${esc(postDraft.location.name)}
     </div>`:''}
+    <div class="pcmp-loc-row">
+      <span class="pcmp-loc-label">－${t("post.tagPeople")}</span>
+      <div class="switch ${postDraft.taggedIds.length?'on':''}" onclick="openTagPicker()"><i></i></div>
+    </div>
+    ${postDraft.taggedIds.length?`<div class="pcmp-loc-sub pcmp-tag-sub">${postDraft.taggedIds.map(id=>{
+      const p=PEOPLE.find(x=>x.id===id); if(!p)return '';
+      return `<span class="pcmp-tag-chip">${esc(p.name)}<i onclick="event.stopPropagation();untagDraft('${id}')">✕</i></span>`;
+    }).join("")}</div>`:''}
+    <div id="postMentionPop" class="mention-pop" style="display:none"></div>
     <input type="file" id="postImgInput" accept="image/*" multiple style="display:none" onchange="onPostImagePick(event)">
   </div>`;
 }
@@ -5577,6 +5692,71 @@ function onPostTextInput(){
   const ta=document.getElementById("postText"); if(!ta)return;
   postDraft.text=ta.value;
   const c=document.getElementById("postCount"); if(c)c.textContent=ta.value.length;
+}
+/* タグ付け候補(フォロー中かつブロック関係にない相手)。タグ付けとメンション入力補完で共通利用 */
+function followingCandidates(){
+  return (typeof PEOPLE!=="undefined"?PEOPLE:[]).filter(p=>p.iFollow && !p.blocked);
+}
+/* 作成中の投稿からタグを1件外す */
+function untagDraft(id){
+  postDraft.taggedIds = postDraft.taggedIds.filter(x=>x!==id);
+  const sc=document.getElementById("screen"); if(sc && S.view==="postcompose") sc.innerHTML=screenPostCompose();
+}
+/* ===== 投稿作成画面専用のメンション入力補完(@ハンドル)。
+   グループチャットの既存メンション機構(mentionCandidates/mentionInput等)とは独立させ、
+   候補はフォロー中のユーザーに限定する(誤爆防止、タグ付け候補と同じ範囲) */
+let _postMentionStart=-1;
+function postMentionInput(ta){
+  const pos=ta.selectionStart;
+  const left=ta.value.slice(0,pos);
+  const m=left.match(/[@＠]([A-Za-z0-9._]*)$/);
+  if(!m){ hidePostMentionPop(); return; }
+  _postMentionStart=pos-m[0].length;
+  const q=m[1].toLowerCase();
+  const list=followingCandidates().filter(p=>p.userId)
+    .filter(p=>!q || p.userId.toLowerCase().includes(q) || (p.name||"").toLowerCase().includes(q));
+  if(!list.length){ hidePostMentionPop(); return; }
+  showPostMentionPop(list);
+}
+function showPostMentionPop(list){
+  const pop=document.getElementById("postMentionPop"); if(!pop)return;
+  pop.innerHTML=list.slice(0,6).map(p=>{
+    const av = p.photo
+      ? `<div class="mc-av" style="background-image:url('${p.photo}')"></div>`
+      : `<div class="mc-av emoji">${esc(p.avatar||"🙂")}</div>`;
+    return `<button class="mc-item" onmousedown="event.preventDefault()" onclick="pickPostMention('${esc(p.userId)}')">
+      ${av}<div class="mc-body"><div class="mc-name">${esc(p.name)}</div><div class="mc-id">@${esc(p.userId)}</div></div></button>`;
+  }).join("");
+  // .mention-popは元々チャット入力欄の直上に浮かせるための相対配置なので、
+  // 投稿作成画面ではテキストエリアの位置を基準にした固定配置へ上書きする
+  const ta=document.getElementById("postText");
+  if(ta){
+    const rect=ta.getBoundingClientRect();
+    pop.style.position="fixed";
+    pop.style.left=rect.left+"px";
+    pop.style.right="auto";
+    pop.style.width=rect.width+"px";
+    pop.style.bottom="auto";
+    pop.style.top=Math.min(rect.bottom+4, window.innerHeight-60)+"px";
+  }
+  pop.style.display="block";
+}
+function hidePostMentionPop(){
+  const pop=document.getElementById("postMentionPop"); if(pop){pop.style.display="none";pop.innerHTML="";}
+  _postMentionStart=-1;
+}
+function pickPostMention(handle){
+  const ta=document.getElementById("postText"); if(!ta||_postMentionStart<0)return;
+  const pos=ta.selectionStart;
+  const before=ta.value.slice(0,_postMentionStart);
+  const after=ta.value.slice(pos);
+  const insert="@"+handle+" ";
+  ta.value=before+insert+after;
+  postDraft.text=ta.value;
+  const c=document.getElementById("postCount"); if(c)c.textContent=ta.value.length;
+  const caret=(before+insert).length;
+  ta.setSelectionRange(caret,caret);
+  hidePostMentionPop(); ta.focus();
 }
 function onPostImagePick(e){
   const files=[...(e.target.files||[])];
@@ -5804,6 +5984,46 @@ function closeLocationPicker(){
   const wrap=document.getElementById("locOverlay"); if(wrap) wrap.remove();
   if(locSearchTimer){ clearTimeout(locSearchTimer); locSearchTimer=null; }
 }
+/* ===== 投稿へのタグ付け(フォロー中のユーザーから複数選択。位置情報ピッカーと同じ全画面オーバーレイ構成を流用) ===== */
+function openTagPicker(){
+  const wrap=document.createElement("div");
+  wrap.className="loc-overlay";
+  wrap.id="tagOverlay";
+  wrap.innerHTML=`
+    <div class="loc-bar">
+      <button class="room-back" onclick="closeTagPicker()"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:17px;color:var(--ink);flex:1">${t("post.tagPickerTitle")}</h2>
+    </div>
+    <input type="text" id="tagSearchInput" class="loc-search-input" placeholder="${t('post.tagSearchPh')}" oninput="renderTagPickerList()" autofocus>
+    <div id="tagResults" class="loc-results"></div>`;
+  document.body.appendChild(wrap);
+  renderTagPickerList();
+  setTimeout(()=>{ const inp=$("#tagSearchInput"); if(inp) inp.focus(); }, 50);
+}
+function closeTagPicker(){
+  const wrap=document.getElementById("tagOverlay"); if(wrap) wrap.remove();
+  if(S.view==="postcompose") renderApp();
+}
+function renderTagPickerList(){
+  const box=document.getElementById("tagResults"); if(!box)return;
+  const q=(($("#tagSearchInput")||{}).value||"").trim().toLowerCase();
+  const cands=followingCandidates().filter(p=>!q || p.name.toLowerCase().includes(q));
+  if(!cands.length){ box.innerHTML=`<div class="loc-status">${t("post.tagNoFriends")}</div>`; return; }
+  box.innerHTML=cands.map(p=>{
+    const added=postDraft.taggedIds.includes(p.id);
+    return `<button class="friend-row ${added?'on':''}" onclick="toggleTagCandidate('${p.id}')">
+      <span class="fp-ava">${p.avatar||"🙂"}</span>
+      <span class="fp-name">${esc(p.name)}</span>
+      <span class="fp-act">${added?"✓":"＋"}</span>
+    </button>`;
+  }).join("");
+}
+function toggleTagCandidate(pid){
+  const idx=postDraft.taggedIds.indexOf(pid);
+  if(idx>=0) postDraft.taggedIds.splice(idx,1);
+  else postDraft.taggedIds.push(pid);
+  renderTagPickerList();
+}
 function onLocSearchInput(){
   if(locSearchTimer) clearTimeout(locSearchTimer);
   const q=($("#locSearchInput")||{}).value||"";
@@ -5920,10 +6140,13 @@ async function submitPost(){
       imageObjs = results;
     }catch(e){ console.log("[post] image processing error:", e); toast(t("post.uploadFailed")); return; }
   }
-  const ok = await savePostToSupabase(text.slice(0,POST_MAX_CHARS), postDraft.visibility, imageObjs, postRatioInfo(postDraft.ratio).css, postDraft.location);
+  const postId = crypto.randomUUID();
+  const finalText = text.slice(0,POST_MAX_CHARS);
+  const ok = await savePostToSupabase(postId, finalText, postDraft.visibility, imageObjs, postRatioInfo(postDraft.ratio).css, postDraft.location, postDraft.taggedIds);
   if(!ok) return;
+  notifyMentionsIn(finalText, postId);
   postDayCount.count++;
-  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null };
+  postDraft={ text:"", images:[], previewThumbs:[], crops:[], ratio:"1:1", visibility:"public", hq:false, location:null, taggedIds:[] };
   toast(t("post.done"));
   await loadPosts();
   goView("post");
@@ -8316,10 +8539,15 @@ async function createNotification(recipientId, type, extra){
     if(extra && extra.postId) row.post_id = extra.postId;
     if(extra && extra.commentId) row.comment_id = extra.commentId;
     const { error } = await window.SB.from("notifications").insert(row);
-    if(error) console.log("[notifications] insert error:", error.message);
+    if(error){
+      // メッセージ通知は「同じ相手からの未読メッセージ通知は常に1件まで」という仕様のため、
+      // DB側のユニーク制約(notifications_unread_msg_uniq)による重複拒否は正常系として無視する
+      if(type==="message" && error.code==="23505") return;
+      console.log("[notifications] insert error:", error.message);
+    }
   }catch(e){ console.log("[notifications] insert exception:", e); }
 }
-const NOTIF_ICON = { like:"❤️", comment:"💬", mention:"📣", follow:"🤝", follow_request:"🔒", follow_accept:"✅", message:"✉️" };
+const NOTIF_ICON = { like:"❤️", comment:"💬", mention:"📣", follow:"🤝", follow_request:"🔒", follow_accept:"✅", message:"✉️", tag:"🏷️" };
 /* ログイン完了時に自分宛ての通知を取得し、NOTIFSを作り直す。actorのprofilesも合わせてPEOPLEへ反映する */
 async function loadNotifications(){
   if(!window.SB || !isSignedIn()) return;
@@ -8349,6 +8577,7 @@ async function loadNotifications(){
       else if(r.type==="follow_request") aText = t("x.notif.msg.followRequest",{name});
       else if(r.type==="follow_accept") aText = t("x.notif.msg.followAccept",{name});
       else if(r.type==="message") aText = t("x.notif.msg.message",{name});
+      else if(r.type==="tag") aText = t("x.notif.msg.tag",{name});
       const isProfileType = (r.type==="follow"||r.type==="follow_request"||r.type==="follow_accept");
       return {
         id: r.id, ic: NOTIF_ICON[r.type]||"🔔", a: aText, b: "",
