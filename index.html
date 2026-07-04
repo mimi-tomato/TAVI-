@@ -7480,7 +7480,15 @@ async function openDM(fid){
 }
 function openGroupChat(gid){ commitRoom(); activeGid=gid; const g=GROUPS.find(x=>x.id===gid); if(g)(g.chat||[]).forEach(c=>c.unread=false); S.view="groupchat"; renderApp(); }
 
-function chatScrollBottom(){ const b=document.getElementById("chatBody"); if(b) b.scrollTop=b.scrollHeight; }
+function chatScrollBottom(){
+  const b=document.getElementById("chatBody"); if(!b) return;
+  requestAnimationFrame(()=>{
+    b.scrollTop=b.scrollHeight;
+    b.querySelectorAll("img").forEach(img=>{
+      if(!img.complete) img.addEventListener("load",()=>{ b.scrollTop=b.scrollHeight; },{once:true});
+    });
+  });
+}
 
 async function sendDM(){
   const ta=document.getElementById("chatInput"); if(!ta)return;
