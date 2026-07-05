@@ -5208,11 +5208,15 @@ function openTaggedListPopup(id, ev){
   pop.className = "post-menu-pop";
   pop.id = "tagListPop";
   pop.innerHTML = p.tags.map(tg=>{
-    const canRemove = p.mine || (me && tg.id===me.id);
+    const isSelf = me && tg.id===me.id;
+    const canRemove = p.mine || isSelf;
     const alreadyCollab = p.mine && ((p.collabs||[]).some(c=>c.id===tg.id) || (p.collabPendingIds||[]).includes(tg.id));
     const canInvite = p.mine && !alreadyCollab;
+    const nameOnclick = isSelf
+      ? "event.stopPropagation();closeAllPostMenus();goTab('profile')"
+      : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(tg.userId||tg.name)}')`;
     return `<div class="tag-list-row">
-      <span class="tag-list-name" onclick="event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(tg.userId||tg.name)}')">${esc(tg.name)}</span>
+      <span class="tag-list-name" onclick="${nameOnclick}">${esc(tg.name)}</span>
       <span class="tag-list-actions">
         ${canInvite?`<button class="mini-btn" onclick="event.stopPropagation();closeAllPostMenus();sendCollabInvite('${id}','${tg.id}')">${t('post.collabInviteBtn')}</button>`:''}
         ${canRemove?`<button class="tag-list-remove" onclick="event.stopPropagation();removePostTag('${id}','${tg.id}')" aria-label="${t('post.tagRemove')}">✕</button>`:''}
@@ -5253,8 +5257,11 @@ function openCollabListPopup(id, ev){
   const me = authUser();
   pop.innerHTML = p.collabs.map(cb=>{
     const isMe = me && cb.id===me.id;
+    const nameOnclick = isMe
+      ? "event.stopPropagation();closeAllPostMenus();goTab('profile')"
+      : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(cb.userId||cb.name)}')`;
     return `<div class="tag-list-row">
-      <span class="tag-list-name" onclick="event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(cb.userId||cb.name)}')">${esc(cb.name)}</span>
+      <span class="tag-list-name" onclick="${nameOnclick}">${esc(cb.name)}</span>
       ${p.mine?`<button class="tag-list-remove" onclick="event.stopPropagation();confirmRemoveCollaborator('${id}','${cb.id}')" aria-label="${t('post.collabEnd')}">✕</button>`
         :isMe?`<button class="mini-btn danger" onclick="event.stopPropagation();closeAllPostMenus();confirmLeaveCollab('${id}')">${t('post.collabLeave')}</button>`:''}
     </div>`;
