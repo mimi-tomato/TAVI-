@@ -815,6 +815,12 @@
   .tag-list-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .tag-list-actions .mini-btn{padding:5px 10px;font-size:0.75rem;white-space:nowrap}
   .tag-list-remove{background:transparent;border:0;color:var(--ink-soft);cursor:pointer;font-size:0.9375rem;padding:2px 6px;flex:0 0 auto}
+  /* 共同投稿バッジ(アバターを2/3サイズ・4人まで少しずつ重ねて表示+1人目のIDのみ表示) */
+  .collab-badge{display:flex;align-items:center;gap:6px}
+  .collab-avatars{display:flex;align-items:center}
+  .collab-ava{width:23px;height:23px;border-radius:50%;background:var(--field);background-size:cover;background-position:center;
+    border:1.5px solid var(--card);display:flex;align-items:center;justify-content:center;font-size:0.6875rem;flex:0 0 auto}
+  .pc-tags.collab-badge .collab-ava{border-color:rgba(255,255,255,.85)}
   .gcard.s-min .min-done{max-width:none}
 
   .prof-top{text-align:center;padding:18px 0 8px}
@@ -1283,7 +1289,7 @@ const JP_PREF=[{"id":1,"name":"北海道","d":"M467.2,22.3 469.0,21.0 470.3,19.3
 const I18N = {
   ja: {
     "tab.home":"ホーム", "tab.chat":"チャット", "tab.search":"友達検索", "tab.profile":"プロフィール",
-    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.useCurrentLocation":"現在地を使う", "post.locNoGeo":"この端末は位置情報に対応していません", "post.locGeoDenied":"位置情報を取得できませんでした", "post.addLocation":"位置情報を追加", "post.locSearchPh":"場所を検索…", "post.locSearching":"検索中…", "post.locNoResults":"見つかりませんでした", "post.showMore":"…さらに表示", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.tagPeople":"タグ付けする", "post.tagPickerTitle":"タグ付け", "post.tagSearchPh":"名前で検索…", "post.tagNoFriends":"フォロー中のユーザーがいません", "post.taggedWith":"{names}とタグ付け", "post.untag":"タグ付けを解除", "post.untagged":"タグ付けを解除しました", "post.tagRemove":"削除", "post.collabInviteBtn":"共同投稿として招待", "post.collabWith":"{name}との共同投稿", "post.collabWithOthers":"{name}、他{n}人との共同投稿", "post.collabEnd":"共同投稿を終了", "post.collabEndConfirmTitle":"共同投稿を終了しますか？", "post.collabEndConfirmBody":"{name}さんはこの投稿の共同投稿者ではなくなります。", "post.collabLeave":"共同投稿から離脱", "post.collabLeaveConfirmTitle":"共同投稿から離脱しますか？", "post.collabLeaveConfirmBody":"離脱すると、この投稿はあなたのMy Postsやフォロワーのフィードに表示されなくなります。", "post.collabLeaveSaveYes":"保存して離脱する", "post.collabLeaveNoSave":"保存せず離脱する", "post.collabLeaveCancel":"キャンセル", "post.collabPrivacyConsentTitle":"非公開アカウントからの共同投稿について", "post.collabPrivacyConsentBody":"あなたは非公開アカウントです。共同投稿の相手が承認すると、この投稿は相手のフォロワーのうち、あなたのこともフォローしている人にだけ公開されます（相手のフォロワー全員には公開されません）。", "post.collabPrivacyConsentOk":"理解して招待する", "post.collabPrivacyConsentCancel":"キャンセル", "post.collabInviteNeedsFollow":"非公開アカウントが招待できるのは、既に自分をフォローしている人だけです", "post.saveSnapshot":"この投稿を保存する", "post.saveSnapshotDone":"自分だけの投稿として保存しました", "post.collabInviteSent":"共同投稿として招待しました", "post.collabEnded":"共同投稿を終了しました", "post.collabInvitePickerTitle":"共同投稿の招待相手を選ぶ", "post.collabNeedsTagFirst":"先にタグ付けしてください", "post.collabNoEligible":"招待できる相手がいません", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
+    "home.title":"あなたの旅", "home.count":"{n}件のグループ", "post.title":"投稿", "post.like":"いいね", "post.comment":"コメント", "post.commentPlaceholder":"コメントを追加…", "post.send":"送信", "post.viewAllComments":"コメント{n}件をすべて見る", "post.hideComments":"コメントを閉じる", "post.delete":"削除", "post.delete.confirmTitle":"投稿を削除しますか？", "post.delete.confirmBody":"この操作は取り消せません。削除すると、いいねやコメントもすべて失われます。", "post.delete.cancel":"キャンセル", "post.delete.confirm":"削除する", "notif.likedYourPost":"あなたの投稿にいいねしました", "notif.commentedYourPost":"コメント：{text}", "post.new":"投稿を作成", "post.empty":"まだ投稿がありません。", "post.empty.sub":"右下の＋から最初の投稿をしよう。", "post.submit":"投稿", "post.placeholder":"今日の出来事をシェアしよう（1000字まで）", "post.addImg":"画像", "post.imgHint":"画像は最大{n}枚まで選択できます", "post.onceADay":"投稿は1日1回までです。", "post.empty.warn":"本文か画像を入れてください。", "post.done":"投稿しました", "post.useCurrentLocation":"現在地を使う", "post.locNoGeo":"この端末は位置情報に対応していません", "post.locGeoDenied":"位置情報を取得できませんでした", "post.addLocation":"位置情報を追加", "post.locSearchPh":"場所を検索…", "post.locSearching":"検索中…", "post.locNoResults":"見つかりませんでした", "post.showMore":"…さらに表示", "post.imgDragHint":"長押しで順番の入れ替え／ゴミ箱に移動して削除", "post.addImgHeading":"画像を追加", "post.visibility":"公開範囲", "post.chooseRatio":"アスペクト比を選ぶ", "post.cropHint":"画像をタップすると、位置や大きさを調整できます", "post.adjustCrop":"位置を調整", "post.cropDone":"完了", "post.cropGestureHint":"ピンチで拡大・縮小、ドラッグで位置を調整できます", "post.dragToDelete":"ここにドロップして削除", "post.uploading":"画像をアップロード中…", "post.uploadFailed":"画像のアップロードに失敗しました", "post.hqToggle":"最高画質でアップロード", "post.tagPeople":"タグ付けする", "post.tagPickerTitle":"タグ付け", "post.tagSearchPh":"IDで検索…", "post.tagNoFriends":"フォロー中のユーザーがいません", "post.taggedWith":"{names}とタグ付け", "post.untag":"タグ付けを解除", "post.untagged":"タグ付けを解除しました", "post.tagRemove":"削除", "post.collabInviteBtn":"共同投稿として招待", "post.collabWithOthersIdSuffix":"など{n}人", "post.collabEnd":"共同投稿を終了", "post.collabEndConfirmTitle":"共同投稿を終了しますか？", "post.collabEndConfirmBody":"{name}さんはこの投稿の共同投稿者ではなくなります。", "post.collabLeave":"共同投稿から離脱", "post.collabLeaveConfirmTitle":"共同投稿から離脱しますか？", "post.collabLeaveConfirmBody":"離脱すると、この投稿はあなたのMy Postsやフォロワーのフィードに表示されなくなります。", "post.collabLeaveSaveYes":"保存して離脱する", "post.collabLeaveNoSave":"保存せず離脱する", "post.collabLeaveCancel":"キャンセル", "post.collabPrivacyConsentTitle":"非公開アカウントからの共同投稿について", "post.collabPrivacyConsentBody":"あなたは非公開アカウントです。共同投稿の相手が承認すると、この投稿は相手のフォロワーのうち、あなたのこともフォローしている人にだけ公開されます（相手のフォロワー全員には公開されません）。", "post.collabPrivacyConsentOk":"理解して招待する", "post.collabPrivacyConsentCancel":"キャンセル", "post.collabInviteNeedsFollow":"非公開アカウントが招待できるのは、既に自分をフォローしている人だけです", "post.saveSnapshot":"この投稿を保存する", "post.saveSnapshotDone":"自分だけの投稿として保存しました", "post.collabInviteSent":"共同投稿として招待しました", "post.collabEnded":"共同投稿を終了しました", "post.collabInvitePickerTitle":"共同投稿の招待相手を選ぶ", "post.collabNeedsTagFirst":"先にタグ付けしてください", "post.collabNoEligible":"招待できる相手がいません", "post.moreActions":"その他の操作", "post.report":"通報する", "post.hide":"非表示にする", "post.hidden":"投稿を非表示にしました", "post.report.title":"通報", "post.report.question":"通報する理由を選んでください", "post.report.reason.spam":"スパム・宣伝目的", "post.report.reason.harassment":"迷惑行為・嫌がらせ", "post.report.reason.inappropriate":"不適切な内容", "post.report.reason.fraud":"詐欺・虚偽情報", "post.report.reason.other":"その他", "post.report.privacyNote":"通報したことは投稿者本人には伝わりません。運営が内容を確認するため、通報者の情報は記録されます。", "post.report.dataLabel":"送信される情報：", "post.report.dataDetail":"通報する投稿の内容、投稿者のID、あなたのIDが運営に送信され、内容の確認・対応のために利用されます。", "post.report.send":"送信する", "post.report.done":"通報を受け付けました", "post.vis.public":"全体公開", "post.vis.followers":"フォロワーのみ", "post.vis.private":"自分のみ", "time.justNow":"たった今", "about.version":"バージョン情報", "about.terms":"利用規約", "about.version.current":"現在のバージョン", "terms.body":"<p>本利用規約（以下「本規約」）は、TAVI。（以下「本アプリ」）の利用条件を定めるものです。利用者は、本アプリを利用することで本規約に同意したものとみなされます。</p><h4>第1条（適用）</h4><p>本規約は、利用者と本アプリの運営者との間の本アプリの利用に関わる一切の関係に適用されます。</p><h4>第2条（利用）</h4><p>本アプリは、旅行の計画や合意形成を補助することを目的とした試作版のサービスです。利用者は、自己の責任において本アプリを利用するものとします。</p><h4>第3条（禁止事項）</h4><p>利用者は、本アプリの利用にあたり、法令または公序良俗に違反する行為、他の利用者または第三者の権利を侵害する行為、虚偽の情報を登録する行為、本アプリの運営を妨害する行為を行ってはなりません。</p><h4>第4条（投稿内容）</h4><p>利用者が本アプリに投稿した文章・画像等について、その内容に関する責任は投稿した利用者が負うものとします。運営者は、不適切と判断した投稿を予告なく削除できるものとします。</p><h4>第5条（免責事項）</h4><p>本アプリは試作版であり、運営者は本アプリの内容の正確性・完全性・有用性を保証しません。本アプリの利用により利用者に生じた損害について、運営者は一切の責任を負わないものとします。</p><h4>第6条（サービスの変更・終了）</h4><p>運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を終了することができるものとします。</p><h4>第7条（規約の変更）</h4><p>運営者は、必要と判断した場合、利用者に通知することなく本規約を変更できるものとします。</p><p class=\"terms-date\">制定日：2026年4月1日</p>", "home.sect.planning":"計画中（{n}）", "home.sect.confirmed":"確定済（{n}）", "home.sect.archived":"アーカイブ済み（{n}）", "countdown.days":"旅行まであと{n}日", "countdown.today":"いよいよ出発の日！", "countdown.ongoing":"旅行中", "chat.tooLong":"{n}文字までです", "chat.showMore":"もっと見る", "chat.showLess":"閉じる", "home.empty":"まだ旅グループがありません。",
     "home.empty.sub":"右下の＋から新しい旅をつくろう。", "home.archived":"アーカイブ済み（{n}）",
     "home.sizeHint":"タップで表示サイズを切替", "home.newTrip":"新しい旅をつくる",
     "card.live":"進行中", "card.done":"確定済み", "card.prep":"準備中", "card.new":"新着", "card.archived":"アーカイブ",
@@ -1559,11 +1565,11 @@ const I18N = {
     "x.prof.addSearchFriend":"友だちを追加・検索",
     "x.prof.settings":"設定",
     "x.prof.tabPosts":"投稿",
-    "x.prof.tabReposts":"リポスト",
+    "x.prof.tabReposts":"共同投稿",
     "x.prof.tabMap":"マイマップ",
     "x.prof.tabCalendar":"マイカレンダー",
     "x.prof.myPostsEmpty":"まだ写真付きの投稿がありません",
-    "x.prof.repostsComingSoon":"リポスト機能は近日公開予定です",
+    "x.prof.collabPostsEmpty":"まだ共同投稿がありません",
     "x.prof.mapComingSoon":"マイマップ機能は近日公開予定です",
     "x.edit.title":"プロフィール編集",
     "x.edit.tapPhoto":"タップして画像を変更",
@@ -1733,7 +1739,7 @@ const I18N = {
   },
   en: {
     "tab.home":"Home", "tab.chat":"Chats", "tab.search":"Find friends", "tab.profile":"Profile",
-    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.useCurrentLocation":"Use current location", "post.locNoGeo":"Location services are not supported on this device", "post.locGeoDenied":"Could not get your location", "post.addLocation":"Add location", "post.locSearchPh":"Search for a place…", "post.locSearching":"Searching…", "post.locNoResults":"No results found", "post.showMore":"…more", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.tagPeople":"Tag people", "post.tagPickerTitle":"Tag people", "post.tagSearchPh":"Search by name…", "post.tagNoFriends":"You're not following anyone yet", "post.taggedWith":"with {names}", "post.untag":"Remove tag", "post.untagged":"Tag removed", "post.tagRemove":"Remove", "post.collabInviteBtn":"Invite to co-author", "post.collabWith":"with {name}", "post.collabWithOthers":"with {name} and {n} others", "post.collabEnd":"End collaboration", "post.collabEndConfirmTitle":"End this collaboration?", "post.collabEndConfirmBody":"{name} will no longer be a collaborator on this post.", "post.collabLeave":"Leave collaboration", "post.collabLeaveConfirmTitle":"Leave this collaboration?", "post.collabLeaveConfirmBody":"After leaving, this post will no longer appear in your My Posts grid or your followers' feed.", "post.collabLeaveSaveYes":"Leave and save a copy", "post.collabLeaveNoSave":"Leave without saving", "post.collabLeaveCancel":"Cancel", "post.collabPrivacyConsentTitle":"About collaborating from a private account", "post.collabPrivacyConsentBody":"Your account is private. Once the other person accepts, this post will only be visible to their followers who also follow you (not to all of their followers).", "post.collabPrivacyConsentOk":"I understand, send invite", "post.collabPrivacyConsentCancel":"Cancel", "post.collabInviteNeedsFollow":"A private account can only invite people who already follow it", "post.saveSnapshot":"Save this post", "post.saveSnapshotDone":"Saved as a private post visible only to you", "post.collabInviteSent":"Collab invite sent", "post.collabEnded":"Collaboration ended", "post.collabInvitePickerTitle":"Choose who to invite", "post.collabNeedsTagFirst":"Tag someone first", "post.collabNoEligible":"No one is eligible to invite", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
+    "home.title":"Your trips", "home.count":"{n} groups", "post.title":"Posts", "post.like":"Like", "post.comment":"Comment", "post.commentPlaceholder":"Add a comment…", "post.send":"Send", "post.viewAllComments":"View all {n} comments", "post.hideComments":"Hide comments", "post.delete":"Delete", "post.delete.confirmTitle":"Delete this post?", "post.delete.confirmBody":"This can't be undone. Deleting will also remove all likes and comments on this post.", "post.delete.cancel":"Cancel", "post.delete.confirm":"Delete", "notif.likedYourPost":"liked your post", "notif.commentedYourPost":"commented: {text}", "post.new":"New post", "post.empty":"No posts yet.", "post.empty.sub":"Tap + to share your first post.", "post.submit":"Post", "post.placeholder":"Share today's moment (up to 1000 chars)", "post.addImg":"Image", "post.imgHint":"You can select up to {n} images", "post.onceADay":"You can post once per day.", "post.empty.warn":"Add text or an image.", "post.done":"Posted", "post.useCurrentLocation":"Use current location", "post.locNoGeo":"Location services are not supported on this device", "post.locGeoDenied":"Could not get your location", "post.addLocation":"Add location", "post.locSearchPh":"Search for a place…", "post.locSearching":"Searching…", "post.locNoResults":"No results found", "post.showMore":"…more", "post.imgDragHint":"Long-press to reorder / drag to trash to delete", "post.addImgHeading":"Add images", "post.visibility":"Visibility", "post.chooseRatio":"Choose aspect ratio", "post.cropHint":"Tap an image to adjust its position and zoom", "post.adjustCrop":"Adjust position", "post.cropDone":"Done", "post.cropGestureHint":"Pinch to zoom, drag to reposition", "post.dragToDelete":"Drop here to delete", "post.uploading":"Uploading images…", "post.uploadFailed":"Failed to upload images", "post.hqToggle":"Upload in highest quality", "post.tagPeople":"Tag people", "post.tagPickerTitle":"Tag people", "post.tagSearchPh":"Search by ID…", "post.tagNoFriends":"You're not following anyone yet", "post.taggedWith":"with {names}", "post.untag":"Remove tag", "post.untagged":"Tag removed", "post.tagRemove":"Remove", "post.collabInviteBtn":"Invite to co-author", "post.collabWithOthersIdSuffix":" and {n} others", "post.collabEnd":"End collaboration", "post.collabEndConfirmTitle":"End this collaboration?", "post.collabEndConfirmBody":"{name} will no longer be a collaborator on this post.", "post.collabLeave":"Leave collaboration", "post.collabLeaveConfirmTitle":"Leave this collaboration?", "post.collabLeaveConfirmBody":"After leaving, this post will no longer appear in your My Posts grid or your followers' feed.", "post.collabLeaveSaveYes":"Leave and save a copy", "post.collabLeaveNoSave":"Leave without saving", "post.collabLeaveCancel":"Cancel", "post.collabPrivacyConsentTitle":"About collaborating from a private account", "post.collabPrivacyConsentBody":"Your account is private. Once the other person accepts, this post will only be visible to their followers who also follow you (not to all of their followers).", "post.collabPrivacyConsentOk":"I understand, send invite", "post.collabPrivacyConsentCancel":"Cancel", "post.collabInviteNeedsFollow":"A private account can only invite people who already follow it", "post.saveSnapshot":"Save this post", "post.saveSnapshotDone":"Saved as a private post visible only to you", "post.collabInviteSent":"Collab invite sent", "post.collabEnded":"Collaboration ended", "post.collabInvitePickerTitle":"Choose who to invite", "post.collabNeedsTagFirst":"Tag someone first", "post.collabNoEligible":"No one is eligible to invite", "post.moreActions":"More actions", "post.report":"Report", "post.hide":"Hide", "post.hidden":"Post hidden", "post.report.title":"Report", "post.report.question":"Please select a reason for reporting", "post.report.reason.spam":"Spam or promotion", "post.report.reason.harassment":"Harassment or unwanted behavior", "post.report.reason.inappropriate":"Inappropriate content", "post.report.reason.fraud":"Fraud or false information", "post.report.reason.other":"Other", "post.report.privacyNote":"The person you report will not be notified that you reported them. Your information is recorded so the team can review the report.", "post.report.dataLabel":"Information sent:", "post.report.dataDetail":"The reported post's content, the poster's ID, and your ID will be sent to the team and used to review and respond to the report.", "post.report.send":"Submit", "post.report.done":"Your report has been submitted", "post.vis.public":"Everyone", "post.vis.followers":"Followers", "post.vis.private":"Only me", "time.justNow":"just now", "about.version":"Version", "about.terms":"Terms of Use", "about.version.current":"Current version", "terms.body":"<p>These Terms of Use (the \"Terms\") set out the conditions for using TAVI. (the \"App\"). By using the App, you are deemed to have agreed to these Terms.</p><h4>1. Scope</h4><p>These Terms apply to all relations between users and the App's operator regarding the use of the App.</p><h4>2. Use</h4><p>The App is a beta service intended to help with trip planning and group decision-making. Users use the App at their own responsibility.</p><h4>3. Prohibited Conduct</h4><p>Users must not violate laws or public order, infringe the rights of other users or third parties, register false information, or interfere with the operation of the App.</p><h4>4. Posted Content</h4><p>Users are responsible for the text, images, and other content they post. The operator may remove content deemed inappropriate without prior notice.</p><h4>5. Disclaimer</h4><p>The App is a beta version. The operator does not guarantee the accuracy, completeness, or usefulness of its content, and is not liable for any damages arising from its use.</p><h4>6. Changes / Termination</h4><p>The operator may change or discontinue the App without prior notice to users.</p><h4>7. Changes to Terms</h4><p>The operator may revise these Terms without notice when deemed necessary.</p><p class=\"terms-date\">Established: April 1, 2026</p>", "home.sect.planning":"Planning ({n})", "home.sect.confirmed":"Confirmed ({n})", "home.sect.archived":"Archived ({n})", "countdown.days":"{n} days until the trip", "countdown.today":"Departure day!", "countdown.ongoing":"On the trip", "chat.tooLong":"Up to {n} characters", "chat.showMore":"Show more", "chat.showLess":"Show less", "home.empty":"No trip groups yet.",
     "home.empty.sub":"Tap + below to start a new trip.", "home.archived":"Archived ({n})",
     "home.sizeHint":"Tap to change card size", "home.newTrip":"Start a new trip",
     "card.live":"In progress", "card.done":"Confirmed", "card.prep":"Getting ready", "card.new":"New", "card.archived":"Archived",
@@ -1993,11 +1999,11 @@ const I18N = {
     "x.prof.addSearchFriend":"Add / search friends",
     "x.prof.settings":"Settings",
     "x.prof.tabPosts":"Posts",
-    "x.prof.tabReposts":"Reposts",
+    "x.prof.tabReposts":"Collabs",
     "x.prof.tabMap":"My Map",
     "x.prof.tabCalendar":"My Calendar",
     "x.prof.myPostsEmpty":"No photo posts yet",
-    "x.prof.repostsComingSoon":"Reposts is coming soon",
+    "x.prof.collabPostsEmpty":"No collaborative posts yet",
     "x.prof.mapComingSoon":"My Map is coming soon",
     "x.edit.title":"Edit profile",
     "x.edit.tapPhoto":"Tap to change photo",
@@ -5106,11 +5112,11 @@ function postCardHTML(p){
       stackTop += 22;
     }
     if(p.tags && p.tags.length){
-      overlayLines += `<div class="pc-tags" style="top:${stackTop}px" onclick="event.stopPropagation();openTaggedListPopup('${p.id}',event)">🏷️ ${esc(t("post.taggedWith",{names:p.tags.map(x=>x.name).join(curLang()==="ja"?"、":", ")}))}</div>`;
+      overlayLines += `<div class="pc-tags" style="top:${stackTop}px" onclick="event.stopPropagation();openTaggedListPopup('${p.id}',event)">🏷️ ${esc(t("post.taggedWith",{names:p.tags.map(x=>"@"+(x.userId||x.name)).join(curLang()==="ja"?"、":", ")}))}</div>`;
       stackTop += 22;
     }
     if(p.collabs && p.collabs.length){
-      overlayLines += `<div class="pc-tags" style="top:${stackTop}px" onclick="event.stopPropagation();openCollabListPopup('${p.id}',event)">🤝 ${esc(collabChipText(p.collabs))}</div>`;
+      overlayLines += `<div class="pc-tags collab-badge" style="top:${stackTop}px" onclick="event.stopPropagation();openCollabListPopup('${p.id}',event)">${collabBadgeHTML(p.collabs)}</div>`;
       stackTop += 22;
     }
     const carousel=`<div class="post-carousel full" style="aspect-ratio:${p.ratio||'1/1'}" ondblclick="event.stopPropagation();likeBurst('${p.id}')">
@@ -5148,8 +5154,8 @@ function postCardHTML(p){
       ${postMenuBtn(p)}
     </div>
     ${p.location?`<div class="tx-location" onclick="event.stopPropagation();openLocationOnMap(${p.location.lat},${p.location.lng})">📍 ${esc(p.location.name)}</div>`:''}
-    ${(p.tags&&p.tags.length)?`<div class="tx-location" onclick="event.stopPropagation();openTaggedListPopup('${p.id}',event)">🏷️ ${esc(t("post.taggedWith",{names:p.tags.map(x=>x.name).join(curLang()==="ja"?"、":", ")}))}</div>`:''}
-    ${(p.collabs&&p.collabs.length)?`<div class="tx-location" onclick="event.stopPropagation();openCollabListPopup('${p.id}',event)">🤝 ${esc(collabChipText(p.collabs))}</div>`:''}
+    ${(p.tags&&p.tags.length)?`<div class="tx-location" onclick="event.stopPropagation();openTaggedListPopup('${p.id}',event)">🏷️ ${esc(t("post.taggedWith",{names:p.tags.map(x=>"@"+(x.userId||x.name)).join(curLang()==="ja"?"、":", ")}))}</div>`:''}
+    ${(p.collabs&&p.collabs.length)?`<div class="tx-location collab-badge" onclick="event.stopPropagation();openCollabListPopup('${p.id}',event)">${collabBadgeHTML(p.collabs)}</div>`:''}
     ${p.text?`<div class="post-text-block" data-pid="${p.id}">
       <div class="post-text clampable" id="ptext_${p.id}" data-clamp-full="9" data-clamp-collapsed="9">${decorateMentionsClickable(p.text)}</div>
       <span class="post-text-more" id="ptextmore_${p.id}" style="display:none" onclick="event.stopPropagation();expandPostText('${p.id}')">${t("post.showMore")}</span>
@@ -5157,10 +5163,17 @@ function postCardHTML(p){
     ${actions}${commentsHTML}${commentInput}
   </div>`;
 }
-/* 「🤝 Aさん、他N人との共同投稿」のテキストを組み立てる(承認済み共同投稿者の配列を渡す) */
-function collabChipText(collabs){
-  if(collabs.length<=1) return t("post.collabWith", {name: collabs[0].name});
-  return t("post.collabWithOthers", {name: collabs[0].name, n: collabs.length-1});
+/* 共同投稿者のアバターを4人まで2/3サイズで少しずつ重ねて表示し、IDは1人目のみ「@id」+(2人以上なら「など{n}人」)を添える。
+   承認済み共同投稿者の配列を渡す */
+function collabBadgeHTML(collabs){
+  const shown = collabs.slice(0,4);
+  const avatars = shown.map((c,i)=>{
+    const av = personAvatarValue(c.avatar);
+    return `<span class="collab-ava${av.clsSuffix}" style="${av.style}${i>0?';margin-left:-8px':''};z-index:${shown.length-i}">${av.inner}</span>`;
+  }).join("");
+  const idText = "@"+esc(collabs[0].userId||collabs[0].name);
+  const suffix = collabs.length>1 ? t("post.collabWithOthersIdSuffix",{n:collabs.length-1}) : "";
+  return `<span class="collab-avatars">${avatars}</span><span class="collab-badge-text">${idText}${esc(suffix)}</span>`;
 }
 function postMenuBtn(p){
   return `<button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}', event)" aria-label="${t('post.moreActions')}">⋮</button>`;
@@ -5216,7 +5229,7 @@ function openTaggedListPopup(id, ev){
       ? "event.stopPropagation();closeAllPostMenus();goTab('profile')"
       : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(tg.userId||tg.name)}')`;
     return `<div class="tag-list-row">
-      <span class="tag-list-name" onclick="${nameOnclick}">${esc(tg.name)}</span>
+      <span class="tag-list-name" onclick="${nameOnclick}">@${esc(tg.userId||tg.name)}</span>
       <span class="tag-list-actions">
         ${canInvite?`<button class="mini-btn" onclick="event.stopPropagation();closeAllPostMenus();sendCollabInvite('${id}','${tg.id}')">${t('post.collabInviteBtn')}</button>`:''}
         ${canRemove?`<button class="tag-list-remove" onclick="event.stopPropagation();removePostTag('${id}','${tg.id}')" aria-label="${t('post.tagRemove')}">✕</button>`:''}
@@ -5261,7 +5274,7 @@ function openCollabListPopup(id, ev){
       ? "event.stopPropagation();closeAllPostMenus();goTab('profile')"
       : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(cb.userId||cb.name)}')`;
     return `<div class="tag-list-row">
-      <span class="tag-list-name" onclick="${nameOnclick}">${esc(cb.name)}</span>
+      <span class="tag-list-name" onclick="${nameOnclick}">@${esc(cb.userId||cb.name)}</span>
       ${p.mine?`<button class="tag-list-remove" onclick="event.stopPropagation();confirmRemoveCollaborator('${id}','${cb.id}')" aria-label="${t('post.collabEnd')}">✕</button>`
         :isMe?`<button class="mini-btn danger" onclick="event.stopPropagation();closeAllPostMenus();confirmLeaveCollab('${id}')">${t('post.collabLeave')}</button>`:''}
     </div>`;
@@ -5945,7 +5958,7 @@ function screenPostCompose(){
     </div>
     ${postDraft.taggedIds.length?`<div class="pcmp-loc-sub pcmp-tag-sub">${postDraft.taggedIds.map(id=>{
       const p=PEOPLE.find(x=>x.id===id); if(!p)return '';
-      return `<span class="pcmp-tag-chip">${esc(p.name)}<i onclick="event.stopPropagation();untagDraft('${id}')">✕</i></span>`;
+      return `<span class="pcmp-tag-chip">@${esc(p.userId)}<i onclick="event.stopPropagation();untagDraft('${id}')">✕</i></span>`;
     }).join("")}</div>`:''}
     <div class="pcmp-loc-row">
       <span class="pcmp-loc-label">－${t("post.collabInviteBtn")}</span>
@@ -5953,7 +5966,7 @@ function screenPostCompose(){
     </div>
     ${postDraft.collabIds.length?`<div class="pcmp-loc-sub pcmp-tag-sub">${postDraft.collabIds.map(id=>{
       const p=PEOPLE.find(x=>x.id===id); if(!p)return '';
-      return `<span class="pcmp-tag-chip">${esc(p.name)}<i onclick="event.stopPropagation();untagCollabDraft('${id}')">✕</i></span>`;
+      return `<span class="pcmp-tag-chip">@${esc(p.userId)}<i onclick="event.stopPropagation();untagCollabDraft('${id}')">✕</i></span>`;
     }).join("")}</div>`:''}
     <div id="postMentionPop" class="mention-pop" style="display:none"></div>
     <input type="file" id="postImgInput" accept="image/*" multiple style="display:none" onchange="onPostImagePick(event)">
@@ -6284,13 +6297,13 @@ function closeTagPicker(){
 function renderTagPickerList(){
   const box=document.getElementById("tagResults"); if(!box)return;
   const q=(($("#tagSearchInput")||{}).value||"").trim().toLowerCase();
-  const cands=followingCandidates().filter(p=>!q || p.name.toLowerCase().includes(q));
+  const cands=followingCandidates().filter(p=>p.userId && (!q || p.userId.toLowerCase().includes(q)));
   if(!cands.length){ box.innerHTML=`<div class="loc-status">${t("post.tagNoFriends")}</div>`; return; }
   box.innerHTML=cands.map(p=>{
     const added=postDraft.taggedIds.includes(p.id);
     return `<button class="friend-row ${added?'on':''}" onclick="toggleTagCandidate('${p.id}')">
       <span class="fp-ava">${p.avatar||"🙂"}</span>
-      <span class="fp-name">${esc(p.name)}</span>
+      <span class="fp-name">@${esc(p.userId)}</span>
       <span class="fp-act">${added?"✓":"＋"}</span>
     </button>`;
   }).join("");
@@ -6332,13 +6345,13 @@ function collabInviteDraftCandidates(){
 function renderCollabInvitePickerList(){
   const box=document.getElementById("collabInviteResults"); if(!box)return;
   const q=(($("#collabInviteSearchInput")||{}).value||"").trim().toLowerCase();
-  const cands=collabInviteDraftCandidates().filter(p=>!q || p.name.toLowerCase().includes(q));
+  const cands=collabInviteDraftCandidates().filter(p=>p.userId && (!q || p.userId.toLowerCase().includes(q)));
   if(!cands.length){ box.innerHTML=`<div class="loc-status">${t("post.collabNoEligible")}</div>`; return; }
   box.innerHTML=cands.map(p=>{
     const added=postDraft.collabIds.includes(p.id);
     return `<button class="friend-row ${added?'on':''}" onclick="toggleCollabDraftCandidate('${p.id}')">
       <span class="fp-ava">${p.avatar||"🙂"}</span>
-      <span class="fp-name">${esc(p.name)}</span>
+      <span class="fp-name">@${esc(p.userId)}</span>
       <span class="fp-act">${added?"✓":"＋"}</span>
     </button>`;
   }).join("");
@@ -6910,8 +6923,7 @@ function setProfileTab(tab){
 }
 /* 自分の投稿のうち画像付きのみ、新しい順(POSTSは既にcreated_at降順)で返す */
 function myPhotoPosts(){
-  const me = authUser();
-  return POSTS.filter(p=> (p.mine || (me && (p.collabs||[]).some(c=>c.id===me.id))) && p.images && p.images.length);
+  return POSTS.filter(p=>p.mine && p.images && p.images.length);
 }
 /* 画像1枚目のサムネイルURLを取り出す。画像は{thumb,mid,full}形式(画像フェーズの3段階)、
    または文字列(旧データ)の場合がありうるため両対応する */
@@ -6939,8 +6951,7 @@ function openMyPostsFeed(postId){
   goFwd('myPostsFeed');
 }
 function screenMyPostsFeed(){
-  const me = authUser();
-  const mine = POSTS.filter(p=> p.mine || (me && (p.collabs||[]).some(c=>c.id===me.id))).slice().sort((a,b)=>b.ts-a.ts);
+  const mine = POSTS.filter(p=>p.mine).slice().sort((a,b)=>b.ts-a.ts);
   const body = mine.length ? mine.map(postCardHTML).join("")
     : `<div class="feed-empty"><div class="ic">📸</div>${t("post.empty")}</div>`;
   return `<div class="page" style="padding-left:0;padding-right:0">
@@ -6956,6 +6967,49 @@ function scrollToMyPostsFeedTarget(){
   if(!myPostsFeedTarget) return;
   const el = document.querySelector(`[data-pid="${CSS.escape(myPostsFeedTarget)}"]`);
   myPostsFeedTarget = null;
+  if(!el) return;
+  el.scrollIntoView({block:"center"});
+  el.classList.add("jump-highlight");
+  setTimeout(()=>el.classList.remove("jump-highlight"), 1700);
+}
+/* ===== 共同投稿タブ(旧Reposts枠)。自分が承認済み共同投稿者になっている、他人が作成した投稿のみを対象とする =====
+   (My Postsタブは元の作成者本人のものだけに戻し、共同投稿はこちらのタブに分離する) */
+function myCollabPhotoPosts(){
+  const me = authUser();
+  return POSTS.filter(p=> !p.mine && me && (p.collabs||[]).some(c=>c.id===me.id) && p.images && p.images.length);
+}
+function renderMyCollabPostsTab(){
+  const items = myCollabPhotoPosts();
+  if(!items.length) return `<p class="empty-note">${t('x.prof.collabPostsEmpty')}</p>`;
+  const tiles = items.map(p=>{
+    const src = firstImageThumb(p);
+    if(!src) return "";
+    return `<div class="mypost-tile" onclick="openMyCollabPostsFeed('${p.id}')"><img src="${esc(src)}" loading="lazy" alt=""></div>`;
+  }).join("");
+  return `<div class="mypost-masonry">${tiles}</div>`;
+}
+let myCollabPostsFeedTarget = null;
+function openMyCollabPostsFeed(postId){
+  myCollabPostsFeedTarget = postId;
+  goFwd('myCollabPostsFeed');
+}
+function screenMyCollabPostsFeed(){
+  const me = authUser();
+  const mine = POSTS.filter(p=> !p.mine && me && (p.collabs||[]).some(c=>c.id===me.id)).slice().sort((a,b)=>b.ts-a.ts);
+  const body = mine.length ? mine.map(postCardHTML).join("")
+    : `<div class="feed-empty"><div class="ic">🤝</div>${t("x.prof.collabPostsEmpty")}</div>`;
+  return `<div class="page" style="padding-left:0;padding-right:0">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 14px;margin-bottom:4px">
+      <button class="room-back" onclick="goBack('profile')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:19px;color:var(--ink)">${t('x.prof.tabReposts')}</h2>
+    </div>
+    <div class="feed post-feed">${body}</div>
+  </div>`;
+}
+function scrollToMyCollabPostsFeedTarget(){
+  if(!myCollabPostsFeedTarget) return;
+  const el = document.querySelector(`[data-pid="${CSS.escape(myCollabPostsFeedTarget)}"]`);
+  myCollabPostsFeedTarget = null;
   if(!el) return;
   el.scrollIntoView({block:"center"});
   el.classList.add("jump-highlight");
@@ -7031,7 +7085,7 @@ function screenProfile(){
     </div>
     <div class="prof-tabpane">
       ${profileTab==='posts' ? renderMyPostsTab()
-        : profileTab==='reposts' ? `<p class="empty-note">${t('x.prof.repostsComingSoon')}</p>`
+        : profileTab==='reposts' ? renderMyCollabPostsTab()
         : profileTab==='map' ? `<p class="empty-note">${t('x.prof.mapComingSoon')}</p>`
         : calendarBodyHTML()}
     </div>
@@ -9982,6 +10036,7 @@ function renderApp(){
   else if(S.view==="addfriend") html=screenAddFriend();
   else if(S.view==="editprofile"){ sc.innerHTML=screenEditProfile(); updateBioCount(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="myPostsFeed"){ sc.innerHTML=screenMyPostsFeed(); applyAllPostCrops(); applyAllPostTextClamps(); scrollToMyPostsFeedTarget(); return; }
+  else if(S.view==="myCollabPostsFeed"){ sc.innerHTML=screenMyCollabPostsFeed(); applyAllPostCrops(); applyAllPostTextClamps(); scrollToMyCollabPostsFeedTarget(); return; }
   else if(S.view==="report"){ sc.innerHTML=screenReport(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
