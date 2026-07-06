@@ -1570,7 +1570,22 @@ const I18N = {
     "x.prof.tabCalendar":"マイカレンダー",
     "x.prof.myPostsEmpty":"まだ写真付きの投稿がありません",
     "x.prof.collabPostsEmpty":"まだ共同投稿がありません",
-    "x.prof.mapComingSoon":"マイマップ機能は近日公開予定です",
+    "x.trip.newTrip":"新しい旅を記録", "x.trip.empty":"まだ旅の記録がありません", "x.trip.emptySub":"上のボタンから最初の旅を記録しましょう",
+    "x.trip.archivedSection":"保留・中止済み",
+    "x.trip.statusDraft":"下書き", "x.trip.statusPlanned":"予定", "x.trip.statusOngoing":"旅行中", "x.trip.statusCompleted":"完了", "x.trip.statusArchived":"保留中", "x.trip.statusCancelled":"中止",
+    "x.trip.editTitle":"旅を編集", "x.trip.newTitle":"新しい旅",
+    "x.trip.titleLabel":"タイトル", "x.trip.titlePh":"例: 東京・韓国・福岡の旅",
+    "x.trip.startDate":"開始日", "x.trip.endDate":"終了日",
+    "x.trip.statusLabel":"状態", "x.trip.visibility":"公開範囲",
+    "x.trip.stops":"立ち寄った場所", "x.trip.addStop":"場所を追加",
+    "x.trip.stopNights":"{n}泊", "x.trip.stopNightsZero":"日帰り", "x.trip.removeStop":"削除",
+    "x.trip.save":"保存", "x.trip.saveDone":"保存しました",
+    "x.trip.manage":"管理", "x.trip.archive":"保留にする", "x.trip.unarchive":"保留を解除",
+    "x.trip.cancel":"中止にする", "x.trip.cancelled":"中止しました", "x.trip.delete":"削除する",
+    "x.trip.cancelConfirmTitle":"この旅を中止しますか？", "x.trip.cancelConfirmBody":"一覧からは非表示になります(元に戻せません)。",
+    "x.trip.deleteConfirmTitle":"この旅を削除しますか？", "x.trip.deleteConfirmBody":"この操作は取り消せません。",
+    "x.trip.needTitle":"タイトルを入力してください",
+    "x.trip.pickLocationTitle":"場所を選ぶ", "x.trip.locationSearchPh":"都市名で検索…", "x.trip.noLocationResults":"見つかりませんでした",
     "x.edit.title":"プロフィール編集",
     "x.edit.tapPhoto":"タップして画像を変更",
     "x.edit.userId":"ユーザーID",
@@ -2004,7 +2019,22 @@ const I18N = {
     "x.prof.tabCalendar":"My Calendar",
     "x.prof.myPostsEmpty":"No photo posts yet",
     "x.prof.collabPostsEmpty":"No collaborative posts yet",
-    "x.prof.mapComingSoon":"My Map is coming soon",
+    "x.trip.newTrip":"Record a new trip", "x.trip.empty":"No trips recorded yet", "x.trip.emptySub":"Tap the button above to record your first trip",
+    "x.trip.archivedSection":"Archived / cancelled",
+    "x.trip.statusDraft":"Draft", "x.trip.statusPlanned":"Planned", "x.trip.statusOngoing":"Ongoing", "x.trip.statusCompleted":"Completed", "x.trip.statusArchived":"Archived", "x.trip.statusCancelled":"Cancelled",
+    "x.trip.editTitle":"Edit trip", "x.trip.newTitle":"New trip",
+    "x.trip.titleLabel":"Title", "x.trip.titlePh":"e.g. Tokyo, Korea & Fukuoka trip",
+    "x.trip.startDate":"Start date", "x.trip.endDate":"End date",
+    "x.trip.statusLabel":"Status", "x.trip.visibility":"Visibility",
+    "x.trip.stops":"Stops", "x.trip.addStop":"Add a stop",
+    "x.trip.stopNights":"{n} night(s)", "x.trip.stopNightsZero":"Day trip", "x.trip.removeStop":"Remove",
+    "x.trip.save":"Save", "x.trip.saveDone":"Saved",
+    "x.trip.manage":"Manage", "x.trip.archive":"Archive", "x.trip.unarchive":"Unarchive",
+    "x.trip.cancel":"Cancel trip", "x.trip.cancelled":"Trip cancelled", "x.trip.delete":"Delete",
+    "x.trip.cancelConfirmTitle":"Cancel this trip?", "x.trip.cancelConfirmBody":"It will be hidden from the list (this can't be undone).",
+    "x.trip.deleteConfirmTitle":"Delete this trip?", "x.trip.deleteConfirmBody":"This can't be undone.",
+    "x.trip.needTitle":"Please enter a title",
+    "x.trip.pickLocationTitle":"Choose a place", "x.trip.locationSearchPh":"Search by city name…", "x.trip.noLocationResults":"No results found",
     "x.edit.title":"Edit profile",
     "x.edit.tapPhoto":"Tap to change photo",
     "x.edit.userId":"User ID",
@@ -2814,7 +2844,7 @@ window.onAuthChanged = async function(user){
       // 利用再開の可否を確認する専用画面だけを表示する
       S.view = "reactivate";
     }else{
-      await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites();
+      await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips();
     }
   }
   if(typeof renderApp === "function") renderApp();
@@ -7015,6 +7045,320 @@ function scrollToMyCollabPostsFeedTarget(){
   el.classList.add("jump-highlight");
   setTimeout(()=>el.classList.remove("jump-highlight"), 1700);
 }
+/* ===== MyMap: Trip / TripStop(フェーズ1 = 一覧・作成・編集のみ。地図表示は別フェーズ) ===== */
+let TRIPS = [];
+/* trips_effective(view)はsecurity_invoker未設定でRLSを迂回しうるため使わず、
+   基本のtripsテーブルを直接読み、実効ステータス(ongoing等)はクライアント側で導出する */
+function tripEffectiveStatus(t){
+  if(t.deleted_at) return "deleted";
+  if(t.cancelled_at) return "cancelled";
+  if(t.archived_at) return "archived";
+  if(t.status === "completed") return "completed";
+  if(t.status === "planned" && t.start_date && t.end_date){
+    const today = new Date().toISOString().slice(0,10);
+    if(today >= t.start_date && today <= t.end_date) return "ongoing";
+  }
+  return t.status || "draft";
+}
+async function loadTrips(){
+  if(!window.SB || !isSignedIn()){ TRIPS = []; return; }
+  try{
+    const me = authUser();
+    const { data: trips, error } = await window.SB
+      .from("trips")
+      .select("id, title, start_date, end_date, status, visibility, archived_at, cancelled_at, deleted_at, created_via")
+      .eq("owner_id", me.id)
+      .is("deleted_at", null)
+      .order("start_date", { ascending:false });
+    if(error){ console.log("[trips] load error:", error.message); return; }
+    const tripIds = (trips||[]).map(x=>x.id);
+    let stopsByTrip = {};
+    if(tripIds.length){
+      const { data: stops, error: se } = await window.SB
+        .from("trip_stops")
+        .select("id, trip_id, location_id, arrival_date, departure_date, nights, sort_key")
+        .in("trip_id", tripIds)
+        .order("sort_key", { ascending:true });
+      if(se) console.log("[trip_stops] load error:", se.message);
+      const locIds = [...new Set((stops||[]).map(s=>s.location_id))];
+      let locMap = {};
+      if(locIds.length){
+        const { data: locs, error: le } = await window.SB
+          .from("locations").select("id, name_ja, name_en").in("id", locIds);
+        if(le) console.log("[locations] load error:", le.message);
+        (locs||[]).forEach(l=>{ locMap[l.id]=l; });
+      }
+      (stops||[]).forEach(s=>{
+        const loc = locMap[s.location_id] || {};
+        (stopsByTrip[s.trip_id] = stopsByTrip[s.trip_id]||[]).push({
+          id: s.id, locationId: s.location_id, locationName: loc.name_ja || "?",
+          arrival: s.arrival_date, departure: s.departure_date, nights: s.nights, sortKey: s.sort_key
+        });
+      });
+    }
+    TRIPS = (trips||[]).map(t=>({ ...t, effectiveStatus: tripEffectiveStatus(t), stops: stopsByTrip[t.id]||[] }));
+  }catch(e){ console.log("[trips] load exception:", e); }
+}
+const TRIP_STATUS_LABEL = { draft:"x.trip.statusDraft", planned:"x.trip.statusPlanned", ongoing:"x.trip.statusOngoing",
+  completed:"x.trip.statusCompleted", archived:"x.trip.statusArchived", cancelled:"x.trip.statusCancelled" };
+let myMapShowArchived = false;
+function renderMyMapTab(){
+  const active = TRIPS.filter(x=>x.effectiveStatus!=="archived" && x.effectiveStatus!=="cancelled");
+  const archived = TRIPS.filter(x=>x.effectiveStatus==="archived" || x.effectiveStatus==="cancelled");
+  const card = (t)=>{
+    const range = t.start_date ? `${esc(t.start_date)}${t.end_date&&t.end_date!==t.start_date?" 〜 "+esc(t.end_date):""}` : "";
+    const route = t.stops.map(s=>esc(s.locationName)).join(" → ");
+    return `<div class="listcard" onclick="openTripEdit('${t.id}')">
+      <div class="lic">🧳</div>
+      <div class="lt"><div class="a">${esc(t.title)}</div><div class="b">${range}${route?"　"+route:""}</div></div>
+      <span class="mini-btn" style="pointer-events:none">${t(TRIP_STATUS_LABEL[t.effectiveStatus]||"x.trip.statusDraft")}</span>
+    </div>`;
+  };
+  return `<div>
+    <button class="btn primary" style="width:100%;margin-bottom:12px" onclick="openNewTrip()">＋ ${t('x.trip.newTrip')}</button>
+    ${active.length ? active.map(card).join("") : `<p class="empty-note">${t('x.trip.empty')}<br>${t('x.trip.emptySub')}</p>`}
+    ${archived.length ? `<div class="cmt-more" onclick="myMapShowArchived=!myMapShowArchived;rerenderProfileInPlace()">${t('x.trip.archivedSection')}(${archived.length})</div>` : ''}
+    ${(archived.length && myMapShowArchived) ? archived.map(card).join("") : ''}
+  </div>`;
+}
+
+/* ===== Trip作成・編集 ===== */
+let tripEditDraft = null; // {id(null=new), title, start_date, end_date, status, visibility, stops:[{id(null=new),locationId,locationName,arrival,departure}]}
+function openNewTrip(){
+  tripEditDraft = { id:null, title:"", start_date:"", end_date:"", status:"draft", visibility:"private", stops:[] };
+  goFwd('tripedit');
+}
+function openTripEdit(id){
+  const t = TRIPS.find(x=>x.id===id); if(!t) return;
+  tripEditDraft = {
+    id: t.id, title: t.title, start_date: t.start_date||"", end_date: t.end_date||"",
+    status: t.status||"draft", visibility: t.visibility||"private",
+    archived_at: t.archived_at, cancelled_at: t.cancelled_at,
+    stops: t.stops.map(s=>({ id:s.id, locationId:s.locationId, locationName:s.locationName, arrival:s.arrival, departure:s.departure }))
+  };
+  goFwd('tripedit');
+}
+function screenTripEdit(){
+  const d = tripEditDraft; if(!d) return `<div class="page"></div>`;
+  const isNew = !d.id;
+  const stopsHtml = d.stops.map((s,i)=>{
+    const nights = Math.round((new Date(s.departure) - new Date(s.arrival)) / 86400000);
+    const nightsText = nights>0 ? t('x.trip.stopNights',{n:nights}) : t('x.trip.stopNightsZero');
+    return `<div class="listcard" style="align-items:flex-start">
+      <div class="lic">📍</div>
+      <div class="lt" style="flex:1">
+        <div class="a">${esc(s.locationName)}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+          <input type="date" class="loc-search-input" style="margin:0;padding:6px 8px;font-size:0.8125rem" value="${escAttr(s.arrival)}" onchange="setTripStopDate(${i},'arrival',this.value)">
+          <span style="color:var(--ink-soft)">〜</span>
+          <input type="date" class="loc-search-input" style="margin:0;padding:6px 8px;font-size:0.8125rem" value="${escAttr(s.departure)}" onchange="setTripStopDate(${i},'departure',this.value)">
+        </div>
+        <div class="b" style="margin-top:4px">${nightsText}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="mini-btn" ${i===0?'disabled':''} onclick="event.stopPropagation();moveTripStop(${i},-1)">↑</button>
+        <button class="mini-btn" ${i===d.stops.length-1?'disabled':''} onclick="event.stopPropagation();moveTripStop(${i},1)">↓</button>
+      </div>
+      <button class="tag-list-remove" onclick="event.stopPropagation();removeTripStop(${i})" aria-label="${t('x.trip.removeStop')}">✕</button>
+    </div>`;
+  }).join("");
+  const canManage = !isNew;
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="goBack('profile')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:19px;color:var(--ink);flex:1">${isNew?t('x.trip.newTitle'):t('x.trip.editTitle')}</h2>
+      <button class="pcmp-submit" onclick="saveTrip()">${t('x.trip.save')}</button>
+    </div>
+    <label class="fld">${t('x.trip.titleLabel')}</label>
+    <input type="text" id="tripTitleInput" class="loc-search-input" style="margin:0 0 14px" value="${escAttr(d.title)}" placeholder="${t('x.trip.titlePh')}" oninput="tripEditDraft.title=this.value">
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1"><label class="fld">${t('x.trip.startDate')}</label>
+        <input type="date" id="tripStartInput" class="loc-search-input" value="${escAttr(d.start_date)}" onchange="tripEditDraft.start_date=this.value"></div>
+      <div style="flex:1"><label class="fld">${t('x.trip.endDate')}</label>
+        <input type="date" id="tripEndInput" class="loc-search-input" value="${escAttr(d.end_date)}" onchange="tripEditDraft.end_date=this.value"></div>
+    </div>
+    <div class="pcmp-section-label">－${t('x.trip.statusLabel')}</div>
+    <div class="lang-switch pcmp-vis-switch" style="margin-bottom:14px">
+      <button class="lang-btn ${d.status==='draft'?'on':''}" onclick="setTripStatus('draft')">${t('x.trip.statusDraft')}</button>
+      <button class="lang-btn ${d.status==='planned'?'on':''}" onclick="setTripStatus('planned')">${t('x.trip.statusPlanned')}</button>
+      <button class="lang-btn ${d.status==='completed'?'on':''}" onclick="setTripStatus('completed')">${t('x.trip.statusCompleted')}</button>
+    </div>
+    <div class="pcmp-section-label">－${t('x.trip.visibility')}</div>
+    <div class="lang-switch pcmp-vis-switch" style="margin-bottom:14px">
+      <button class="lang-btn ${d.visibility==='public'?'on':''}" onclick="tripEditDraft.visibility='public';rerenderTripEdit()">${t('post.vis.public')}</button>
+      <button class="lang-btn ${d.visibility==='followers'?'on':''}" onclick="tripEditDraft.visibility='followers';rerenderTripEdit()">${t('post.vis.followers')}</button>
+      <button class="lang-btn ${d.visibility==='private'?'on':''}" onclick="tripEditDraft.visibility='private';rerenderTripEdit()">${t('post.vis.private')}</button>
+    </div>
+    <div class="pcmp-section-label">－${t('x.trip.stops')}</div>
+    ${stopsHtml}
+    <button class="btn ghost" style="width:100%;margin:10px 0 20px" onclick="openStopLocationPicker()">＋ ${t('x.trip.addStop')}</button>
+    ${canManage?`<div class="pcmp-section-label">－${t('x.trip.manage')}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <button class="btn ghost" onclick="toggleTripArchive()">${d.archived_at?t('x.trip.unarchive'):t('x.trip.archive')}</button>
+      <button class="btn ghost" onclick="cancelTripConfirm()">${t('x.trip.cancel')}</button>
+      <button class="btn ghost" style="color:var(--no)" onclick="deleteTripConfirm()">${t('x.trip.delete')}</button>
+    </div>`:''}
+  </div>`;
+}
+function rerenderTripEdit(){ const sc=document.getElementById("screen"); if(sc && S.view==="tripedit") sc.innerHTML=screenTripEdit(); }
+function setTripStatus(s){ tripEditDraft.status=s; rerenderTripEdit(); }
+function moveTripStop(i, dir){
+  const arr=tripEditDraft.stops; const j=i+dir; if(j<0||j>=arr.length) return;
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+  rerenderTripEdit();
+}
+function removeTripStop(i){ tripEditDraft.stops.splice(i,1); rerenderTripEdit(); }
+/* 到着日・出発日を編集する。DB側のchk_dates制約(出発 >= 到着)を破らないよう、
+   矛盾する組み合わせになった場合はもう一方の日付を automatically 揃える */
+function setTripStopDate(i, field, value){
+  const s = tripEditDraft.stops[i]; if(!s || !value) return;
+  s[field] = value;
+  if(new Date(s.departure) < new Date(s.arrival)){
+    if(field === "arrival") s.departure = value; else s.arrival = value;
+  }
+  rerenderTripEdit();
+}
+
+async function saveTrip(){
+  const d = tripEditDraft;
+  if(!d.title || !d.title.trim()){ toast(t('x.trip.needTitle')); return; }
+  if(!window.SB || !isSignedIn()) return;
+  const me = authUser();
+  let tripId = d.id;
+  if(!tripId){
+    tripId = crypto.randomUUID();
+    const { error } = await window.SB.from("trips").insert({
+      id: tripId, owner_id: me.id, title: d.title.trim(),
+      start_date: d.start_date||null, end_date: d.end_date||null,
+      status: d.status, visibility: d.visibility, created_via: "manual"
+    });
+    if(error){ console.log("[trips] insert error:", error.message); toast(error.message); return; }
+  } else {
+    const { error } = await window.SB.from("trips").update({
+      title: d.title.trim(), start_date: d.start_date||null, end_date: d.end_date||null,
+      status: d.status, visibility: d.visibility
+    }).eq("id", tripId);
+    if(error){ console.log("[trips] update error:", error.message); toast(error.message); return; }
+  }
+  // stopsは「今の並び順・内容」を正として、既存分を全削除してから入れ直す(件数が少ないため単純さを優先)
+  const { error: delErr } = await window.SB.from("trip_stops").delete().eq("trip_id", tripId);
+  if(delErr) console.log("[trip_stops] delete error:", delErr.message);
+  if(d.stops.length){
+    const rows = d.stops.map((s,i)=>({ trip_id: tripId, location_id: s.locationId, arrival_date: s.arrival, departure_date: s.departure, sort_key: (i+1)*100 }));
+    const { error: insErr } = await window.SB.from("trip_stops").insert(rows);
+    if(insErr){ console.log("[trip_stops] insert error:", insErr.message); toast(insErr.message); return; }
+  }
+  toast(t('x.trip.saveDone'));
+  await loadTrips();
+  goBack('profile');
+}
+function toggleTripArchive(){
+  const d=tripEditDraft;
+  d.archived_at = d.archived_at ? null : new Date().toISOString();
+  (async ()=>{
+    if(!window.SB || !isSignedIn()) return;
+    const { error } = await window.SB.from("trips").update({ archived_at: d.archived_at }).eq("id", d.id);
+    if(error){ console.log("[trips] archive toggle error:", error.message); return; }
+    await loadTrips();
+    rerenderTripEdit();
+  })();
+}
+function cancelTripConfirm(){
+  const wrap=document.createElement("div");
+  wrap.className="confirm-overlay"; wrap.id="tripCancelConfirm";
+  wrap.innerHTML=`<div class="confirm-card">
+    <div class="confirm-title">${t('x.trip.cancelConfirmTitle')}</div>
+    <div class="confirm-body">${t('x.trip.cancelConfirmBody')}</div>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="document.getElementById('tripCancelConfirm').remove()">${t('post.delete.cancel')}</button>
+      <button class="confirm-btn danger" onclick="document.getElementById('tripCancelConfirm').remove();doCancelTrip()">${t('x.trip.cancel')}</button>
+    </div></div>`;
+  document.body.appendChild(wrap);
+}
+async function doCancelTrip(){
+  if(!window.SB || !isSignedIn()) return;
+  const { error } = await window.SB.from("trips").update({ cancelled_at: new Date().toISOString() }).eq("id", tripEditDraft.id);
+  if(error){ console.log("[trips] cancel error:", error.message); return; }
+  toast(t('x.trip.cancelled'));
+  await loadTrips();
+  goBack('profile');
+}
+function deleteTripConfirm(){
+  const wrap=document.createElement("div");
+  wrap.className="confirm-overlay"; wrap.id="tripDeleteConfirm";
+  wrap.innerHTML=`<div class="confirm-card">
+    <div class="confirm-title-danger">${t('x.trip.deleteConfirmTitle')}</div>
+    <div class="confirm-body">${t('x.trip.deleteConfirmBody')}</div>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="document.getElementById('tripDeleteConfirm').remove()">${t('post.delete.cancel')}</button>
+      <button class="confirm-btn danger" onclick="document.getElementById('tripDeleteConfirm').remove();doDeleteTrip()">${t('post.delete.confirm')}</button>
+    </div></div>`;
+  document.body.appendChild(wrap);
+}
+async function doDeleteTrip(){
+  if(!window.SB || !isSignedIn()) return;
+  const { error } = await window.SB.from("trips").update({ deleted_at: new Date().toISOString() }).eq("id", tripEditDraft.id);
+  if(error){ console.log("[trips] delete error:", error.message); return; }
+  toast(t('post.delete.confirm'));
+  await loadTrips();
+  goBack('profile');
+}
+
+/* ===== TripStop用の場所ピッカー(locationsテーブルのcity行を検索、タグピッカーと同じオーバーレイ構成) ===== */
+let stopLocSearchTimer = null;
+function openStopLocationPicker(){
+  const wrap=document.createElement("div");
+  wrap.className="loc-overlay"; wrap.id="stopLocOverlay";
+  wrap.innerHTML=`
+    <div class="loc-bar">
+      <button class="room-back" onclick="closeStopLocationPicker()"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:17px;color:var(--ink);flex:1">${t('x.trip.pickLocationTitle')}</h2>
+    </div>
+    <input type="text" id="stopLocSearchInput" class="loc-search-input" placeholder="${t('x.trip.locationSearchPh')}" oninput="onStopLocSearchInput()" autofocus>
+    <div id="stopLocResults" class="loc-results"></div>`;
+  document.body.appendChild(wrap);
+  setTimeout(()=>{ const inp=$("#stopLocSearchInput"); if(inp) inp.focus(); }, 50);
+}
+function closeStopLocationPicker(){
+  const wrap=document.getElementById("stopLocOverlay"); if(wrap) wrap.remove();
+  if(stopLocSearchTimer){ clearTimeout(stopLocSearchTimer); stopLocSearchTimer=null; }
+}
+function onStopLocSearchInput(){
+  if(stopLocSearchTimer) clearTimeout(stopLocSearchTimer);
+  const q=($("#stopLocSearchInput")||{}).value||"";
+  if(!q.trim()){ const r=$("#stopLocResults"); if(r) r.innerHTML=""; return; }
+  stopLocSearchTimer=setTimeout(()=>runStopLocSearch(q.trim()), 350);
+}
+async function runStopLocSearch(q){
+  const resultsEl=$("#stopLocResults"); if(!resultsEl) return;
+  resultsEl.innerHTML=`<div class="loc-status">${t('post.locSearching')}</div>`;
+  if(!window.SB){ resultsEl.innerHTML=`<div class="loc-status">${t('x.trip.noLocationResults')}</div>`; return; }
+  try{
+    const { data, error } = await window.SB
+      .from("locations").select("id, name_ja, name_en")
+      .eq("type", "city")
+      .or(`name_ja.ilike.%${q}%,name_en.ilike.%${q}%`)
+      .order("display_priority", { ascending:true })
+      .limit(20);
+    if(error){ console.log("[locations] search error:", error.message); resultsEl.innerHTML=`<div class="loc-status">${t('x.trip.noLocationResults')}</div>`; return; }
+    if(!data || !data.length){ resultsEl.innerHTML=`<div class="loc-status">${t('x.trip.noLocationResults')}</div>`; return; }
+    resultsEl.innerHTML = data.map((d,i)=>`
+      <button class="loc-result-item" onclick="pickStopLocation('${d.id}','${escAttr(d.name_ja)}')">
+        <span class="loc-result-ic">📍</span>
+        <span class="loc-result-name">${esc(d.name_ja)}</span>
+      </button>`).join("");
+  }catch(e){
+    console.log("[locations] search exception:", e);
+    resultsEl.innerHTML=`<div class="loc-status">${t('x.trip.noLocationResults')}</div>`;
+  }
+}
+function pickStopLocation(locationId, locationName){
+  closeStopLocationPicker();
+  const today = new Date().toISOString().slice(0,10);
+  tripEditDraft.stops.push({ id:null, locationId, locationName, arrival: today, departure: today });
+  rerenderTripEdit();
+}
+
 function screenProfile(){
   const dark=document.documentElement.getAttribute("data-theme")==="dark";
   const joined=GROUPS.filter(g=>g.joined);
@@ -7086,7 +7430,7 @@ function screenProfile(){
     <div class="prof-tabpane">
       ${profileTab==='posts' ? renderMyPostsTab()
         : profileTab==='reposts' ? renderMyCollabPostsTab()
-        : profileTab==='map' ? `<p class="empty-note">${t('x.prof.mapComingSoon')}</p>`
+        : profileTab==='map' ? renderMyMapTab()
         : calendarBodyHTML()}
     </div>
   </div>`;
@@ -7504,7 +7848,7 @@ async function reactivateAccount(){
     if(error){ toast(t('x.auth.noConn')); console.log("[account] reactivate error:", error.message); return; }
     ME.deactivated = false;
     toast(t('x.acct.reactivated'));
-    await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications();
+    await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips();
     S.view = "post";
     renderApp();
   }catch(e){ console.log("[account] reactivate exception:", e); toast(t('x.auth.noConn')); }
@@ -10037,6 +10381,7 @@ function renderApp(){
   else if(S.view==="editprofile"){ sc.innerHTML=screenEditProfile(); updateBioCount(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="myPostsFeed"){ sc.innerHTML=screenMyPostsFeed(); applyAllPostCrops(); applyAllPostTextClamps(); scrollToMyPostsFeedTarget(); return; }
   else if(S.view==="myCollabPostsFeed"){ sc.innerHTML=screenMyCollabPostsFeed(); applyAllPostCrops(); applyAllPostTextClamps(); scrollToMyCollabPostsFeedTarget(); return; }
+  else if(S.view==="tripedit"){ sc.innerHTML=screenTripEdit(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="report"){ sc.innerHTML=screenReport(); window.scrollTo({top:0,behavior:"auto"}); return; }
   else if(S.view==="userprofile") html=screenUserProfile();
   else if(S.view==="settings") html=screenSettings();
