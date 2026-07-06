@@ -1680,8 +1680,10 @@ const I18N = {
     "x.badge.noneSub":"旅を確定したり友達を増やすと増えていきます。",
     "x.map.title":"マイ地図 🗺️",
     "x.map.prefs":"訪れた都道府県",
-    "x.map.domesticNote":"確定した国内旅行が地図に塗られます。",
-    "x.map.overseasNote":"確定した海外旅行がここに並びます。",
+    "x.map.domesticNote":"Tripに国内の立ち寄り場所を追加すると地図に塗られます。",
+    "x.map.overseasNote":"Tripに海外の立ち寄り場所を追加するとここに並びます。",
+    "x.map.countriesVisited":"訪れた国（{n}）",
+    "x.map.subTabMap":"地図", "x.map.subTabList":"旅行一覧",
     "x.cal.title":"マイカレンダー 🗓️",
     "x.cal.cycle":"終日 → 昼のみ → 夜のみ → 空きなし",
     "x.cal.allday":"終日OK",
@@ -2132,8 +2134,10 @@ const I18N = {
     "x.badge.noneSub":"They'll grow as you confirm trips and add friends.",
     "x.map.title":"My map 🗺️",
     "x.map.prefs":"Prefectures visited",
-    "x.map.domesticNote":"Confirmed domestic trips fill in the map.",
-    "x.map.overseasNote":"Confirmed overseas trips appear here.",
+    "x.map.domesticNote":"Add a domestic stop to a Trip to fill in the map.",
+    "x.map.overseasNote":"Add an overseas stop to a Trip to see it here.",
+    "x.map.countriesVisited":"Countries visited ({n})",
+    "x.map.subTabMap":"Map", "x.map.subTabList":"Trip list",
     "x.cal.title":"My calendar 🗓️",
     "x.cal.cycle":"All day → Day only → Night only → Unavailable",
     "x.cal.allday":"All day OK",
@@ -2864,7 +2868,7 @@ window.onAuthChanged = async function(user){
       // 利用再開の可否を確認する専用画面だけを表示する
       S.view = "reactivate";
     }else{
-      await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips();
+      await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips(); await loadMyMapStats();
     }
   }
   if(typeof renderApp === "function") renderApp();
@@ -6962,7 +6966,11 @@ function toggleProfileInfoTip(key){ profileInfoTip = (profileInfoTip===key) ? nu
 function rerenderProfileInPlace(){
   if(S.view!=="profile") return;
   const sc=document.getElementById("screen");
-  if(sc){ sc.innerHTML=screenProfile(); if(profileTab==="calendar") drawMyCal(); }
+  if(sc){
+    sc.innerHTML=screenProfile();
+    if(profileTab==="calendar") drawMyCal();
+    else if(profileTab==="map" && myMapSubView==="map") drawMyMapJP();
+  }
 }
 /* ===== プロフィール4タブ(My Posts/Reposts/My Map/My Calendar) ===== */
 let profileTab = "posts"; // "posts" | "reposts" | "map" | "calendar"
@@ -7122,7 +7130,17 @@ async function loadTrips(){
 const TRIP_STATUS_LABEL = { draft:"x.trip.statusDraft", planned:"x.trip.statusPlanned", ongoing:"x.trip.statusOngoing",
   completed:"x.trip.statusCompleted", archived:"x.trip.statusArchived", cancelled:"x.trip.statusCancelled" };
 let myMapShowArchived = false;
+let myMapSubView = "map"; // "map" | "list"
 function renderMyMapTab(){
+  return `<div>
+    <div class="lang-switch pcmp-vis-switch" style="margin-bottom:12px">
+      <button class="lang-btn ${myMapSubView==='map'?'on':''}" onclick="myMapSubView='map';rerenderProfileInPlace()">${t('x.map.subTabMap')}</button>
+      <button class="lang-btn ${myMapSubView==='list'?'on':''}" onclick="myMapSubView='list';rerenderProfileInPlace()">${t('x.map.subTabList')}</button>
+    </div>
+    ${myMapSubView==='map' ? myMapVisitedBodyHTML() : renderMyTripsListHTML()}
+  </div>`;
+}
+function renderMyTripsListHTML(){
   const active = TRIPS.filter(x=>x.effectiveStatus!=="archived" && x.effectiveStatus!=="cancelled");
   const archived = TRIPS.filter(x=>x.effectiveStatus==="archived" || x.effectiveStatus==="cancelled");
   const card = (trip)=>{
@@ -8009,7 +8027,7 @@ async function reactivateAccount(){
     if(error){ toast(t('x.auth.noConn')); console.log("[account] reactivate error:", error.message); return; }
     ME.deactivated = false;
     toast(t('x.acct.reactivated'));
-    await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips();
+    await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips(); await loadMyMapStats();
     S.view = "post";
     renderApp();
   }catch(e){ console.log("[account] reactivate exception:", e); toast(t('x.auth.noConn')); }
@@ -10197,43 +10215,80 @@ function screenBadges(){
     </div>`:`<p class="muted" style="text-align:center;margin-top:20px">${t('x.badge.none')}<br>${t('x.badge.noneSub')}</p>`}
   </div>`;
 }
-const PREF_ID_BY_NAME={}; (typeof JP_PREF!=="undefined"?JP_PREF:[]).forEach(p=>{
-  PREF_ID_BY_NAME[p.name]=p.id; PREF_ID_BY_NAME[p.name.replace(/(都|府|県)$/,"")]=p.id;
-});
-function visitedPrefIds(){
-  const ids=[]; visitedPrefSet().forEach(nm=>{ const id=PREF_ID_BY_NAME[nm]; if(id)ids.push(id); });
-  return ids;
+/* ===== MyMap: user_location_stats(Trip/TripStopから実際に集計された実データ)に基づく訪問済み地図 =====
+   旧: visitedPrefSet()/visitedCountrySet()はGROUPS(旅行計画・モックデータ)由来で、
+   「全国への道」「世界への道」バッジは引き続きそちらを参照している(意図的に維持。バッジ側の
+   移行は今回のスコープ外)。このMyMapの地図表示だけを実データ(user_location_stats)に切り替える */
+let MYMAP_PREF_SCORES = {};    // name_ja -> {trip_count, night_count}
+let MYMAP_COUNTRY_SCORES = {}; // country_code -> {name, trip_count, night_count}
+async function loadMyMapStats(){
+  if(!window.SB || !isSignedIn()){ MYMAP_PREF_SCORES={}; MYMAP_COUNTRY_SCORES={}; return; }
+  try{
+    const me = authUser();
+    const { data, error } = await window.SB
+      .from("user_location_stats").select("location_id, trip_count, night_count")
+      .eq("user_id", me.id);
+    if(error){ console.log("[user_location_stats] load error:", error.message); return; }
+    const rows = data||[];
+    const locIds = rows.map(r=>r.location_id);
+    let locMap = {};
+    if(locIds.length){
+      const { data: locs, error: le } = await window.SB
+        .from("locations").select("id, type, name_ja, country_code").in("id", locIds);
+      if(le) console.log("[locations] load error:", le.message);
+      (locs||[]).forEach(l=>{ locMap[l.id]=l; });
+    }
+    MYMAP_PREF_SCORES = {}; MYMAP_COUNTRY_SCORES = {};
+    rows.forEach(r=>{
+      const loc = locMap[r.location_id]; if(!loc) return;
+      if(loc.type === "jp_prefecture") MYMAP_PREF_SCORES[loc.name_ja] = { trip_count:r.trip_count, night_count:r.night_count };
+      else if(loc.type === "country") MYMAP_COUNTRY_SCORES[loc.country_code] = { name:loc.name_ja, trip_count:r.trip_count, night_count:r.night_count };
+    });
+  }catch(e){ console.log("[user_location_stats] load exception:", e); }
+}
+/* 訪問の「濃さ」を決めるスコア。0泊の日帰り立ち寄りでもtrip_countで最低限の濃さがつくようにする */
+function myMapScore(row){ return (row.trip_count||0) + (row.night_count||0); }
+function myMapVisitedBodyHTML(){
+  const prefNames = Object.keys(MYMAP_PREF_SCORES);
+  const countries = Object.values(MYMAP_COUNTRY_SCORES);
+  return `<div class="gi-prog" style="margin-top:0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:14px;font-weight:700;color:var(--ink)">${t('x.map.prefs')}</span>
+        <span style="font-size:13px;color:var(--accent);font-weight:800">${prefNames.length} / 47</span>
+      </div>
+      <div class="bar"><i style="width:${Math.round(prefNames.length/47*100)}%"></i></div>
+    </div>
+    <div class="mapwrap" id="myMapJP" style="margin-top:12px"></div>
+    ${prefNames.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${prefNames.map(nm=>`<span class="chip">${esc(nm)}</span>`).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.domesticNote')}</p>`}
+
+    <h3 class="sub" style="margin:22px 4px 8px">🌏 ${t('x.map.countriesVisited',{n:countries.length})}</h3>
+    ${countries.length?`<div class="badge-grid" style="grid-template-columns:repeat(3,1fr)">
+      ${countries.map(c=>`<div class="badge-item"><div class="badge-ic" style="background:linear-gradient(135deg,#8b5cf6,#c4b5fd)">🌐</div><div class="bn">${esc(c.name)}</div></div>`).join("")}
+    </div>`:`<p class="muted">${t('x.map.overseasNote')}</p>`}`;
 }
 function screenMyMap(){
-  const prefIds=visitedPrefIds();
-  const countries=[...visitedCountrySet()];
   return `<div class="page">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
       <button class="room-back" onclick="goBack('profile')"><span class="back-arrow">←</span></button>
       <h2 style="margin:0;font-size:20px;color:var(--ink)">${t('x.map.title')}</h2>
     </div>
-    <div class="gi-prog" style="margin-top:0">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span style="font-size:14px;font-weight:700;color:var(--ink)">${t('x.map.prefs')}</span>
-        <span style="font-size:13px;color:var(--accent);font-weight:800">${prefIds.length} / 47</span>
-      </div>
-      <div class="bar"><i style="width:${Math.round(prefIds.length/47*100)}%"></i></div>
-    </div>
-    <div class="mapwrap" id="myMapJP" style="margin-top:12px"></div>
-    ${prefIds.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${visitedPrefIds().map(id=>`<span class="chip">${esc(PREF_BY_ID[id])}</span>`).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.domesticNote')}</p>`}
-
-    <h3 class="sub" style="margin:22px 4px 8px">🌏 訪れた国（${countries.length}）</h3>
-    ${countries.length?`<div class="badge-grid" style="grid-template-columns:repeat(3,1fr)">
-      ${countries.map(c=>`<div class="badge-item"><div class="badge-ic" style="background:linear-gradient(135deg,#8b5cf6,#c4b5fd)">🌐</div><div class="bn">${esc(c)}</div></div>`).join("")}
-    </div>`:`<p class="muted">${t('x.map.overseasNote')}</p>`}
+    ${myMapVisitedBodyHTML()}
   </div>`;
 }
 function drawMyMapJP(){
   const c=document.getElementById("myMapJP"); if(!c||typeof JP_PREF==="undefined")return;
-  const visited=visitedPrefIds();
+  const scores = MYMAP_PREF_SCORES;
+  const scoreVals = Object.values(scores).map(myMapScore);
+  const maxScore = scoreVals.length ? Math.max(...scoreVals) : 1;
   const paths=JP_PREF.map(p=>{
-    const cls=visited.includes(p.id)?"sel":"";
-    return `<path d="${p.d}" class="${cls}"><title>${esc(p.name)}</title></path>`;
+    const row = scores[p.name];
+    let cls="";
+    if(row){
+      const r = myMapScore(row)/maxScore;
+      cls = r<=.2?"m1":r<=.4?"m2":r<=.6?"m3":r<1?"m4":"m5";
+    }
+    const title = row ? `${p.name}(${t('x.trip.stopNights',{n:row.night_count})})` : p.name;
+    return `<path d="${p.d}" class="${cls}"><title>${esc(title)}</title></path>`;
   }).join("");
   const frame=`<polyline class="okiframe" points="142,38 142,118 38,165" fill="none"/>`;
   c.innerHTML=`<svg viewBox="0 0 480 470" xmlns="http://www.w3.org/2000/svg">${frame}${paths}</svg>`;
@@ -10555,7 +10610,12 @@ function renderApp(){
   else if(S.view==="notify")  html=screenNotify();
   else if(S.view==="followrequests") html=screenFollowRequests();
   else if(S.view==="collabrequests") html=screenCollabInvites();
-  else if(S.view==="profile"){ sc.innerHTML=screenProfile(); if(profileTab==="calendar") drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
+  else if(S.view==="profile"){
+    sc.innerHTML=screenProfile();
+    if(profileTab==="calendar") drawMyCal();
+    else if(profileTab==="map" && myMapSubView==="map") drawMyMapJP();
+    window.scrollTo({top:0,behavior:"auto"}); return;
+  }
   else if(S.view==="followlist") html=screenFollowList();
   else html=screenHome();
   sc.innerHTML=html;
