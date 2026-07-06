@@ -121,6 +121,16 @@
   .mapwrap svg path.m1{fill:var(--map1)}.mapwrap svg path.m2{fill:var(--map2)}.mapwrap svg path.m3{fill:var(--map3)}
   .mapwrap svg path.m4{fill:var(--map4)}.mapwrap svg path.m5{fill:var(--map5)}
   .mapwrap svg .okiframe{fill:none;stroke:#9aa6bb;stroke-width:1.1;stroke-dasharray:5 4}
+  /* マイマップ(JP地図・世界地図)専用の背景色・境界線色設定。GROUPSの投票ヒートマップが使う
+     共有の.mapwrapは上のデフォルト(白背景・白境界線)のまま変えず、.mymap-visualが付いた
+     コンテナ(#myMapJP/#myMapWorld)だけ、ライト/ダーク問わず設定画面の選択を反映する */
+  .mymap-visual{background:#cfeaf5}
+  .mymap-visual svg path{stroke:#000}
+  [data-theme="dark"] .mymap-visual svg path{stroke:#000}
+  [data-map-border="white"] .mymap-visual svg path{stroke:#fff}
+  [data-map-bg="white"] .mymap-visual{background:#fbfcff}
+  [data-map-bg="black"] .mymap-visual{background:#20242b}
+  [data-map-bg="blue"] .mymap-visual{background:#cfeaf5}
   .selpref{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:8px}
   .selpref .chip{background:#eef2fb}
   /* 海外 国カード(景色背景+国旗) */
@@ -1564,6 +1574,9 @@ const I18N = {
     "x.chat.sendFailed":"メッセージの送信に失敗しました",
     "x.chat.read":"既読",
     "settings.chatManage":"チャットを管理", "settings.readReceipts":"既読の表示",
+    "settings.mymap":"マイマップ",
+    "x.map.settings.border":"境界線の色", "x.map.settings.bg":"地図背景の色",
+    "x.map.settings.black":"黒", "x.map.settings.white":"白", "x.map.settings.blue":"水色",
     "settings.readReceipts.sub":"オフにすると、自分の既読を相手に表示しません",
     "x.common.showMore":"もっと見る",
     "x.notif.title":"お知らせ",
@@ -2024,6 +2037,9 @@ const I18N = {
     "x.chat.sendFailed":"Failed to send message",
     "x.chat.read":"Read",
     "settings.chatManage":"Manage chat", "settings.readReceipts":"Read receipts",
+    "settings.mymap":"My map",
+    "x.map.settings.border":"Border color", "x.map.settings.bg":"Map background color",
+    "x.map.settings.black":"Black", "x.map.settings.white":"White", "x.map.settings.blue":"Light blue",
     "settings.readReceipts.sub":"When off, others won't see when you've read their messages",
     "x.common.showMore":"Show more",
     "x.notif.title":"Notifications",
@@ -3042,7 +3058,9 @@ const S = {
   consent:{}, comments:{}, objections:{},
   tripDays:1, dayLabels:[], dayPlan:[], activeDay:0, // 詳細プラン
   calYear:2026, calMonth:6,
-  view:"home", theme:"light", searchQ:"", accent:"#EC6800", lang:"ja", fontSize:"md"
+  view:"home", theme:"light", searchQ:"", accent:"#EC6800", lang:"ja", fontSize:"md",
+  mapBorder: localStorage.getItem("tavi_map_border") || "black",
+  mapBg: localStorage.getItem("tavi_map_bg") || "blue"
 };
 
 /* ===== ①アクセントカラー切替 ===== */
@@ -6989,7 +7007,7 @@ let profileTab = "posts"; // "posts" | "reposts" | "map" | "calendar"
 function setProfileTab(tab){
   if(profileTab===tab) return;
   profileTab = tab;
-  renderApp();
+  rerenderProfileInPlace();
 }
 /* 自分の投稿のうち画像付きのみ、新しい順(POSTSは既にcreated_at降順)で返す */
 function myPhotoPosts(){
@@ -7847,6 +7865,7 @@ function screenSettings(){
         <div class="switch ${notifEnabled?'on':''}" onclick="toggleNotif()"><i></i></div></div>
       <div class="item" onclick="openNotify()"><span class="si">📩</span><span class="st">${t("settings.openNotif")}</span><span style="color:var(--ink-soft)">›</span></div>
       <div class="item" onclick="goFwd('chatManage')"><span class="si">💬</span><span class="st">${t("settings.chatManage")}</span><span style="color:var(--ink-soft)">›</span></div>
+      <div class="item" onclick="goFwd('mymapSettings')"><span class="si">🗺️</span><span class="st">${t("settings.mymap")}</span><span style="color:var(--ink-soft)">›</span></div>
     </div>
 
     <h3 class="sub" style="margin:16px 4px 8px">${t("settings.other")}</h3>
@@ -7882,6 +7901,37 @@ async function toggleReadReceipts(){
     const { error } = await window.SB.from("profiles").update({ show_read_receipts: ME.showReadReceipts }).eq("id", authUser().id);
     if(error) console.log("[profiles] show_read_receipts save error:", error.message);
   }
+}
+/* マイマップ(JP地図・世界地図)専用の表示設定。端末ローカルのみ(localStorage)で、
+   GROUPSの投票ヒートマップ(共有の.mapwrap)には影響させない。境界線色/地図背景色は
+   CSS側で.mymap-visualクラスにだけスコープした[data-map-border]/[data-map-bg]属性で切り替える */
+function setMapBorder(v){
+  S.mapBorder = v;
+  localStorage.setItem("tavi_map_border", v);
+  document.documentElement.setAttribute("data-map-border", v);
+  renderApp();
+}
+function setMapBg(v){
+  S.mapBg = v;
+  localStorage.setItem("tavi_map_bg", v);
+  document.documentElement.setAttribute("data-map-bg", v);
+  renderApp();
+}
+function mapBorderBtn(v,label){ return `<button class="lang-btn ${S.mapBorder===v?'on':''}" onclick="setMapBorder('${v}')">${label}</button>`; }
+function mapBgBtn(v,label){ return `<button class="lang-btn ${S.mapBg===v?'on':''}" onclick="setMapBg('${v}')">${label}</button>`; }
+function screenMyMapSettings(){
+  return `<div class="page">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="room-back" onclick="goBack('settings')"><span class="back-arrow">←</span></button>
+      <h2 style="margin:0;font-size:20px;color:var(--ink)">${t("settings.mymap")}</h2>
+    </div>
+    <div class="setting">
+      <div class="item"><span class="si">🗺️</span><span class="st">${t("x.map.settings.border")}</span>
+        <div class="lang-switch">${mapBorderBtn("black",t("x.map.settings.black"))}${mapBorderBtn("white",t("x.map.settings.white"))}</div></div>
+      <div class="item"><span class="si">🎨</span><span class="st">${t("x.map.settings.bg")}</span>
+        <div class="lang-switch">${mapBgBtn("white",t("x.map.settings.white"))}${mapBgBtn("black",t("x.map.settings.black"))}${mapBgBtn("blue",t("x.map.settings.blue"))}</div></div>
+    </div>
+  </div>`;
 }
 /* ===== アカウント管理(利用解除/削除) =====
    4段階の共通フロー: ①影響表示 → ②パスワード再確認 → ③最終確認 → ④実行
@@ -10321,7 +10371,9 @@ function drawMyMapWorld(regionCode){
   const codeSet = region.codes ? new Set(region.codes) : null;
   const arr = codeSet ? fullArr.filter(co=>codeSet.has(co.code)) : fullArr;
   const scores = MYMAP_COUNTRY_SCORES;
-  const scoreVals = Object.values(scores).map(myMapScore);
+  // 濃さの基準(最高スコア)は、今表示している地域内の国だけから求める(他地域の訪問実績に
+  // 引っ張られて、この地域内の一番濃いはずの国が薄く表示されてしまわないように)
+  const scoreVals = arr.map(co=>scores[co.code]).filter(Boolean).map(myMapScore);
   const maxScore = scoreVals.length ? Math.max(...scoreVals) : 1;
   const paths = arr.map(co=>{
     const row = scores[co.code];
@@ -10344,7 +10396,7 @@ function myMapJPBodyHTML(){
       </div>
       <div class="bar"><i style="width:${Math.round(prefNames.length/47*100)}%"></i></div>
     </div>
-    <div class="mapwrap" id="myMapJP" style="margin-top:12px"></div>
+    <div class="mapwrap mymap-visual" id="myMapJP" style="margin-top:12px"></div>
     ${prefNames.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${prefNames.map(nm=>`<span class="chip">${esc(nm)}</span>`).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.domesticNote')}</p>`}`;
 }
 function myMapWorldBodyHTML(){
@@ -10372,7 +10424,7 @@ function myMapWorldBodyHTML(){
       </div>
       <div class="bar"><i style="width:${codes.length?Math.round(visitedCodes.length/codes.length*100):0}%"></i></div>
     </div>
-    <div class="mapwrap" id="myMapWorld" style="margin-top:12px"></div>
+    <div class="mapwrap mymap-visual" id="myMapWorld" style="margin-top:12px"></div>
     ${visitedCodes.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${visitedCodes.map(code=>{
         const row=MYMAP_COUNTRY_SCORES[code];
         return `<span class="chip">${esc(curLang()==="ja"?row.name:row.name_en)}</span>`;
@@ -10759,6 +10811,8 @@ function renderApp(){
     return;
   }
   document.documentElement.setAttribute("data-theme", S.theme);
+  document.documentElement.setAttribute("data-map-border", S.mapBorder);
+  document.documentElement.setAttribute("data-map-bg", S.mapBg);
   applyAccent(S.accent);
   $("#topbar").innerHTML = topbarHTML();
   $("#tabbar").innerHTML = tabbarHTML();
@@ -10804,6 +10858,7 @@ function renderApp(){
   else if(S.view==="settings") html=screenSettings();
   else if(S.view==="blockedusers") html=screenBlockedUsers();
   else if(S.view==="chatManage") html=screenChatManage();
+  else if(S.view==="mymapSettings") html=screenMyMapSettings();
   else if(S.view==="accountManage") html=screenAccountManage();
   else if(S.view==="accountAction1") html=screenAccountAction1();
   else if(S.view==="accountAction2") html=screenAccountAction2();
