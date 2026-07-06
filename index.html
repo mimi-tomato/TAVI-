@@ -1687,7 +1687,8 @@ const I18N = {
     "x.map.modeJP":"日本", "x.map.modeWorld":"世界",
     "x.map.regionComingSoon":"このエリアは近日公開予定です",
     "x.map.regionPickNote":"エリアを選ぶと、国ごとの訪問状況が地図で見られます。",
-    "x.map.region.asia":"アジア", "x.map.region.europe":"ヨーロッパ", "x.map.region.africa":"アフリカ",
+    "x.map.region.east_asia":"東アジア", "x.map.region.west_asia":"西アジア",
+    "x.map.region.europe":"ヨーロッパ", "x.map.region.africa":"アフリカ",
     "x.map.region.north_america":"北アメリカ", "x.map.region.south_america":"南アメリカ", "x.map.region.oceania":"オセアニア",
     "x.cal.title":"マイカレンダー 🗓️",
     "x.cal.cycle":"終日 → 昼のみ → 夜のみ → 空きなし",
@@ -2146,7 +2147,8 @@ const I18N = {
     "x.map.modeJP":"Japan", "x.map.modeWorld":"World",
     "x.map.regionComingSoon":"This region is coming soon",
     "x.map.regionPickNote":"Pick a region to see your visited countries on the map.",
-    "x.map.region.asia":"Asia", "x.map.region.europe":"Europe", "x.map.region.africa":"Africa",
+    "x.map.region.east_asia":"East Asia", "x.map.region.west_asia":"West Asia",
+    "x.map.region.europe":"Europe", "x.map.region.africa":"Africa",
     "x.map.region.north_america":"North America", "x.map.region.south_america":"South America", "x.map.region.oceania":"Oceania",
     "x.cal.title":"My calendar 🗓️",
     "x.cal.cycle":"All day → Day only → Night only → Unavailable",
@@ -10261,33 +10263,41 @@ function myMapScore(row){ return (row.trip_count||0) + (row.night_count||0); }
 
 /* ===== Phase 3: 世界地図(リージョン選択→国別色分け)=====
    47都道府県(JP_PREF)と違い、リージョンごとの国境SVGデータは数百KB単位になるため
-   index.htmlにインライン化せず、data/world-<region>.js に分割し、そのリージョンを
-   実際に開いた時だけ動的<script>挿入で読み込む(初期表示のペイロードを増やさないため) */
+   index.htmlにインライン化せず、data/world-<dataFile>.js に分割し、そのリージョンを
+   実際に開いた時だけ動的<script>挿入で読み込む(初期表示のペイロードを増やさないため)。
+   アジアは横に広すぎて1枚の地図では国が小さくなりすぎるため、表示上だけ東西2つに
+   分けている(dataFileは共通の"asia"を指し、DB側のlocations.region_idはどちらも
+   'asia'のまま。東西分割はあくまで見た目のクロップであり、地理階層のデータモデルは変えない)*/
 let myMapMapMode = "jp";      // "jp" | "world"
-let myMapWorldRegion = null;  // null(リージョン選択中) | "asia" 等
+let myMapWorldRegion = null;  // null(リージョン選択中) | "east_asia" 等
 const MYMAP_REGIONS = [
-  { code:"asia",          icon:"🌏", ready:true  },
-  { code:"europe",        icon:"🏰", ready:false },
-  { code:"africa",        icon:"🦁", ready:false },
-  { code:"north_america", icon:"🗽", ready:false },
-  { code:"south_america", icon:"🏔️", ready:false },
-  { code:"oceania",       icon:"🏝️", ready:false },
+  { code:"east_asia",     dataFile:"asia", icon:"🌏", ready:true,
+    codes:["JP","KR","KP","CN","MN","TW","HK","MO","VN","LA","KH","TH","MM","MY","SG","ID","PH","BN","TL"],
+    viewBox:"1776.5 278.4 591.3 595.7" },
+  { code:"west_asia",     dataFile:"asia", icon:"🐫", ready:true,
+    codes:["IN","PK","BD","LK","NP","BT","MV","AF","KZ","UZ","TM","TJ","KG","SA","AE","QA","KW","BH","OM","YE","IQ","IR","IL","JO","LB","SY","TR","GE","AM","AZ","PS","CY"],
+    viewBox:"1436.9 263.6 574.9 492.7" },
+  { code:"europe",        dataFile:"europe", icon:"🏰", ready:false },
+  { code:"africa",        dataFile:"africa", icon:"🦁", ready:false },
+  { code:"north_america", dataFile:"north_america", icon:"🗽", ready:false },
+  { code:"south_america", dataFile:"south_america", icon:"🏔️", ready:false },
+  { code:"oceania",       dataFile:"oceania", icon:"🏝️", ready:false },
 ];
-const MYMAP_WORLD_LOADED = {}; // regionCode -> true(読み込み済み)
-function loadWorldRegionScript(code){
-  if(MYMAP_WORLD_LOADED[code] || window["WORLD_"+code.toUpperCase()]) { MYMAP_WORLD_LOADED[code]=true; return Promise.resolve(); }
+const MYMAP_WORLD_LOADED = {}; // dataFile -> true(読み込み済み)
+function loadWorldRegionScript(dataFile){
+  if(MYMAP_WORLD_LOADED[dataFile] || window["WORLD_"+dataFile.toUpperCase()]) { MYMAP_WORLD_LOADED[dataFile]=true; return Promise.resolve(); }
   return new Promise((resolve,reject)=>{
     const s=document.createElement("script");
-    s.src=`data/world-${code}.js`;
-    s.onload=()=>{ MYMAP_WORLD_LOADED[code]=true; resolve(); };
-    s.onerror=()=>reject(new Error("load failed: "+code));
+    s.src=`data/world-${dataFile}.js`;
+    s.onload=()=>{ MYMAP_WORLD_LOADED[dataFile]=true; resolve(); };
+    s.onerror=()=>reject(new Error("load failed: "+dataFile));
     document.head.appendChild(s);
   });
 }
 async function openMyMapWorldRegion(code){
   const region = MYMAP_REGIONS.find(r=>r.code===code);
   if(!region || !region.ready){ toast(t('x.map.regionComingSoon')); return; }
-  try{ await loadWorldRegionScript(code); }
+  try{ await loadWorldRegionScript(region.dataFile); }
   catch(e){ console.log("[world map] load error:", e); toast(t('x.map.regionComingSoon')); return; }
   myMapWorldRegion = code;
   rerenderProfileInPlace();
@@ -10305,9 +10315,11 @@ function drawMyMapVisual(){
   else drawMyMapJP();
 }
 function drawMyMapWorld(regionCode){
-  const arr = window["WORLD_"+regionCode.toUpperCase()];
-  const vb  = window["WORLD_"+regionCode.toUpperCase()+"_VIEWBOX"];
-  const c = document.getElementById("myMapWorld"); if(!c || !arr) return;
+  const region = MYMAP_REGIONS.find(r=>r.code===regionCode); if(!region) return;
+  const fullArr = window["WORLD_"+region.dataFile.toUpperCase()];
+  const c = document.getElementById("myMapWorld"); if(!c || !fullArr) return;
+  const codeSet = region.codes ? new Set(region.codes) : null;
+  const arr = codeSet ? fullArr.filter(co=>codeSet.has(co.code)) : fullArr;
   const scores = MYMAP_COUNTRY_SCORES;
   const scoreVals = Object.values(scores).map(myMapScore);
   const maxScore = scoreVals.length ? Math.max(...scoreVals) : 1;
@@ -10319,6 +10331,7 @@ function drawMyMapWorld(regionCode){
     const title = row ? `${name}(${t('x.trip.stopNights',{n:row.night_count})})` : name;
     return `<path d="${co.d}" class="${cls}"><title>${esc(title)}</title></path>`;
   }).join("");
+  const vb = region.viewBox || window["WORLD_"+region.dataFile.toUpperCase()+"_VIEWBOX"];
   c.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
 }
 function myMapJPBodyHTML(){
@@ -10343,7 +10356,9 @@ function myMapWorldBodyHTML(){
     </div>
     <p class="muted" style="text-align:center;margin-top:10px">${t('x.map.regionPickNote')}</p>`;
   }
-  const codes = (window["WORLD_"+myMapWorldRegion.toUpperCase()]||[]).map(co=>co.code);
+  const region = MYMAP_REGIONS.find(r=>r.code===myMapWorldRegion);
+  const fullCodes = (window["WORLD_"+region.dataFile.toUpperCase()]||[]).map(co=>co.code);
+  const codes = region.codes ? region.codes.filter(c=>fullCodes.includes(c)) : fullCodes;
   const visitedCodes = codes.filter(code=>MYMAP_COUNTRY_SCORES[code]);
   return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <button class="room-back" onclick="closeMyMapWorldRegion()"><span class="back-arrow">←</span></button>
