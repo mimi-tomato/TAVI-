@@ -112,8 +112,8 @@
   .place-tabs button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px;
     font-weight:700;font-family:inherit;font-size:0.875rem;cursor:pointer;color:var(--ink-soft)}
   .place-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .mapwrap{margin-top:6px;background:#fbfcff;border:1px solid var(--line);border-radius:12px;padding:8px}
-  .mapwrap svg{width:100%;height:auto;display:block;touch-action:manipulation}
+  .mapwrap{margin-top:6px;background:#fbfcff;border:1px solid var(--line);border-radius:12px;padding:8px;overflow:hidden;touch-action:pan-y}
+  .mapwrap svg{width:100%;height:auto;display:block;touch-action:pan-y}
   .mapwrap svg path{fill:#e9eef7;stroke:#fff;stroke-width:.5;cursor:pointer;transition:.1s}
   .mapwrap svg path:hover{fill:#c3d4f5}
   .mapwrap svg path.sel{fill:var(--accent);stroke:#fff}
@@ -10333,6 +10333,7 @@ function drawMyMapWorld(regionCode){
   }).join("");
   const vb = region.viewBox || window["WORLD_"+region.dataFile.toUpperCase()+"_VIEWBOX"];
   c.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+  resetMapZoom("myMapWorld");
 }
 function myMapJPBodyHTML(){
   const prefNames = Object.keys(MYMAP_PREF_SCORES);
@@ -10410,6 +10411,79 @@ function drawMyMapJP(){
   }).join("");
   const frame=`<polyline class="okiframe" points="142,38 142,118 38,165" fill="none"/>`;
   c.innerHTML=`<svg viewBox="0 0 480 470" xmlns="http://www.w3.org/2000/svg">${frame}${paths}</svg>`;
+  resetMapZoom("myMapJP");
+}
+/* ===== 地図のピンチズーム・ドラッグパン(JPマップ・世界マップ共通) =====
+   drawMyMapJP/drawMyMapWorldはinnerHTMLを毎回丸ごと差し替えて新しい<svg>を作るため、
+   svg要素への参照はイベントハンドラ内で毎回取り直す(初期化時に一度だけ取得してしまうと、
+   再描画後は古い(DOMから外れた)ノードを参照し続けて操作が効かなくなるため)。
+   ポインタイベントの登録自体は1コンテナにつき1回だけ行い、再描画のたびに増殖させない */
+const MAP_ZOOM_STATE = {};       // containerId -> {scale,x,y}
+const MAP_ZOOM_INITED = new Set();
+const MAP_ZOOM_MAX = 4;
+/* scale===1の間はtouch-action:pan-yにして、地図の上から始まる指1本のスワイプは
+   ページの縦スクロールに使わせる(ブラウザ標準のピンチズームだけは無効化し、JS側の
+   ピンチ処理に委ねる)。scale>1でズーム中だけtouch-action:noneに切り替え、指1本の
+   ドラッグを地図のパン操作として奪う(ページスクロールと奪い合いにならないように) */
+function applyMapTransform(el, svg, st){
+  svg.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.scale})`;
+  svg.style.transformOrigin = "center center";
+  el.style.touchAction = st.scale>1 ? "none" : "pan-y";
+}
+function resetMapZoom(containerId){
+  const el = document.getElementById(containerId); if(!el) return;
+  const st = MAP_ZOOM_STATE[containerId] = {scale:1, x:0, y:0};
+  const svg = el.querySelector("svg");
+  if(svg) applyMapTransform(el, svg, st);
+  if(!MAP_ZOOM_INITED.has(containerId)){
+    MAP_ZOOM_INITED.add(containerId);
+    initMapZoomListeners(containerId);
+  }
+}
+function initMapZoomListeners(containerId){
+  const el = document.getElementById(containerId); if(!el) return;
+  const pointers = new Map();
+  let pinchStartDist=0, pinchStartScale=1, panStart=null, lastTap=0;
+  const dist=(a,b)=>Math.hypot(a.x-b.x, a.y-b.y);
+  el.addEventListener("pointerdown", e=>{
+    const st = MAP_ZOOM_STATE[containerId]; if(!st) return;
+    el.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pointers.size===2){
+      const [a,b]=[...pointers.values()];
+      pinchStartDist=dist(a,b); pinchStartScale=st.scale; panStart=null;
+    } else if(pointers.size===1){
+      panStart={px:e.clientX, py:e.clientY, stx:st.x, sty:st.y};
+      const now=Date.now();
+      if(now-lastTap<300){
+        st.scale = st.scale>1 ? 1 : 2.2; st.x=0; st.y=0;
+        const svg=el.querySelector("svg"); if(svg) applyMapTransform(el, svg, st);
+      }
+      lastTap=now;
+    }
+  });
+  el.addEventListener("pointermove", e=>{
+    const st = MAP_ZOOM_STATE[containerId]; if(!st || !pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    const svg = el.querySelector("svg"); if(!svg) return;
+    if(pointers.size===2){
+      const [a,b]=[...pointers.values()];
+      const d=dist(a,b);
+      st.scale = Math.min(MAP_ZOOM_MAX, Math.max(1, pinchStartScale*(d/pinchStartDist)));
+      applyMapTransform(el, svg, st);
+    } else if(pointers.size===1 && panStart && st.scale>1){
+      st.x = panStart.stx + (e.clientX-panStart.px);
+      st.y = panStart.sty + (e.clientY-panStart.py);
+      applyMapTransform(el, svg, st);
+    }
+  });
+  function endPointer(e){
+    pointers.delete(e.pointerId);
+    if(pointers.size<2) pinchStartDist=0;
+    if(pointers.size===0) panStart=null;
+  }
+  el.addEventListener("pointerup", endPointer);
+  el.addEventListener("pointercancel", endPointer);
 }
 function toggleFactor(f,el){
   const i=MYPREFS.indexOf(f);
