@@ -783,6 +783,15 @@
   .pcmp-loc-label{display:inline-flex;align-items:center;gap:6px;font-size:0.875rem;color:var(--ink-soft);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pcmp-loc-pin-ic{width:16px;height:16px;object-fit:contain;flex:0 0 auto}
   .pcmp-loc-sub{display:flex;align-items:center;gap:6px;padding:0 2px;font-size:0.8125rem;color:var(--ink)}
+  /* Tripの泊数バー(区間ごとにグラデーション状に色分けし、境目をドラッグして泊数を配分し直せる) */
+  .trip-bar{display:flex;height:58px;border-radius:10px;overflow:hidden;margin:10px 0 4px}
+  .trip-bar-seg{display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;
+    font-size:0.6875rem;font-weight:700;line-height:1.35;padding:2px 4px;overflow:hidden;
+    text-shadow:0 1px 2px rgba(0,0,0,.35);min-width:0}
+  .trip-bar-handle{width:16px;flex:0 0 auto;background:var(--card);cursor:ew-resize;touch-action:none;position:relative}
+  .trip-bar-handle::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:3px;height:24px;border-radius:2px;background:var(--ink-soft);opacity:.5}
+  .trip-bar-dates{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ink-soft);margin-bottom:14px}
   .pcmp-tag-sub{flex-wrap:wrap;gap:8px}
   .pcmp-tag-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--chip);font-weight:700}
   .pcmp-tag-chip i{font-style:normal;cursor:pointer;color:var(--ink-soft)}
@@ -1576,7 +1585,9 @@ const I18N = {
     "x.trip.editTitle":"旅を編集", "x.trip.newTitle":"新しい旅",
     "x.trip.titleLabel":"タイトル", "x.trip.titlePh":"例: 東京・韓国・福岡の旅",
     "x.trip.startDate":"開始日", "x.trip.endDate":"終了日",
-    "x.trip.statusLabel":"状態", "x.trip.visibility":"公開範囲",
+    "x.trip.statusLabel":"状態",
+    "x.trip.barEmpty":"場所を追加すると、日程バーで滞在日数を調整できます",
+    "x.trip.needDatesFirst":"先に開始日・終了日を入力してください",
     "x.trip.stops":"立ち寄った場所", "x.trip.addStop":"場所を追加",
     "x.trip.stopNights":"{n}泊", "x.trip.stopNightsZero":"日帰り", "x.trip.removeStop":"削除",
     "x.trip.save":"保存", "x.trip.saveDone":"保存しました",
@@ -2025,7 +2036,9 @@ const I18N = {
     "x.trip.editTitle":"Edit trip", "x.trip.newTitle":"New trip",
     "x.trip.titleLabel":"Title", "x.trip.titlePh":"e.g. Tokyo, Korea & Fukuoka trip",
     "x.trip.startDate":"Start date", "x.trip.endDate":"End date",
-    "x.trip.statusLabel":"Status", "x.trip.visibility":"Visibility",
+    "x.trip.statusLabel":"Status",
+    "x.trip.barEmpty":"Add a place to adjust how many nights you'll spend there on the day bar",
+    "x.trip.needDatesFirst":"Please enter the start and end dates first",
     "x.trip.stops":"Stops", "x.trip.addStop":"Add a stop",
     "x.trip.stopNights":"{n} night(s)", "x.trip.stopNightsZero":"Day trip", "x.trip.removeStop":"Remove",
     "x.trip.save":"Save", "x.trip.saveDone":"Saved",
@@ -7125,36 +7138,123 @@ function renderMyMapTab(){
 /* ===== Trip作成・編集 ===== */
 let tripEditDraft = null; // {id(null=new), title, start_date, end_date, status, visibility, stops:[{id(null=new),locationId,locationName,arrival,departure}]}
 function openNewTrip(){
-  tripEditDraft = { id:null, title:"", start_date:"", end_date:"", status:"draft", visibility:"private", stops:[] };
+  tripEditDraft = { id:null, title:"", start_date:"", end_date:"", status:"draft", stops:[] };
   goFwd('tripedit');
 }
 function openTripEdit(id){
   const trip = TRIPS.find(x=>x.id===id); if(!trip) return;
   tripEditDraft = {
     id: trip.id, title: trip.title, start_date: trip.start_date||"", end_date: trip.end_date||"",
-    status: trip.status||"draft", visibility: trip.visibility||"private",
+    status: trip.status||"draft",
     archived_at: trip.archived_at, cancelled_at: trip.cancelled_at,
-    stops: trip.stops.map(s=>({ id:s.id, locationId:s.locationId, locationName:s.locationName, arrival:s.arrival, departure:s.departure }))
+    stops: trip.stops.map(s=>({ id:s.id, locationId:s.locationId, locationName:s.locationName, nights:s.nights||0 }))
   };
   goFwd('tripedit');
+}
+/* トリップ全体の泊数(開始日〜終了日)。日付が揃っていなければ0 */
+/* "YYYY-MM-DD"をローカルタイムゾーンに影響されないUTC基準のタイムスタンプへ変換する。
+   new Date(str+"T00:00:00")+toISOString()の組み合わせは、日本のような正のUTCオフセットの
+   タイムゾーンで前日にずれるバグを起こすため、日付の純粋な足し算にはこちらを使う */
+function parseDateUTC(s){ const [y,m,d]=s.split("-").map(Number); return Date.UTC(y,m-1,d); }
+function formatDateUTC(ms){
+  const dt=new Date(ms);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,"0")}-${String(dt.getUTCDate()).padStart(2,"0")}`;
+}
+function tripTotalNights(){
+  const d = tripEditDraft;
+  if(!d || !d.start_date || !d.end_date) return 0;
+  const n = Math.round((parseDateUTC(d.end_date) - parseDateUTC(d.start_date)) / 86400000);
+  return n>0 ? n : 0;
+}
+/* 各TripStopの到着日・出発日を、開始日+各区間の泊数の累積から算出する(区間は隙間なく連続する) */
+function tripStopDates(){
+  const d = tripEditDraft;
+  const out = [];
+  if(!d || !d.start_date){ d.stops.forEach(()=>out.push({arrival:"",departure:""})); return out; }
+  let cursorMs = parseDateUTC(d.start_date);
+  d.stops.forEach(s=>{
+    const arrival = formatDateUTC(cursorMs);
+    cursorMs += (s.nights||0)*86400000;
+    out.push({ arrival, departure: formatDateUTC(cursorMs) });
+  });
+  return out;
+}
+/* 開始日・終了日が変わった時、各場所の泊数配分を新しい総泊数に合わせて比例配分し直す(端数は最後の場所へ) */
+function rebalanceStopNights(){
+  const stops = tripEditDraft.stops;
+  if(!stops.length) return;
+  const desired = tripTotalNights();
+  const current = stops.reduce((a,s)=>a+(s.nights||0),0);
+  if(current === desired) return;
+  if(desired<=0){ stops.forEach(s=>s.nights=0); return; }
+  if(current<=0){
+    const base = Math.floor(desired/stops.length);
+    stops.forEach((s,i)=>{ s.nights = (i<stops.length-1) ? base : desired-base*(stops.length-1); });
+    return;
+  }
+  let assigned=0;
+  stops.forEach((s,i)=>{
+    if(i<stops.length-1){ const v=Math.max(0,Math.round(s.nights/current*desired)); s.nights=v; assigned+=v; }
+  });
+  stops[stops.length-1].nights = Math.max(0, desired-assigned);
+}
+/* 場所ごとの泊数バー(グラデーション状の帯を、各場所の泊数に応じて分割する視覚的UI)。
+   区間の境目をドラッグすると隣り合う場所同士で泊数を融通し合う(合計は常にトリップ全体の泊数のまま) */
+function renderTripBarHTML(){
+  const stops = tripEditDraft.stops;
+  const total = tripTotalNights();
+  if(!stops.length){
+    return `<p class="empty-note">${t('x.trip.barEmpty')}</p>`;
+  }
+  if(total<=0){
+    return `<p class="empty-note">${t('x.trip.needDatesFirst')}</p>`;
+  }
+  const dates = tripStopDates();
+  const segs = stops.map((s,i)=>{
+    const grow = Math.max(s.nights, 0.4);
+    const hue = stops.length>1 ? Math.round(160 + (i/(stops.length-1))*140) : 160;
+    const nightsText = s.nights>0 ? t('x.trip.stopNights',{n:s.nights}) : t('x.trip.stopNightsZero');
+    const handle = i<stops.length-1 ? `<div class="trip-bar-handle" onpointerdown="tripBarDragStart(event,${i})"></div>` : '';
+    return `<div class="trip-bar-seg" style="flex-grow:${grow};background:hsl(${hue},58%,52%)">
+      <span class="trip-bar-seg-label">${esc(s.locationName)}<br>${nightsText}</span>
+    </div>${handle}`;
+  }).join("");
+  return `<div class="trip-bar" id="tripBar">${segs}</div>
+    <div class="trip-bar-dates"><span>${esc(dates[0].arrival)}</span><span>${esc(dates[dates.length-1].departure)}</span></div>`;
+}
+let tripBarDrag = null;
+function tripBarDragStart(e, i){
+  e.preventDefault();
+  const bar = document.getElementById("tripBar"); if(!bar) return;
+  const rect = bar.getBoundingClientRect();
+  const total = tripTotalNights(); if(total<=0) return;
+  const a = tripEditDraft.stops[i], b = tripEditDraft.stops[i+1]; if(!a||!b) return;
+  tripBarDrag = { i, startX: e.clientX, pxPerNight: rect.width/total, startA: a.nights, pairTotal: a.nights+b.nights };
+  document.addEventListener("pointermove", tripBarDragMove);
+  document.addEventListener("pointerup", tripBarDragEnd, { once:true });
+}
+function tripBarDragMove(e){
+  if(!tripBarDrag) return;
+  const drag = tripBarDrag;
+  const dNights = Math.round((e.clientX - drag.startX) / drag.pxPerNight);
+  let newA = Math.max(0, Math.min(drag.pairTotal, drag.startA + dNights));
+  tripEditDraft.stops[drag.i].nights = newA;
+  tripEditDraft.stops[drag.i+1].nights = drag.pairTotal - newA;
+  const wrap = document.getElementById("tripBarWrap");
+  if(wrap) wrap.innerHTML = renderTripBarHTML();
+}
+function tripBarDragEnd(){
+  document.removeEventListener("pointermove", tripBarDragMove);
+  tripBarDrag = null;
+  rerenderTripEdit();
 }
 function screenTripEdit(){
   const d = tripEditDraft; if(!d) return `<div class="page"></div>`;
   const isNew = !d.id;
-  const stopsHtml = d.stops.map((s,i)=>{
-    const nights = Math.round((new Date(s.departure) - new Date(s.arrival)) / 86400000);
-    const nightsText = nights>0 ? t('x.trip.stopNights',{n:nights}) : t('x.trip.stopNightsZero');
-    return `<div class="listcard" style="align-items:flex-start">
+  const stopsListHtml = d.stops.map((s,i)=>{
+    return `<div class="listcard">
       <div class="lic">📍</div>
-      <div class="lt" style="flex:1">
-        <div class="a">${esc(s.locationName)}</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
-          <input type="date" class="loc-search-input" style="margin:0;padding:6px 8px;font-size:0.8125rem" value="${escAttr(s.arrival)}" onchange="setTripStopDate(${i},'arrival',this.value)">
-          <span style="color:var(--ink-soft)">〜</span>
-          <input type="date" class="loc-search-input" style="margin:0;padding:6px 8px;font-size:0.8125rem" value="${escAttr(s.departure)}" onchange="setTripStopDate(${i},'departure',this.value)">
-        </div>
-        <div class="b" style="margin-top:4px">${nightsText}</div>
-      </div>
+      <div class="lt"><div class="a">${esc(s.locationName)}</div></div>
       <div style="display:flex;flex-direction:column;gap:4px">
         <button class="mini-btn" ${i===0?'disabled':''} onclick="event.stopPropagation();moveTripStop(${i},-1)">↑</button>
         <button class="mini-btn" ${i===d.stops.length-1?'disabled':''} onclick="event.stopPropagation();moveTripStop(${i},1)">↓</button>
@@ -7173,9 +7273,9 @@ function screenTripEdit(){
     <input type="text" id="tripTitleInput" class="loc-search-input" style="margin:0 0 14px" value="${escAttr(d.title)}" placeholder="${t('x.trip.titlePh')}" oninput="tripEditDraft.title=this.value">
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div style="flex:1"><label class="fld">${t('x.trip.startDate')}</label>
-        <input type="date" id="tripStartInput" class="loc-search-input" value="${escAttr(d.start_date)}" onchange="tripEditDraft.start_date=this.value"></div>
+        <input type="date" id="tripStartInput" class="loc-search-input" value="${escAttr(d.start_date)}" onchange="tripEditDraft.start_date=this.value;rebalanceStopNights();rerenderTripEdit()"></div>
       <div style="flex:1"><label class="fld">${t('x.trip.endDate')}</label>
-        <input type="date" id="tripEndInput" class="loc-search-input" value="${escAttr(d.end_date)}" onchange="tripEditDraft.end_date=this.value"></div>
+        <input type="date" id="tripEndInput" class="loc-search-input" value="${escAttr(d.end_date)}" onchange="tripEditDraft.end_date=this.value;rebalanceStopNights();rerenderTripEdit()"></div>
     </div>
     <div class="pcmp-section-label">－${t('x.trip.statusLabel')}</div>
     <div class="lang-switch pcmp-vis-switch" style="margin-bottom:14px">
@@ -7183,14 +7283,9 @@ function screenTripEdit(){
       <button class="lang-btn ${d.status==='planned'?'on':''}" onclick="setTripStatus('planned')">${t('x.trip.statusPlanned')}</button>
       <button class="lang-btn ${d.status==='completed'?'on':''}" onclick="setTripStatus('completed')">${t('x.trip.statusCompleted')}</button>
     </div>
-    <div class="pcmp-section-label">－${t('x.trip.visibility')}</div>
-    <div class="lang-switch pcmp-vis-switch" style="margin-bottom:14px">
-      <button class="lang-btn ${d.visibility==='public'?'on':''}" onclick="tripEditDraft.visibility='public';rerenderTripEdit()">${t('post.vis.public')}</button>
-      <button class="lang-btn ${d.visibility==='followers'?'on':''}" onclick="tripEditDraft.visibility='followers';rerenderTripEdit()">${t('post.vis.followers')}</button>
-      <button class="lang-btn ${d.visibility==='private'?'on':''}" onclick="tripEditDraft.visibility='private';rerenderTripEdit()">${t('post.vis.private')}</button>
-    </div>
     <div class="pcmp-section-label">－${t('x.trip.stops')}</div>
-    ${stopsHtml}
+    <div id="tripBarWrap">${renderTripBarHTML()}</div>
+    ${stopsListHtml}
     <button class="btn ghost" style="width:100%;margin:10px 0 20px" onclick="openStopLocationPicker()">＋ ${t('x.trip.addStop')}</button>
     ${canManage?`<div class="pcmp-section-label">－${t('x.trip.manage')}</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
@@ -7207,14 +7302,14 @@ function moveTripStop(i, dir){
   [arr[i],arr[j]]=[arr[j],arr[i]];
   rerenderTripEdit();
 }
-function removeTripStop(i){ tripEditDraft.stops.splice(i,1); rerenderTripEdit(); }
-/* 到着日・出発日を編集する。DB側のchk_dates制約(出発 >= 到着)を破らないよう、
-   矛盾する組み合わせになった場合はもう一方の日付を automatically 揃える */
-function setTripStopDate(i, field, value){
-  const s = tripEditDraft.stops[i]; if(!s || !value) return;
-  s[field] = value;
-  if(new Date(s.departure) < new Date(s.arrival)){
-    if(field === "arrival") s.departure = value; else s.arrival = value;
+/* 削除した場所の泊数は、隣の場所(基本は直前、先頭ならその次)へそのまま引き継ぎ、
+   トリップ全体の泊数の合計が変わらないようにする */
+function removeTripStop(i){
+  const removed = tripEditDraft.stops[i];
+  tripEditDraft.stops.splice(i,1);
+  if(tripEditDraft.stops.length){
+    const giveTo = i>0 ? i-1 : 0;
+    tripEditDraft.stops[giveTo].nights += removed.nights;
   }
   rerenderTripEdit();
 }
@@ -7230,13 +7325,14 @@ async function saveTrip(){
     const { error } = await window.SB.from("trips").insert({
       id: tripId, owner_id: me.id, title: d.title.trim(),
       start_date: d.start_date||null, end_date: d.end_date||null,
-      status: d.status, visibility: d.visibility, created_via: "manual"
+      status: d.status, created_via: "manual"
+      // visibilityは列のデフォルト('private')に任せる(このTripは非公開の個人記録のため、UIでは選ばせない)
     });
     if(error){ console.log("[trips] insert error:", error.message); toast(error.message); return; }
   } else {
     const { error } = await window.SB.from("trips").update({
       title: d.title.trim(), start_date: d.start_date||null, end_date: d.end_date||null,
-      status: d.status, visibility: d.visibility
+      status: d.status
     }).eq("id", tripId);
     if(error){ console.log("[trips] update error:", error.message); toast(error.message); return; }
   }
@@ -7244,7 +7340,8 @@ async function saveTrip(){
   const { error: delErr } = await window.SB.from("trip_stops").delete().eq("trip_id", tripId);
   if(delErr) console.log("[trip_stops] delete error:", delErr.message);
   if(d.stops.length){
-    const rows = d.stops.map((s,i)=>({ trip_id: tripId, location_id: s.locationId, arrival_date: s.arrival, departure_date: s.departure, sort_key: (i+1)*100 }));
+    const dates = tripStopDates();
+    const rows = d.stops.map((s,i)=>({ trip_id: tripId, location_id: s.locationId, arrival_date: dates[i].arrival, departure_date: dates[i].departure, sort_key: (i+1)*100 }));
     const { error: insErr } = await window.SB.from("trip_stops").insert(rows);
     if(insErr){ console.log("[trip_stops] insert error:", insErr.message); toast(insErr.message); return; }
   }
@@ -7352,10 +7449,24 @@ async function runStopLocSearch(q){
     resultsEl.innerHTML=`<div class="loc-status">${t('x.trip.noLocationResults')}</div>`;
   }
 }
+/* 新しい場所を追加する。開始日・終了日が未入力だと泊数バーの分割対象が無いため先に入力を促す。
+   既存の場所がある場合は、最も長い区間を半分に割って新しい場所を差し込む(直感的な初期配分) */
 function pickStopLocation(locationId, locationName){
   closeStopLocationPicker();
-  const today = new Date().toISOString().slice(0,10);
-  tripEditDraft.stops.push({ id:null, locationId, locationName, arrival: today, departure: today });
+  if(!tripEditDraft.start_date || !tripEditDraft.end_date){
+    toast(t('x.trip.needDatesFirst'));
+    return;
+  }
+  const stops = tripEditDraft.stops;
+  if(!stops.length){
+    stops.push({ id:null, locationId, locationName, nights: tripTotalNights() });
+  } else {
+    let maxIdx=0;
+    stops.forEach((s,i)=>{ if(s.nights>stops[maxIdx].nights) maxIdx=i; });
+    const half = Math.floor(stops[maxIdx].nights/2);
+    stops[maxIdx].nights -= half;
+    stops.splice(maxIdx+1, 0, { id:null, locationId, locationName, nights: half });
+  }
   rerenderTripEdit();
 }
 
