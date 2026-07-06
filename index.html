@@ -783,8 +783,10 @@
   .pcmp-loc-label{display:inline-flex;align-items:center;gap:6px;font-size:0.875rem;color:var(--ink-soft);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pcmp-loc-pin-ic{width:16px;height:16px;object-fit:contain;flex:0 0 auto}
   .pcmp-loc-sub{display:flex;align-items:center;gap:6px;padding:0 2px;font-size:0.8125rem;color:var(--ink)}
-  /* Tripの泊数バー(区間ごとにグラデーション状に色分けし、境目をドラッグして泊数を配分し直せる) */
-  .trip-bar{display:flex;height:58px;border-radius:10px;overflow:hidden;margin:10px 0 4px}
+  /* Tripの泊数バー(区間ごとにグラデーション状に色分けし、境目をドラッグして泊数を配分し直せる)。
+     場所が増えると.trip-bar-rowが複数行に分かれる(TRIP_BAR_PER_ROW件ずつ) */
+  .trip-bar-row{display:flex;height:58px;border-radius:10px;overflow:hidden;margin:0 0 6px}
+  .trip-bar-row:last-of-type{margin-bottom:4px}
   .trip-bar-seg{display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;
     font-size:0.6875rem;font-weight:700;line-height:1.35;padding:2px 4px;overflow:hidden;
     text-shadow:0 1px 2px rgba(0,0,0,.35);min-width:0}
@@ -1588,6 +1590,7 @@ const I18N = {
     "x.trip.statusLabel":"状態",
     "x.trip.barEmpty":"場所を追加すると、日程バーで滞在日数を調整できます",
     "x.trip.needDatesFirst":"先に開始日・終了日を入力してください",
+    "x.trip.maxDaysToast":"「旅行」の上限は366日です、それ以上は「放浪」です",
     "x.trip.stops":"立ち寄った場所", "x.trip.addStop":"場所を追加",
     "x.trip.stopNights":"{n}泊", "x.trip.stopNightsZero":"日帰り", "x.trip.removeStop":"削除",
     "x.trip.save":"保存", "x.trip.saveDone":"保存しました",
@@ -2039,6 +2042,7 @@ const I18N = {
     "x.trip.statusLabel":"Status",
     "x.trip.barEmpty":"Add a place to adjust how many nights you'll spend there on the day bar",
     "x.trip.needDatesFirst":"Please enter the start and end dates first",
+    "x.trip.maxDaysToast":"A \"Trip\" maxes out at 366 days — anything longer is a \"Wanderer.\"",
     "x.trip.stops":"Stops", "x.trip.addStop":"Add a stop",
     "x.trip.stopNights":"{n} night(s)", "x.trip.stopNightsZero":"Day trip", "x.trip.removeStop":"Remove",
     "x.trip.save":"Save", "x.trip.saveDone":"Saved",
@@ -7166,6 +7170,17 @@ function tripTotalNights(){
   const n = Math.round((parseDateUTC(d.end_date) - parseDateUTC(d.start_date)) / 86400000);
   return n>0 ? n : 0;
 }
+/* 「旅行」は366日(日付の差分)まで。それを超えて設定された場合は開始日+366日にクランプし、トーストで知らせる */
+const TRIP_MAX_DAYS = 366;
+function clampTripDateRange(){
+  const d = tripEditDraft;
+  if(!d.start_date || !d.end_date) return;
+  const span = Math.round((parseDateUTC(d.end_date) - parseDateUTC(d.start_date)) / 86400000);
+  if(span > TRIP_MAX_DAYS){
+    d.end_date = formatDateUTC(parseDateUTC(d.start_date) + TRIP_MAX_DAYS*86400000);
+    toast(t('x.trip.maxDaysToast'));
+  }
+}
 /* 各TripStopの到着日・出発日を、開始日+各区間の泊数の累積から算出する(区間は隙間なく連続する) */
 function tripStopDates(){
   const d = tripEditDraft;
@@ -7199,7 +7214,19 @@ function rebalanceStopNights(){
   stops[stops.length-1].nights = Math.max(0, desired-assigned);
 }
 /* 場所ごとの泊数バー(グラデーション状の帯を、各場所の泊数に応じて分割する視覚的UI)。
-   区間の境目をドラッグすると隣り合う場所同士で泊数を融通し合う(合計は常にトリップ全体の泊数のまま) */
+   区間の境目をドラッグすると隣り合う場所同士で泊数を融通し合う(合計は常にトリップ全体の泊数のまま)。
+   立ち寄った場所が増えて1行に収まらなくなると、2行目・3行目…へ折り返す(TRIP_BAR_PER_ROW件ずつ)。
+   ドラッグは同じ行の中の隣り合う区間同士でのみ行える(行をまたぐ境目にはハンドルを置かない) */
+const TRIP_BAR_PER_ROW = 4;
+function tripBarSegWeight(s){ return Math.max(s.nights, 0.4); }
+function tripBarRowWeightSum(i){
+  const stops = tripEditDraft.stops;
+  const rowStart = Math.floor(i / TRIP_BAR_PER_ROW) * TRIP_BAR_PER_ROW;
+  const rowEnd = Math.min(rowStart + TRIP_BAR_PER_ROW, stops.length);
+  let sum = 0;
+  for(let k=rowStart;k<rowEnd;k++) sum += tripBarSegWeight(stops[k]);
+  return sum;
+}
 function renderTripBarHTML(){
   const stops = tripEditDraft.stops;
   const total = tripTotalNights();
@@ -7210,26 +7237,33 @@ function renderTripBarHTML(){
     return `<p class="empty-note">${t('x.trip.needDatesFirst')}</p>`;
   }
   const dates = tripStopDates();
-  const segs = stops.map((s,i)=>{
-    const grow = Math.max(s.nights, 0.4);
-    const hue = stops.length>1 ? Math.round(160 + (i/(stops.length-1))*140) : 160;
-    const nightsText = s.nights>0 ? t('x.trip.stopNights',{n:s.nights}) : t('x.trip.stopNightsZero');
-    const handle = i<stops.length-1 ? `<div class="trip-bar-handle" onpointerdown="tripBarDragStart(event,${i})"></div>` : '';
-    return `<div class="trip-bar-seg" style="flex-grow:${grow};background:hsl(${hue},58%,52%)">
-      <span class="trip-bar-seg-label">${esc(s.locationName)}<br>${nightsText}</span>
-    </div>${handle}`;
-  }).join("");
-  return `<div class="trip-bar" id="tripBar">${segs}</div>
+  let rowsHtml = "";
+  for(let rowStart=0; rowStart<stops.length; rowStart+=TRIP_BAR_PER_ROW){
+    const rowEnd = Math.min(rowStart+TRIP_BAR_PER_ROW, stops.length);
+    let segs = "";
+    for(let i=rowStart; i<rowEnd; i++){
+      const s = stops[i];
+      const hue = stops.length>1 ? Math.round(160 + (i/(stops.length-1))*140) : 160;
+      const nightsText = s.nights>0 ? t('x.trip.stopNights',{n:s.nights}) : t('x.trip.stopNightsZero');
+      const isLastInRow = i === rowEnd-1;
+      const handle = (!isLastInRow) ? `<div class="trip-bar-handle" onpointerdown="tripBarDragStart(event,${i})"></div>` : '';
+      segs += `<div class="trip-bar-seg" style="flex-grow:${tripBarSegWeight(s)};background:hsl(${hue},58%,52%)">
+        <span class="trip-bar-seg-label">${esc(s.locationName)}<br>${nightsText}</span>
+      </div>${handle}`;
+    }
+    rowsHtml += `<div class="trip-bar-row">${segs}</div>`;
+  }
+  return `<div id="tripBar">${rowsHtml}</div>
     <div class="trip-bar-dates"><span>${esc(dates[0].arrival)}</span><span>${esc(dates[dates.length-1].departure)}</span></div>`;
 }
 let tripBarDrag = null;
 function tripBarDragStart(e, i){
   e.preventDefault();
-  const bar = document.getElementById("tripBar"); if(!bar) return;
-  const rect = bar.getBoundingClientRect();
-  const total = tripTotalNights(); if(total<=0) return;
+  const row = e.currentTarget.closest(".trip-bar-row"); if(!row) return;
+  const rect = row.getBoundingClientRect();
   const a = tripEditDraft.stops[i], b = tripEditDraft.stops[i+1]; if(!a||!b) return;
-  tripBarDrag = { i, startX: e.clientX, pxPerNight: rect.width/total, startA: a.nights, pairTotal: a.nights+b.nights };
+  const rowWeight = tripBarRowWeightSum(i);
+  tripBarDrag = { i, startX: e.clientX, pxPerNight: rect.width/rowWeight, startA: a.nights, pairTotal: a.nights+b.nights };
   document.addEventListener("pointermove", tripBarDragMove);
   document.addEventListener("pointerup", tripBarDragEnd, { once:true });
 }
@@ -7273,9 +7307,9 @@ function screenTripEdit(){
     <input type="text" id="tripTitleInput" class="loc-search-input" style="margin:0 0 14px" value="${escAttr(d.title)}" placeholder="${t('x.trip.titlePh')}" oninput="tripEditDraft.title=this.value">
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div style="flex:1"><label class="fld">${t('x.trip.startDate')}</label>
-        <input type="date" id="tripStartInput" class="loc-search-input" value="${escAttr(d.start_date)}" onchange="tripEditDraft.start_date=this.value;rebalanceStopNights();rerenderTripEdit()"></div>
+        <input type="date" id="tripStartInput" class="loc-search-input" value="${escAttr(d.start_date)}" onchange="tripEditDraft.start_date=this.value;clampTripDateRange();rebalanceStopNights();rerenderTripEdit()"></div>
       <div style="flex:1"><label class="fld">${t('x.trip.endDate')}</label>
-        <input type="date" id="tripEndInput" class="loc-search-input" value="${escAttr(d.end_date)}" onchange="tripEditDraft.end_date=this.value;rebalanceStopNights();rerenderTripEdit()"></div>
+        <input type="date" id="tripEndInput" class="loc-search-input" value="${escAttr(d.end_date)}" onchange="tripEditDraft.end_date=this.value;clampTripDateRange();rebalanceStopNights();rerenderTripEdit()"></div>
     </div>
     <div class="pcmp-section-label">－${t('x.trip.statusLabel')}</div>
     <div class="lang-switch pcmp-vis-switch" style="margin-bottom:14px">
