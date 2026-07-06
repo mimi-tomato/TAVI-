@@ -7049,16 +7049,16 @@ function scrollToMyCollabPostsFeedTarget(){
 let TRIPS = [];
 /* trips_effective(view)はsecurity_invoker未設定でRLSを迂回しうるため使わず、
    基本のtripsテーブルを直接読み、実効ステータス(ongoing等)はクライアント側で導出する */
-function tripEffectiveStatus(t){
-  if(t.deleted_at) return "deleted";
-  if(t.cancelled_at) return "cancelled";
-  if(t.archived_at) return "archived";
-  if(t.status === "completed") return "completed";
-  if(t.status === "planned" && t.start_date && t.end_date){
+function tripEffectiveStatus(trip){
+  if(trip.deleted_at) return "deleted";
+  if(trip.cancelled_at) return "cancelled";
+  if(trip.archived_at) return "archived";
+  if(trip.status === "completed") return "completed";
+  if(trip.status === "planned" && trip.start_date && trip.end_date){
     const today = new Date().toISOString().slice(0,10);
-    if(today >= t.start_date && today <= t.end_date) return "ongoing";
+    if(today >= trip.start_date && today <= trip.end_date) return "ongoing";
   }
-  return t.status || "draft";
+  return trip.status || "draft";
 }
 async function loadTrips(){
   if(!window.SB || !isSignedIn()){ TRIPS = []; return; }
@@ -7105,13 +7105,13 @@ let myMapShowArchived = false;
 function renderMyMapTab(){
   const active = TRIPS.filter(x=>x.effectiveStatus!=="archived" && x.effectiveStatus!=="cancelled");
   const archived = TRIPS.filter(x=>x.effectiveStatus==="archived" || x.effectiveStatus==="cancelled");
-  const card = (t)=>{
-    const range = t.start_date ? `${esc(t.start_date)}${t.end_date&&t.end_date!==t.start_date?" 〜 "+esc(t.end_date):""}` : "";
-    const route = t.stops.map(s=>esc(s.locationName)).join(" → ");
-    return `<div class="listcard" onclick="openTripEdit('${t.id}')">
+  const card = (trip)=>{
+    const range = trip.start_date ? `${esc(trip.start_date)}${trip.end_date&&trip.end_date!==trip.start_date?" 〜 "+esc(trip.end_date):""}` : "";
+    const route = trip.stops.map(s=>esc(s.locationName)).join(" → ");
+    return `<div class="listcard" onclick="openTripEdit('${trip.id}')">
       <div class="lic">🧳</div>
-      <div class="lt"><div class="a">${esc(t.title)}</div><div class="b">${range}${route?"　"+route:""}</div></div>
-      <span class="mini-btn" style="pointer-events:none">${t(TRIP_STATUS_LABEL[t.effectiveStatus]||"x.trip.statusDraft")}</span>
+      <div class="lt"><div class="a">${esc(trip.title)}</div><div class="b">${range}${route?"　"+route:""}</div></div>
+      <span class="mini-btn" style="pointer-events:none">${t(TRIP_STATUS_LABEL[trip.effectiveStatus]||"x.trip.statusDraft")}</span>
     </div>`;
   };
   return `<div>
@@ -7129,12 +7129,12 @@ function openNewTrip(){
   goFwd('tripedit');
 }
 function openTripEdit(id){
-  const t = TRIPS.find(x=>x.id===id); if(!t) return;
+  const trip = TRIPS.find(x=>x.id===id); if(!trip) return;
   tripEditDraft = {
-    id: t.id, title: t.title, start_date: t.start_date||"", end_date: t.end_date||"",
-    status: t.status||"draft", visibility: t.visibility||"private",
-    archived_at: t.archived_at, cancelled_at: t.cancelled_at,
-    stops: t.stops.map(s=>({ id:s.id, locationId:s.locationId, locationName:s.locationName, arrival:s.arrival, departure:s.departure }))
+    id: trip.id, title: trip.title, start_date: trip.start_date||"", end_date: trip.end_date||"",
+    status: trip.status||"draft", visibility: trip.visibility||"private",
+    archived_at: trip.archived_at, cancelled_at: trip.cancelled_at,
+    stops: trip.stops.map(s=>({ id:s.id, locationId:s.locationId, locationName:s.locationName, arrival:s.arrival, departure:s.departure }))
   };
   goFwd('tripedit');
 }
