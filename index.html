@@ -112,8 +112,8 @@
   .place-tabs button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px;
     font-weight:700;font-family:inherit;font-size:0.875rem;cursor:pointer;color:var(--ink-soft)}
   .place-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .mapwrap{margin-top:6px;background:#fbfcff;border:1px solid var(--line);border-radius:12px;padding:8px;overflow:hidden;touch-action:pan-y}
-  .mapwrap svg{width:100%;height:auto;display:block;touch-action:pan-y}
+  .mapwrap{margin-top:6px;background:#fbfcff;border:1px solid var(--line);border-radius:12px;padding:8px;overflow:hidden;touch-action:none}
+  .mapwrap svg{width:100%;height:auto;display:block;touch-action:none}
   .mapwrap svg path{fill:#e9eef7;stroke:#fff;stroke-width:.5;cursor:pointer;transition:.1s}
   .mapwrap svg path:hover{fill:#c3d4f5}
   .mapwrap svg path.sel{fill:var(--accent);stroke:#fff}
@@ -10420,14 +10420,22 @@ function drawMyMapJP(){
    ポインタイベントの登録自体は1コンテナにつき1回だけ行い、再描画のたびに増殖させない */
 const MAP_ZOOM_STATE = {};       // containerId -> {scale,x,y}
 const MAP_ZOOM_MAX = 4;
-/* scale===1の間はtouch-action:pan-yにして、地図の上から始まる指1本のスワイプは
-   ページの縦スクロールに使わせる(ブラウザ標準のピンチズームだけは無効化し、JS側の
-   ピンチ処理に委ねる)。scale>1でズーム中だけtouch-action:noneに切り替え、指1本の
-   ドラッグを地図のパン操作として奪う(ページスクロールと奪い合いにならないように) */
+/* 等倍(1x)でもドラッグで地図を動かせるようにするため、パン操作は常に有効(scaleによる
+   制限をしない)。その代わり、コンテナの上で始まる指1本のドラッグは常にこちら側が奪う
+   必要があるため、.mapwrapはtouch-action:noneで固定している(ページの縦スクロールは
+   地図の外から行ってもらう。これは地図系UIでは一般的なトレードオフ)*/
 function applyMapTransform(el, svg, st){
   svg.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.scale})`;
   svg.style.transformOrigin = "center center";
-  el.style.touchAction = st.scale>1 ? "none" : "pan-y";
+}
+/* 等倍時に画面全体をドラッグで見失わないよう、パン量をコンテナサイズに応じて制限する。
+   ズームするほど動かせる範囲も広がる(scaleに比例)*/
+function clampMapPan(el, st){
+  const rect = el.getBoundingClientRect();
+  const maxX = rect.width * 0.5 * st.scale;
+  const maxY = rect.height * 0.5 * st.scale;
+  st.x = Math.max(-maxX, Math.min(maxX, st.x));
+  st.y = Math.max(-maxY, Math.min(maxY, st.y));
 }
 /* drawMyMapJP/drawMyMapWorldはscreenProfile()を丸ごと再生成するrerenderProfileInPlace()経由で
    呼ばれるたびに、id="myMapJP"/"myMapWorld"のコンテナ自体も新しいDOM要素として作り直される
@@ -10471,9 +10479,10 @@ function initMapZoomListeners(containerId){
       const d=dist(a,b);
       st.scale = Math.min(MAP_ZOOM_MAX, Math.max(1, pinchStartScale*(d/pinchStartDist)));
       applyMapTransform(el, svg, st);
-    } else if(pointers.size===1 && panStart && st.scale>1){
+    } else if(pointers.size===1 && panStart){
       st.x = panStart.stx + (e.clientX-panStart.px);
       st.y = panStart.sty + (e.clientY-panStart.py);
+      clampMapPan(el, st);
       applyMapTransform(el, svg, st);
     }
   });
