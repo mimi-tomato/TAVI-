@@ -10419,7 +10419,6 @@ function drawMyMapJP(){
    再描画後は古い(DOMから外れた)ノードを参照し続けて操作が効かなくなるため)。
    ポインタイベントの登録自体は1コンテナにつき1回だけ行い、再描画のたびに増殖させない */
 const MAP_ZOOM_STATE = {};       // containerId -> {scale,x,y}
-const MAP_ZOOM_INITED = new Set();
 const MAP_ZOOM_MAX = 4;
 /* scale===1の間はtouch-action:pan-yにして、地図の上から始まる指1本のスワイプは
    ページの縦スクロールに使わせる(ブラウザ標準のピンチズームだけは無効化し、JS側の
@@ -10430,15 +10429,16 @@ function applyMapTransform(el, svg, st){
   svg.style.transformOrigin = "center center";
   el.style.touchAction = st.scale>1 ? "none" : "pan-y";
 }
+/* drawMyMapJP/drawMyMapWorldはscreenProfile()を丸ごと再生成するrerenderProfileInPlace()経由で
+   呼ばれるたびに、id="myMapJP"/"myMapWorld"のコンテナ自体も新しいDOM要素として作り直される
+   (innerHTMLでの置換なので、以前の要素とそのリスナーは破棄される)。そのため「初回だけ登録」
+   という判定はできず、呼ばれるたびに現在のコンテナへ毎回リスナーを付け直す必要がある */
 function resetMapZoom(containerId){
   const el = document.getElementById(containerId); if(!el) return;
   const st = MAP_ZOOM_STATE[containerId] = {scale:1, x:0, y:0};
   const svg = el.querySelector("svg");
   if(svg) applyMapTransform(el, svg, st);
-  if(!MAP_ZOOM_INITED.has(containerId)){
-    MAP_ZOOM_INITED.add(containerId);
-    initMapZoomListeners(containerId);
-  }
+  initMapZoomListeners(containerId);
 }
 function initMapZoomListeners(containerId){
   const el = document.getElementById(containerId); if(!el) return;
@@ -10857,6 +10857,8 @@ renderApp();
       const len=track.children?track.children.length:1;
       if(len>1) inCarousel=true;
     }
+    // 地図(ピンチズーム・パン)の上で始まったスワイプもタブ移動には使わせない
+    if(e.target.closest && e.target.closest(".mapwrap")) inCarousel=true;
   },{passive:true});
   screen.addEventListener("touchend",(e)=>{
     if(!tracking) return; tracking=false;
