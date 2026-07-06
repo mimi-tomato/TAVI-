@@ -1684,6 +1684,11 @@ const I18N = {
     "x.map.overseasNote":"Tripに海外の立ち寄り場所を追加するとここに並びます。",
     "x.map.countriesVisited":"訪れた国（{n}）",
     "x.map.subTabMap":"地図", "x.map.subTabList":"旅行一覧",
+    "x.map.modeJP":"日本", "x.map.modeWorld":"世界",
+    "x.map.regionComingSoon":"このエリアは近日公開予定です",
+    "x.map.regionPickNote":"エリアを選ぶと、国ごとの訪問状況が地図で見られます。",
+    "x.map.region.asia":"アジア", "x.map.region.europe":"ヨーロッパ", "x.map.region.africa":"アフリカ",
+    "x.map.region.north_america":"北アメリカ", "x.map.region.south_america":"南アメリカ", "x.map.region.oceania":"オセアニア",
     "x.cal.title":"マイカレンダー 🗓️",
     "x.cal.cycle":"終日 → 昼のみ → 夜のみ → 空きなし",
     "x.cal.allday":"終日OK",
@@ -2138,6 +2143,11 @@ const I18N = {
     "x.map.overseasNote":"Add an overseas stop to a Trip to see it here.",
     "x.map.countriesVisited":"Countries visited ({n})",
     "x.map.subTabMap":"Map", "x.map.subTabList":"Trip list",
+    "x.map.modeJP":"Japan", "x.map.modeWorld":"World",
+    "x.map.regionComingSoon":"This region is coming soon",
+    "x.map.regionPickNote":"Pick a region to see your visited countries on the map.",
+    "x.map.region.asia":"Asia", "x.map.region.europe":"Europe", "x.map.region.africa":"Africa",
+    "x.map.region.north_america":"North America", "x.map.region.south_america":"South America", "x.map.region.oceania":"Oceania",
     "x.cal.title":"My calendar 🗓️",
     "x.cal.cycle":"All day → Day only → Night only → Unavailable",
     "x.cal.allday":"All day OK",
@@ -6969,7 +6979,7 @@ function rerenderProfileInPlace(){
   if(sc){
     sc.innerHTML=screenProfile();
     if(profileTab==="calendar") drawMyCal();
-    else if(profileTab==="map" && myMapSubView==="map") drawMyMapJP();
+    else if(profileTab==="map" && myMapSubView==="map") drawMyMapVisual();
   }
 }
 /* ===== プロフィール4タブ(My Posts/Reposts/My Map/My Calendar) ===== */
@@ -10234,7 +10244,7 @@ async function loadMyMapStats(){
     let locMap = {};
     if(locIds.length){
       const { data: locs, error: le } = await window.SB
-        .from("locations").select("id, type, name_ja, country_code").in("id", locIds);
+        .from("locations").select("id, type, name_ja, name_en, country_code").in("id", locIds);
       if(le) console.log("[locations] load error:", le.message);
       (locs||[]).forEach(l=>{ locMap[l.id]=l; });
     }
@@ -10242,15 +10252,77 @@ async function loadMyMapStats(){
     rows.forEach(r=>{
       const loc = locMap[r.location_id]; if(!loc) return;
       if(loc.type === "jp_prefecture") MYMAP_PREF_SCORES[loc.name_ja] = { trip_count:r.trip_count, night_count:r.night_count };
-      else if(loc.type === "country") MYMAP_COUNTRY_SCORES[loc.country_code] = { name:loc.name_ja, trip_count:r.trip_count, night_count:r.night_count };
+      else if(loc.type === "country") MYMAP_COUNTRY_SCORES[loc.country_code] = { name:loc.name_ja, name_en:loc.name_en, trip_count:r.trip_count, night_count:r.night_count };
     });
   }catch(e){ console.log("[user_location_stats] load exception:", e); }
 }
 /* 訪問の「濃さ」を決めるスコア。0泊の日帰り立ち寄りでもtrip_countで最低限の濃さがつくようにする */
 function myMapScore(row){ return (row.trip_count||0) + (row.night_count||0); }
-function myMapVisitedBodyHTML(){
+
+/* ===== Phase 3: 世界地図(リージョン選択→国別色分け)=====
+   47都道府県(JP_PREF)と違い、リージョンごとの国境SVGデータは数百KB単位になるため
+   index.htmlにインライン化せず、data/world-<region>.js に分割し、そのリージョンを
+   実際に開いた時だけ動的<script>挿入で読み込む(初期表示のペイロードを増やさないため) */
+let myMapMapMode = "jp";      // "jp" | "world"
+let myMapWorldRegion = null;  // null(リージョン選択中) | "asia" 等
+const MYMAP_REGIONS = [
+  { code:"asia",          icon:"🌏", ready:true  },
+  { code:"europe",        icon:"🏰", ready:false },
+  { code:"africa",        icon:"🦁", ready:false },
+  { code:"north_america", icon:"🗽", ready:false },
+  { code:"south_america", icon:"🏔️", ready:false },
+  { code:"oceania",       icon:"🏝️", ready:false },
+];
+const MYMAP_WORLD_LOADED = {}; // regionCode -> true(読み込み済み)
+function loadWorldRegionScript(code){
+  if(MYMAP_WORLD_LOADED[code] || window["WORLD_"+code.toUpperCase()]) { MYMAP_WORLD_LOADED[code]=true; return Promise.resolve(); }
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src=`data/world-${code}.js`;
+    s.onload=()=>{ MYMAP_WORLD_LOADED[code]=true; resolve(); };
+    s.onerror=()=>reject(new Error("load failed: "+code));
+    document.head.appendChild(s);
+  });
+}
+async function openMyMapWorldRegion(code){
+  const region = MYMAP_REGIONS.find(r=>r.code===code);
+  if(!region || !region.ready){ toast(t('x.map.regionComingSoon')); return; }
+  try{ await loadWorldRegionScript(code); }
+  catch(e){ console.log("[world map] load error:", e); toast(t('x.map.regionComingSoon')); return; }
+  myMapWorldRegion = code;
+  rerenderProfileInPlace();
+}
+function closeMyMapWorldRegion(){ myMapWorldRegion = null; rerenderProfileInPlace(); }
+function setMyMapMapMode(mode){
+  if(myMapMapMode===mode) return;
+  myMapMapMode = mode;
+  if(mode==="jp") myMapWorldRegion = null;
+  rerenderProfileInPlace();
+}
+/* JPマップ(drawMyMapJP)・世界マップ(drawMyMapWorld)のどちらを描くべきか、現在のモードに応じて振り分ける */
+function drawMyMapVisual(){
+  if(myMapMapMode==="world"){ if(myMapWorldRegion) drawMyMapWorld(myMapWorldRegion); }
+  else drawMyMapJP();
+}
+function drawMyMapWorld(regionCode){
+  const arr = window["WORLD_"+regionCode.toUpperCase()];
+  const vb  = window["WORLD_"+regionCode.toUpperCase()+"_VIEWBOX"];
+  const c = document.getElementById("myMapWorld"); if(!c || !arr) return;
+  const scores = MYMAP_COUNTRY_SCORES;
+  const scoreVals = Object.values(scores).map(myMapScore);
+  const maxScore = scoreVals.length ? Math.max(...scoreVals) : 1;
+  const paths = arr.map(co=>{
+    const row = scores[co.code];
+    let cls="";
+    if(row){ const r=myMapScore(row)/maxScore; cls = r<=.2?"m1":r<=.4?"m2":r<=.6?"m3":r<1?"m4":"m5"; }
+    const name = curLang()==="ja" ? co.name_ja : co.name_en;
+    const title = row ? `${name}(${t('x.trip.stopNights',{n:row.night_count})})` : name;
+    return `<path d="${co.d}" class="${cls}"><title>${esc(title)}</title></path>`;
+  }).join("");
+  c.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+}
+function myMapJPBodyHTML(){
   const prefNames = Object.keys(MYMAP_PREF_SCORES);
-  const countries = Object.values(MYMAP_COUNTRY_SCORES);
   return `<div class="gi-prog" style="margin-top:0">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <span style="font-size:14px;font-weight:700;color:var(--ink)">${t('x.map.prefs')}</span>
@@ -10259,12 +10331,43 @@ function myMapVisitedBodyHTML(){
       <div class="bar"><i style="width:${Math.round(prefNames.length/47*100)}%"></i></div>
     </div>
     <div class="mapwrap" id="myMapJP" style="margin-top:12px"></div>
-    ${prefNames.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${prefNames.map(nm=>`<span class="chip">${esc(nm)}</span>`).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.domesticNote')}</p>`}
-
-    <h3 class="sub" style="margin:22px 4px 8px">🌏 ${t('x.map.countriesVisited',{n:countries.length})}</h3>
-    ${countries.length?`<div class="badge-grid" style="grid-template-columns:repeat(3,1fr)">
-      ${countries.map(c=>`<div class="badge-item"><div class="badge-ic" style="background:linear-gradient(135deg,#8b5cf6,#c4b5fd)">🌐</div><div class="bn">${esc(c.name)}</div></div>`).join("")}
-    </div>`:`<p class="muted">${t('x.map.overseasNote')}</p>`}`;
+    ${prefNames.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${prefNames.map(nm=>`<span class="chip">${esc(nm)}</span>`).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.domesticNote')}</p>`}`;
+}
+function myMapWorldBodyHTML(){
+  if(!myMapWorldRegion){
+    return `<div class="badge-grid" style="grid-template-columns:repeat(3,1fr)">
+      ${MYMAP_REGIONS.map(r=>`<div class="badge-item ${r.ready?'':'locked'}" onclick="openMyMapWorldRegion('${r.code}')">
+        <div class="badge-ic" style="background:linear-gradient(135deg,#8b5cf6,#c4b5fd)">${r.icon}</div>
+        <div class="bn">${esc(t('x.map.region.'+r.code))}</div>
+      </div>`).join("")}
+    </div>
+    <p class="muted" style="text-align:center;margin-top:10px">${t('x.map.regionPickNote')}</p>`;
+  }
+  const codes = (window["WORLD_"+myMapWorldRegion.toUpperCase()]||[]).map(co=>co.code);
+  const visitedCodes = codes.filter(code=>MYMAP_COUNTRY_SCORES[code]);
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <button class="room-back" onclick="closeMyMapWorldRegion()"><span class="back-arrow">←</span></button>
+      <span style="font-weight:700;color:var(--ink)">${esc(t('x.map.region.'+myMapWorldRegion))}</span>
+    </div>
+    <div class="gi-prog" style="margin-top:0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:14px;font-weight:700;color:var(--ink)">${t('x.map.countriesVisited',{n:visitedCodes.length})}</span>
+        <span style="font-size:13px;color:var(--accent);font-weight:800">${visitedCodes.length} / ${codes.length}</span>
+      </div>
+      <div class="bar"><i style="width:${codes.length?Math.round(visitedCodes.length/codes.length*100):0}%"></i></div>
+    </div>
+    <div class="mapwrap" id="myMapWorld" style="margin-top:12px"></div>
+    ${visitedCodes.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${visitedCodes.map(code=>{
+        const row=MYMAP_COUNTRY_SCORES[code];
+        return `<span class="chip">${esc(curLang()==="ja"?row.name:row.name_en)}</span>`;
+      }).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.overseasNote')}</p>`}`;
+}
+function myMapVisitedBodyHTML(){
+  return `<div class="lang-switch pcmp-vis-switch" style="margin-bottom:12px">
+      <button class="lang-btn ${myMapMapMode==='jp'?'on':''}" onclick="setMyMapMapMode('jp')">${t('x.map.modeJP')}</button>
+      <button class="lang-btn ${myMapMapMode==='world'?'on':''}" onclick="setMyMapMapMode('world')">${t('x.map.modeWorld')}</button>
+    </div>
+    ${myMapMapMode==='jp' ? myMapJPBodyHTML() : myMapWorldBodyHTML()}`;
 }
 function screenMyMap(){
   return `<div class="page">
@@ -10572,7 +10675,7 @@ function renderApp(){
   if(S.view==="groupinfo"){ sc.innerHTML=screenGroupInfo(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="invite"){ sc.innerHTML=screenInvite(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="album"){ sc.innerHTML=screenAlbum(); window.scrollTo({top:0,behavior:"auto"}); return; }
-  if(S.view==="mymap"){ sc.innerHTML=screenMyMap(); drawMyMapJP(); window.scrollTo({top:0,behavior:"auto"}); return; }
+  if(S.view==="mymap"){ sc.innerHTML=screenMyMap(); drawMyMapVisual(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="badges"){ sc.innerHTML=screenBadges(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="split"){ sc.innerHTML=screenSplit(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="about"){ sc.innerHTML=screenAbout(); window.scrollTo({top:0,behavior:"auto"}); return; }
@@ -10613,7 +10716,7 @@ function renderApp(){
   else if(S.view==="profile"){
     sc.innerHTML=screenProfile();
     if(profileTab==="calendar") drawMyCal();
-    else if(profileTab==="map" && myMapSubView==="map") drawMyMapJP();
+    else if(profileTab==="map" && myMapSubView==="map") drawMyMapVisual();
     window.scrollTo({top:0,behavior:"auto"}); return;
   }
   else if(S.view==="followlist") html=screenFollowList();
