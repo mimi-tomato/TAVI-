@@ -439,7 +439,8 @@
   .tab{flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;
     padding:8px 0;cursor:pointer;color:var(--ink-soft);transition:.12s;font-family:inherit}
   .tab .tab-ic-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;height:30px}
-  .tab .tab-ic{width:27px;height:27px;object-fit:contain;display:block;transition:.12s}
+  .tab .tab-ic{width:29px;height:29px;object-fit:contain;display:block;transition:.12s}
+  .tab .tab-ic.tab-ic-pin{width:24px;height:24px}
   .tab.on .tab-ic{transform:translateY(-1px)}
   .tab .tab-dot{position:absolute;top:-2px;right:-5px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
   .tab .tab-ava{width:28px;height:28px;border-radius:50%;background:var(--chip);display:flex;align-items:center;
@@ -5102,7 +5103,7 @@ function tabbarHTML(){
       <span class="tab-ic-wrap"><img class="tab-ic" src="${src}" alt="">${dot}</span></button>`;
   };
   // プロフィールタブ(ユーザー画像を丸く表示。サイズ統一)
-  const onP = S.view==="profile";
+  const onP = S.view==="profile" || S.view==="addfriend"; // 友達検索はプロフィールから開く画面なので同じ扱いにする
   const pAv = ME.photo
     ? `<span class="tab-ava img ${onP?'on':''}" style="background-image:url('${ME.photo}')"></span>`
     : `<span class="tab-ava ${onP?'on':''}">${esc(ME.avatar||"🙂")}</span>`;
@@ -5112,7 +5113,7 @@ function tabbarHTML(){
   const onMyMap = S.view==="mymap";
   const myMapIcon = onMyMap ? UI_IMG.pin_red : (tone==="white"?UI_IMG.pin_white:UI_IMG.pin_black);
   const myMapTabBtn = `<button class="tab ${onMyMap?'on':''}" onclick="goTab('mymap')" aria-label="${t('tab.mymap')}">
-      <span class="tab-ic-wrap"><img class="tab-ic" src="${myMapIcon}" alt=""></span></button>`;
+      <span class="tab-ic-wrap"><img class="tab-ic tab-ic-pin" src="${myMapIcon}" alt=""></span></button>`;
   // ②並び順: 投稿 / 旅計画 / チャット / マイマップ / プロフィール
   //   投稿(post)=従来のホームアイコン, 旅計画(home)=ペンアイコン
   return `<div class="tabbar"><div class="tabwrap">
