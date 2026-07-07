@@ -10483,7 +10483,7 @@ function drawMyMapJP(){
    再描画後は古い(DOMから外れた)ノードを参照し続けて操作が効かなくなるため)。
    ポインタイベントの登録自体は1コンテナにつき1回だけ行い、再描画のたびに増殖させない */
 const MAP_ZOOM_STATE = {};       // containerId -> {scale,x,y}
-const MAP_ZOOM_MAX = 4;
+const MAP_ZOOM_MAX = 8;
 /* 等倍(1x)でもドラッグで地図を動かせるようにするため、パン操作は常に有効(scaleによる
    制限をしない)。その代わり、コンテナの上で始まる指1本のドラッグは常にこちら側が奪う
    必要があるため、.mapwrapはtouch-action:noneで固定している(ページの縦スクロールは
