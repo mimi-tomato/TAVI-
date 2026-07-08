@@ -131,6 +131,23 @@
   [data-map-bg="white"] .mymap-visual{background:#fbfcff}
   [data-map-bg="black"] .mymap-visual{background:#20242b}
   [data-map-bg="blue"] .mymap-visual{background:#cfeaf5}
+  /* マイマップ全画面表示(モバイル幅のみ。isMyMapFullscreen()と対になるCSS側の保険として
+     @media自体でも同じ閾値にしておく)。地図の背景(海色)はノッチ・ホームインジケーター
+     周りまで隙間なく広げ、操作ボタン類の位置だけ安全域に収める */
+  @media (max-width:520px){
+    body.mymap-full{overflow:hidden;position:fixed;width:100%;touch-action:none}
+    .mymap-fs{position:fixed;inset:0;z-index:20;background:var(--bg)}
+    .mymap-fs-map{position:absolute;inset:0;margin:0;border:0;border-radius:0;padding:0}
+    .mymap-fs-top{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;gap:8px;
+      padding:calc(10px + env(safe-area-inset-top)) 12px 10px}
+    .mymap-fs-modes{margin-left:0}
+    .mymap-fs-bottom{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;gap:8px;
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+    /* Google検索窓のような、控えめで主張の少ない丸型の入力欄 */
+    .mymap-fs-search{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:24px;
+      padding:11px 18px;font-size:0.875rem;color:var(--ink-soft);box-shadow:0 1px 6px rgba(0,0,0,.1)}
+    .mymap-fs-search:disabled{opacity:.7;cursor:default}
+  }
   .selpref{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:8px}
   .selpref .chip{background:#eef2fb}
   /* 海外 国カード(景色背景+国旗) */
@@ -1699,6 +1716,9 @@ const I18N = {
     "x.map.subTabMap":"地図", "x.map.subTabList":"旅行一覧",
     "x.map.modeJP":"日本", "x.map.modeWorld":"世界",
     "x.map.regionComingSoon":"このエリアは近日公開予定です",
+    "x.map.worldLoadError":"世界地図の読み込みに失敗しました",
+    "x.map.searchPlaceholder":"国名で検索（近日対応）",
+    "x.aria.mapBack":"戻る", "x.aria.mapReset":"表示をリセット",
     "x.map.regionPickNote":"エリアを選ぶと、国ごとの訪問状況が地図で見られます。",
     "x.map.region.east_asia":"東アジア", "x.map.region.west_asia":"西アジア",
     "x.map.region.europe":"ヨーロッパ", "x.map.region.africa":"アフリカ",
@@ -2161,6 +2181,9 @@ const I18N = {
     "x.map.subTabMap":"Map", "x.map.subTabList":"Trip list",
     "x.map.modeJP":"Japan", "x.map.modeWorld":"World",
     "x.map.regionComingSoon":"This region is coming soon",
+    "x.map.worldLoadError":"Failed to load the world map",
+    "x.map.searchPlaceholder":"Search by country (coming soon)",
+    "x.aria.mapBack":"Back", "x.aria.mapReset":"Reset map view",
     "x.map.regionPickNote":"Pick a region to see your visited countries on the map.",
     "x.map.region.east_asia":"East Asia", "x.map.region.west_asia":"West Asia",
     "x.map.region.europe":"Europe", "x.map.region.africa":"Africa",
@@ -4951,11 +4974,13 @@ function destLabel(g){
 let pendingViewAnim=null;
 const TAB_VIEW_ORDER=["post","home","chat","mymap","profile"];
 /* ②タブをクリックで移動するときも、位置関係に応じて左右からカットイン */
+let mymapPrevTab = "home"; // マイマップ全画面の「戻る」で使う、直前に見ていたタブ
 function goTab(v){
   const from=TAB_VIEW_ORDER.indexOf(S.view), to=TAB_VIEW_ORDER.indexOf(v);
   if(from>=0 && to>=0 && from!==to){
     pendingViewAnim = to>from ? "cut-in-right" : "cut-in-left";
   }
+  if(v==="mymap" && S.view!=="mymap") mymapPrevTab = S.view;
   goView(v);
 }
 function goView(v){ commitRoom(); S.view=v; activeGid=null; activeChatId=null; renderApp(); applyViewAnim(); }
@@ -7008,8 +7033,16 @@ function rerenderProfileInPlace(){
 /* マイマップ(下部タブ)専用の軽微な状態変更(地図/旅行一覧トグル・リージョン選択等)の
    その場再描画。rerenderProfileInPlace()と同じ考え方だが、対象画面がS.view==="mymap"であり
    screenProfile()ではなくscreenMyMap()を再生成する点だけが異なる */
+function applyMyMapChrome(){
+  const fs = isMyMapFullscreen();
+  document.body.classList.toggle("mymap-full", fs);
+  const tb=document.getElementById("topbar"), tab=document.getElementById("tabbar");
+  if(tb) tb.innerHTML = fs ? "" : topbarHTML();
+  if(tab) tab.innerHTML = fs ? "" : tabbarHTML();
+}
 function rerenderMyMapInPlace(){
   if(S.view!=="mymap") return;
+  applyMyMapChrome();
   const sc=document.getElementById("screen");
   if(sc){
     sc.innerHTML=screenMyMap();
@@ -7176,6 +7209,7 @@ const TRIP_STATUS_LABEL = { draft:"x.trip.statusDraft", planned:"x.trip.statusPl
 let myMapShowArchived = false;
 let myMapSubView = "map"; // "map" | "list"
 function renderMyMapTab(){
+  if(isMyMapFullscreen()) return myMapVisitedBodyHTML();
   return `<div>
     <div class="lang-switch pcmp-vis-switch" style="margin-bottom:12px">
       <button class="lang-btn ${myMapSubView==='map'?'on':''}" onclick="myMapSubView='map';rerenderMyMapInPlace()">${t('x.map.subTabMap')}</button>
@@ -10326,83 +10360,70 @@ async function loadMyMapStats(){
 /* 訪問の「濃さ」を決めるスコア。0泊の日帰り立ち寄りでもtrip_countで最低限の濃さがつくようにする */
 function myMapScore(row){ return (row.trip_count||0) + (row.night_count||0); }
 
-/* ===== Phase 3: 世界地図(リージョン選択→国別色分け)=====
-   47都道府県(JP_PREF)と違い、リージョンごとの国境SVGデータは数百KB単位になるため
-   index.htmlにインライン化せず、data/world-<dataFile>.js に分割し、そのリージョンを
-   実際に開いた時だけ動的<script>挿入で読み込む(初期表示のペイロードを増やさないため)。
-   アジアは横に広すぎて1枚の地図では国が小さくなりすぎるため、表示上だけ東西2つに
-   分けている(dataFileは共通の"asia"を指し、DB側のlocations.region_idはどちらも
-   'asia'のまま。東西分割はあくまで見た目のクロップであり、地理階層のデータモデルは変えない)*/
+/* ===== 世界地図(連続メルカトル図法、横方向に無限スクロール) =====
+   以前はリージョン(地域)を選んでからその地域だけの地図を見る2段階構成だったが、ユーザーの
+   希望により、世界全体を1枚の連続したメルカトル図法の地図として横スクロール(経度180度で
+   折り返さず周回)できる形に作り替えた。旧リージョン制のコードはdata/_archive_mymap_region_system.md
+   に保存してある(生きたコードからは削除済み、data/world-<region>.jsの6ファイルも参照されなく
+   なっただけで削除はしていない)。地図データはdata/world-mercator.jsに1本化されており(Natural
+   Earth由来、南極を除く208件)、実際にWorldモードを開いた時だけ動的<script>挿入で読み込む。*/
 let myMapMapMode = "jp";      // "jp" | "world"
-let myMapWorldRegion = null;  // null(リージョン選択中) | "east_asia" 等
-const MYMAP_REGIONS = [
-  { code:"east_asia",     dataFile:"asia", icon:"🌏", ready:true,
-    codes:["JP","KR","KP","CN","MN","TW","HK","MO","VN","LA","KH","TH","MM","MY","SG","ID","PH","BN","TL"],
-    viewBox:"1776.5 278.4 591.3 595.7" },
-  { code:"west_asia",     dataFile:"asia", icon:"🐫", ready:true,
-    codes:["IN","PK","BD","LK","NP","BT","MV","AF","KZ","UZ","TM","TJ","KG","SA","AE","QA","KW","BH","OM","YE","IQ","IR","IL","JO","LB","SY","TR","GE","AM","AZ","PS","CY"],
-    viewBox:"1436.9 263.6 574.9 492.7" },
-  { code:"europe",        dataFile:"europe", icon:"🏰", ready:true },
-  { code:"africa",        dataFile:"africa", icon:"🦁", ready:true },
-  { code:"north_america", dataFile:"north_america", icon:"🗽", ready:true },
-  { code:"south_america", dataFile:"south_america", icon:"🏔️", ready:true },
-  { code:"oceania",       dataFile:"oceania", icon:"🏝️", ready:true },
-];
-const MYMAP_WORLD_LOADED = {}; // dataFile -> true(読み込み済み)
-function loadWorldRegionScript(dataFile){
-  if(MYMAP_WORLD_LOADED[dataFile] || window["WORLD_"+dataFile.toUpperCase()]) { MYMAP_WORLD_LOADED[dataFile]=true; return Promise.resolve(); }
+let MYMAP_WORLD_LOADED = false;
+function loadWorldMercatorScript(){
+  if(MYMAP_WORLD_LOADED || window.WORLD_MERCATOR) { MYMAP_WORLD_LOADED=true; return Promise.resolve(); }
   return new Promise((resolve,reject)=>{
     const s=document.createElement("script");
-    s.src=`data/world-${dataFile}.js`;
-    s.onload=()=>{ MYMAP_WORLD_LOADED[dataFile]=true; resolve(); };
-    s.onerror=()=>reject(new Error("load failed: "+dataFile));
+    s.src="data/world-mercator.js";
+    s.onload=()=>{ MYMAP_WORLD_LOADED=true; resolve(); };
+    s.onerror=()=>reject(new Error("load failed: world-mercator"));
     document.head.appendChild(s);
   });
 }
-async function openMyMapWorldRegion(code){
-  const region = MYMAP_REGIONS.find(r=>r.code===code);
-  if(!region || !region.ready){ toast(t('x.map.regionComingSoon')); return; }
-  try{ await loadWorldRegionScript(region.dataFile); }
-  catch(e){ console.log("[world map] load error:", e); toast(t('x.map.regionComingSoon')); return; }
-  myMapWorldRegion = code;
+async function setMyMapMapMode(mode){
+  if(myMapMapMode===mode) return;
+  if(mode==="world"){
+    try{ await loadWorldMercatorScript(); }
+    catch(e){ console.log("[world map] load error:", e); toast(t('x.map.worldLoadError')); return; }
+  }
+  myMapMapMode = mode;
   rerenderMyMapInPlace();
 }
-function closeMyMapWorldRegion(){ myMapWorldRegion = null; rerenderMyMapInPlace(); }
-function setMyMapMapMode(mode){
-  if(myMapMapMode===mode) return;
-  myMapMapMode = mode;
-  if(mode==="jp") myMapWorldRegion = null;
-  rerenderMyMapInPlace();
+/* マイマップの「地図」サブビューは、モバイル幅(スマホ・狭い横幅のブラウザ)では全画面表示にし、
+   進捗バー等を消して地図の表示面積を最大化する。PC/タブレット幅では従来通りの通常レイアウト
+   (ヘッダー・タブバー・進捗表示つき)のままにする(リージョン選択が無くなったこと以外は変更なし) */
+function isMyMapFullscreen(){
+  return myMapSubView==="map" && window.innerWidth<=520;
 }
 /* JPマップ(drawMyMapJP)・世界マップ(drawMyMapWorld)のどちらを描くべきか、現在のモードに応じて振り分ける */
 function drawMyMapVisual(){
-  if(myMapMapMode==="world"){ if(myMapWorldRegion) drawMyMapWorld(myMapWorldRegion); }
+  if(myMapMapMode==="world") drawMyMapWorld();
   else drawMyMapJP();
 }
-function drawMyMapWorld(regionCode){
-  const region = MYMAP_REGIONS.find(r=>r.code===regionCode); if(!region) return;
-  const fullArr = window["WORLD_"+region.dataFile.toUpperCase()];
-  const c = document.getElementById("myMapWorld"); if(!c || !fullArr) return;
-  const codeSet = region.codes ? new Set(region.codes) : null;
-  const arr = codeSet ? fullArr.filter(co=>codeSet.has(co.code)) : fullArr;
+function drawMyMapWorld(){
+  const arr = window.WORLD_MERCATOR;
+  const c = document.getElementById("myMapWorld"); if(!c || !arr) return;
   const scores = MYMAP_COUNTRY_SCORES;
-  // 濃さの基準(最高スコア)は、今表示している地域内の国だけから求める(他地域の訪問実績に
-  // 引っ張られて、この地域内の一番濃いはずの国が薄く表示されてしまわないように)
-  const scoreVals = arr.map(co=>scores[co.code]).filter(Boolean).map(myMapScore);
+  // 濃さの基準(最高スコア)は、リージョンという単位が無くなったため世界全体の中での最高値を使う
+  const scoreVals = Object.values(scores).map(myMapScore);
   const maxScore = scoreVals.length ? Math.max(...scoreVals) : 1;
-  const paths = arr.map(co=>{
+  const tileW = window.WORLD_MERCATOR_TILE_WIDTH;
+  const drawTile = (dx)=> arr.map(co=>{
     const row = scores[co.code];
     let cls="";
     if(row){ const r=myMapScore(row)/maxScore; cls = r<=.2?"m1":r<=.4?"m2":r<=.6?"m3":r<1?"m4":"m5"; }
     const name = curLang()==="ja" ? co.name_ja : co.name_en;
     const title = row ? `${name}(${t('x.trip.stopNights',{n:row.night_count})})` : name;
-    return `<path d="${co.d}" class="${cls}"><title>${esc(title)}</title></path>`;
+    return `<path d="${co.d}" class="${cls}" transform="translate(${dx},0)"><title>${esc(title)}</title></path>`;
   }).join("");
-  const vb = region.viewBox || window["WORLD_"+region.dataFile.toUpperCase()+"_VIEWBOX"];
-  c.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+  // 横方向の無限スクロールのため、世界地図を3面(中央+左右)複製して並べる。経度180度をまたぐ国
+  // (ロシア・フィジー等)はd3の投影計算で左右両端に分裂して出力されるため、隣の面との継ぎ目で
+  // 自然につながって見える
+  const paths = drawTile(-tileW) + drawTile(0) + drawTile(tileW);
+  c.innerHTML = `<svg viewBox="${window.WORLD_MERCATOR_VIEWBOX}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
   resetMapZoom("myMapWorld");
 }
 function myMapJPBodyHTML(){
+  if(isMyMapFullscreen()) return myMapFullscreenShell("myMapJP");
   const prefNames = Object.keys(MYMAP_PREF_SCORES);
   return `<div class="gi-prog" style="margin-top:0">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
@@ -10415,24 +10436,10 @@ function myMapJPBodyHTML(){
     ${prefNames.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${prefNames.map(nm=>`<span class="chip">${esc(nm)}</span>`).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.domesticNote')}</p>`}`;
 }
 function myMapWorldBodyHTML(){
-  if(!myMapWorldRegion){
-    return `<div class="badge-grid" style="grid-template-columns:repeat(3,1fr)">
-      ${MYMAP_REGIONS.map(r=>`<div class="badge-item ${r.ready?'':'locked'}" onclick="openMyMapWorldRegion('${r.code}')">
-        <div class="badge-ic" style="background:linear-gradient(135deg,#8b5cf6,#c4b5fd)">${r.icon}</div>
-        <div class="bn">${esc(t('x.map.region.'+r.code))}</div>
-      </div>`).join("")}
-    </div>
-    <p class="muted" style="text-align:center;margin-top:10px">${t('x.map.regionPickNote')}</p>`;
-  }
-  const region = MYMAP_REGIONS.find(r=>r.code===myMapWorldRegion);
-  const fullCodes = (window["WORLD_"+region.dataFile.toUpperCase()]||[]).map(co=>co.code);
-  const codes = region.codes ? region.codes.filter(c=>fullCodes.includes(c)) : fullCodes;
+  if(isMyMapFullscreen()) return myMapFullscreenShell("myMapWorld");
+  const codes = (window.WORLD_MERCATOR||[]).map(co=>co.code);
   const visitedCodes = codes.filter(code=>MYMAP_COUNTRY_SCORES[code]);
-  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <button class="room-back" onclick="closeMyMapWorldRegion()"><span class="back-arrow">←</span></button>
-      <span style="font-weight:700;color:var(--ink)">${esc(t('x.map.region.'+myMapWorldRegion))}</span>
-    </div>
-    <div class="gi-prog" style="margin-top:0">
+  return `<div class="gi-prog" style="margin-top:0">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <span style="font-size:14px;font-weight:700;color:var(--ink)">${t('x.map.countriesVisited',{n:visitedCodes.length})}</span>
         <span style="font-size:13px;color:var(--accent);font-weight:800">${visitedCodes.length} / ${codes.length}</span>
@@ -10445,7 +10452,34 @@ function myMapWorldBodyHTML(){
         return `<span class="chip">${esc(curLang()==="ja"?row.name:row.name_en)}</span>`;
       }).join("")}</div>`:`<p class="muted" style="text-align:center;margin-top:8px">${t('x.map.overseasNote')}</p>`}`;
 }
+/* 全画面表示(モバイル幅)専用の器。地図の背景はノッチ・ホームインジケーター周りまで隙間なく
+   広げ(position:fixed;inset:0の.mymap-fsを丸ごと使う)、操作ボタン類の位置だけ
+   env(safe-area-inset-*)で安全域に収める。戻る=マイマップ自体を抜けて直前のタブへ(タブバー
+   自体が全画面中は非表示になるため、これが唯一の離脱導線)。JP/World切替ピルは全画面のまま
+   モードを行き来できるようにする。検索欄は見た目のみ(機能はロードマップ③で対応)、リセット
+   ボタンは既存のresetMapZoom()をそのまま呼ぶ(拡大率・位置の両方が初期状態に戻る) */
+function myMapFullscreenShell(containerId){
+  return `<div class="mymap-fs">
+    <div class="mapwrap mymap-visual mymap-fs-map" id="${containerId}"></div>
+    <div class="mymap-fs-top">
+      <button class="icon-btn" onclick="goTab(mymapPrevTab)" aria-label="${esc(t('x.aria.mapBack'))}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <div class="lang-switch mymap-fs-modes">
+        <button class="lang-btn ${myMapMapMode==='jp'?'on':''}" onclick="setMyMapMapMode('jp')">${t('x.map.modeJP')}</button>
+        <button class="lang-btn ${myMapMapMode==='world'?'on':''}" onclick="setMyMapMapMode('world')">${t('x.map.modeWorld')}</button>
+      </div>
+    </div>
+    <div class="mymap-fs-bottom">
+      <input class="mymap-fs-search" type="text" placeholder="${esc(t('x.map.searchPlaceholder'))}" disabled>
+      <button class="icon-btn" onclick="resetMapZoom('${containerId}')" aria-label="${esc(t('x.aria.mapReset'))}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+      </button>
+    </div>
+  </div>`;
+}
 function myMapVisitedBodyHTML(){
+  if(isMyMapFullscreen()) return myMapMapMode==='jp' ? myMapJPBodyHTML() : myMapWorldBodyHTML();
   return `<div class="lang-switch pcmp-vis-switch" style="margin-bottom:12px">
       <button class="lang-btn ${myMapMapMode==='jp'?'on':''}" onclick="setMyMapMapMode('jp')">${t('x.map.modeJP')}</button>
       <button class="lang-btn ${myMapMapMode==='world'?'on':''}" onclick="setMyMapMapMode('world')">${t('x.map.modeWorld')}</button>
@@ -10453,6 +10487,7 @@ function myMapVisitedBodyHTML(){
     ${myMapMapMode==='jp' ? myMapJPBodyHTML() : myMapWorldBodyHTML()}`;
 }
 function screenMyMap(){
+  if(isMyMapFullscreen()) return renderMyMapTab();
   return `<div class="page">
     <h2 style="margin:4px 4px 14px;font-size:20px;color:var(--ink)">${t('x.map.title')}</h2>
     ${renderMyMapTab()}
@@ -10494,12 +10529,30 @@ function applyMapTransform(el, svg, st){
 }
 /* 等倍時に画面全体をドラッグで見失わないよう、パン量をコンテナサイズに応じて制限する。
    ズームするほど動かせる範囲も広がる(scaleに比例)*/
-function clampMapPan(el, st){
+function clampMapPanY(el, st){
+  const rect = el.getBoundingClientRect();
+  const maxY = rect.height * 0.5 * st.scale;
+  st.y = Math.max(-maxY, Math.min(maxY, st.y));
+}
+function clampMapPanX(el, st){
   const rect = el.getBoundingClientRect();
   const maxX = rect.width * 0.5 * st.scale;
-  const maxY = rect.height * 0.5 * st.scale;
   st.x = Math.max(-maxX, Math.min(maxX, st.x));
-  st.y = Math.max(-maxY, Math.min(maxY, st.y));
+}
+/* 世界地図(myMapWorld)だけは横方向に無限スクロール(経度180度で折り返さず周回)させる。
+   drawMyMapWorldが地図を3面(中央+左右)複製して並べているため、横方向のパン量(画面px)を
+   ちょうど1面ぶん(コンテナ幅×倍率)でモジュロ計算して巻き戻せば、見た目上は継ぎ目なく
+   無限に横スクロールできているように見える(定番の「無限カルーセル」と同じ手法) */
+function wrapMapPanX(el, st){
+  const rect = el.getBoundingClientRect();
+  const worldWidthPx = rect.width * st.scale;
+  if(!worldWidthPx) return;
+  st.x = ((st.x % worldWidthPx) + worldWidthPx) % worldWidthPx;
+  if(st.x > worldWidthPx/2) st.x -= worldWidthPx;
+}
+function clampMapPan(el, st, containerId){
+  if(containerId==="myMapWorld") wrapMapPanX(el, st); else clampMapPanX(el, st);
+  clampMapPanY(el, st);
 }
 /* drawMyMapJP/drawMyMapWorldはscreenMyMap()を丸ごと再生成するrerenderMyMapInPlace()経由で
    呼ばれるたびに、id="myMapJP"/"myMapWorld"のコンテナ自体も新しいDOM要素として作り直される
@@ -10515,7 +10568,7 @@ function resetMapZoom(containerId){
 function initMapZoomListeners(containerId){
   const el = document.getElementById(containerId); if(!el) return;
   const pointers = new Map();
-  let pinchStartDist=0, pinchStartScale=1, panStart=null, lastTap=0;
+  let pinchStartDist=0, pinchStartScale=1, panStart=null;
   const dist=(a,b)=>Math.hypot(a.x-b.x, a.y-b.y);
   el.addEventListener("pointerdown", e=>{
     const st = MAP_ZOOM_STATE[containerId]; if(!st) return;
@@ -10526,12 +10579,6 @@ function initMapZoomListeners(containerId){
       pinchStartDist=dist(a,b); pinchStartScale=st.scale; panStart=null;
     } else if(pointers.size===1){
       panStart={px:e.clientX, py:e.clientY, stx:st.x, sty:st.y};
-      const now=Date.now();
-      if(now-lastTap<300){
-        st.scale = st.scale>1 ? 1 : 2.2; st.x=0; st.y=0;
-        const svg=el.querySelector("svg"); if(svg) applyMapTransform(el, svg, st);
-      }
-      lastTap=now;
     }
   });
   el.addEventListener("pointermove", e=>{
@@ -10546,7 +10593,7 @@ function initMapZoomListeners(containerId){
     } else if(pointers.size===1 && panStart){
       st.x = panStart.stx + (e.clientX-panStart.px);
       st.y = panStart.sty + (e.clientY-panStart.py);
-      clampMapPan(el, st);
+      clampMapPan(el, st, containerId);
       applyMapTransform(el, svg, st);
     }
   });
@@ -10839,7 +10886,7 @@ function renderApp(){
   if(S.view==="groupinfo"){ sc.innerHTML=screenGroupInfo(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="invite"){ sc.innerHTML=screenInvite(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="album"){ sc.innerHTML=screenAlbum(); window.scrollTo({top:0,behavior:"auto"}); return; }
-  if(S.view==="mymap"){ sc.innerHTML=screenMyMap(); if(myMapSubView==="map") drawMyMapVisual(); window.scrollTo({top:0,behavior:"auto"}); return; }
+  if(S.view==="mymap"){ applyMyMapChrome(); sc.innerHTML=screenMyMap(); if(myMapSubView==="map") drawMyMapVisual(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="badges"){ sc.innerHTML=screenBadges(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="split"){ sc.innerHTML=screenSplit(); window.scrollTo({top:0,behavior:"auto"}); return; }
   if(S.view==="about"){ sc.innerHTML=screenAbout(); window.scrollTo({top:0,behavior:"auto"}); return; }
