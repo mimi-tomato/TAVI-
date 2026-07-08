@@ -113,7 +113,7 @@
     font-weight:700;font-family:inherit;font-size:0.875rem;cursor:pointer;color:var(--ink-soft)}
   .place-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .mapwrap{margin-top:6px;background:#fbfcff;border:1px solid var(--line);border-radius:12px;padding:8px;overflow:hidden;touch-action:none}
-  .mapwrap svg{width:100%;height:auto;display:block;touch-action:none}
+  .mapwrap svg{width:100%;height:auto;display:block;touch-action:none;will-change:transform}
   .mapwrap svg path{fill:#e9eef7;stroke:#fff;stroke-width:.5;cursor:pointer;transition:.1s}
   .mapwrap svg path:hover{fill:#c3d4f5}
   .mapwrap svg path.sel{fill:var(--accent);stroke:#fff}
@@ -137,7 +137,13 @@
   @media (max-width:520px){
     body.mymap-full{overflow:hidden;position:fixed;width:100%;touch-action:none}
     .mymap-fs{position:fixed;inset:0;z-index:20;background:var(--bg)}
-    .mymap-fs-map{position:absolute;inset:0;margin:0;border:0;border-radius:0;padding:0}
+    /* 地図の縦横比と画面の縦横比が一致しないため、幅基準(width:100%)のままだと上部に
+       寄って下に大きな余白ができてしまう。高さ基準(height:100%)にして中央寄せすることで、
+       画面いっぱいに地図が来るようにする(横にはみ出す分は、世界地図なら無限スクロールで、
+       日本地図なら通常のドラッグパンで見られる) */
+    .mymap-fs-map{position:absolute;inset:0;margin:0;border:0;border-radius:0;padding:0;
+      display:flex;align-items:center;justify-content:center}
+    .mymap-fs-map svg{width:auto;height:100%;flex:0 0 auto}
     .mymap-fs-top{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;gap:8px;
       padding:calc(10px + env(safe-area-inset-top)) 12px 10px}
     .mymap-fs-modes{margin-left:0}
@@ -10528,31 +10534,33 @@ function applyMapTransform(el, svg, st){
   svg.style.transformOrigin = "center center";
 }
 /* 等倍時に画面全体をドラッグで見失わないよう、パン量をコンテナサイズに応じて制限する。
-   ズームするほど動かせる範囲も広がる(scaleに比例)*/
-function clampMapPanY(el, st){
-  const rect = el.getBoundingClientRect();
-  const maxY = rect.height * 0.5 * st.scale;
+   ズームするほど動かせる範囲も広がる(scaleに比例)。
+   geo(コンテナ・svgの実測サイズ)はドラッグ開始時に1回だけ計測してpanStartへキャッシュし、
+   ここでは受け取るだけにする(pointermoveのたびにgetBoundingClientRect()を呼ぶと強制
+   リフローが毎回走りスクロールがカクつくため、ドラッグ中の再計測をやめて滑らかにした) */
+function clampMapPanY(st, geo){
+  const maxY = geo.height * 0.5 * st.scale;
   st.y = Math.max(-maxY, Math.min(maxY, st.y));
 }
-function clampMapPanX(el, st){
-  const rect = el.getBoundingClientRect();
-  const maxX = rect.width * 0.5 * st.scale;
+function clampMapPanX(st, geo){
+  const maxX = geo.width * 0.5 * st.scale;
   st.x = Math.max(-maxX, Math.min(maxX, st.x));
 }
 /* 世界地図(myMapWorld)だけは横方向に無限スクロール(経度180度で折り返さず周回)させる。
    drawMyMapWorldが地図を3面(中央+左右)複製して並べているため、横方向のパン量(画面px)を
-   ちょうど1面ぶん(コンテナ幅×倍率)でモジュロ計算して巻き戻せば、見た目上は継ぎ目なく
-   無限に横スクロールできているように見える(定番の「無限カルーセル」と同じ手法) */
-function wrapMapPanX(el, st){
-  const rect = el.getBoundingClientRect();
-  const worldWidthPx = rect.width * st.scale;
+   ちょうど1面ぶん(svgの実際の描画幅)でモジュロ計算して巻き戻せば、見た目上は継ぎ目なく
+   無限に横スクロールできているように見える(定番の「無限カルーセル」と同じ手法)。
+   全画面表示ではsvgをheight:100%で高さ基準に描くため、svg自身の実測幅(=1面ぶんの幅、
+   現在のscaleを含む)を使う。コンテナ幅を使うと全画面時に食い違うため使わない */
+function wrapMapPanX(st, geo){
+  const worldWidthPx = geo.tileWidthPx;
   if(!worldWidthPx) return;
   st.x = ((st.x % worldWidthPx) + worldWidthPx) % worldWidthPx;
   if(st.x > worldWidthPx/2) st.x -= worldWidthPx;
 }
-function clampMapPan(el, st, containerId){
-  if(containerId==="myMapWorld") wrapMapPanX(el, st); else clampMapPanX(el, st);
-  clampMapPanY(el, st);
+function clampMapPan(st, containerId, geo){
+  if(containerId==="myMapWorld") wrapMapPanX(st, geo); else clampMapPanX(st, geo);
+  clampMapPanY(st, geo);
 }
 /* drawMyMapJP/drawMyMapWorldはscreenMyMap()を丸ごと再生成するrerenderMyMapInPlace()経由で
    呼ばれるたびに、id="myMapJP"/"myMapWorld"のコンテナ自体も新しいDOM要素として作り直される
@@ -10578,7 +10586,12 @@ function initMapZoomListeners(containerId){
       const [a,b]=[...pointers.values()];
       pinchStartDist=dist(a,b); pinchStartScale=st.scale; panStart=null;
     } else if(pointers.size===1){
-      panStart={px:e.clientX, py:e.clientY, stx:st.x, sty:st.y};
+      // ドラッグ開始時に1回だけ実測してキャッシュする(pointermove中は再計測しない)
+      const rect = el.getBoundingClientRect();
+      const svgNow = el.querySelector("svg");
+      const geo = { width: rect.width, height: rect.height,
+        tileWidthPx: svgNow ? svgNow.getBoundingClientRect().width : rect.width };
+      panStart={px:e.clientX, py:e.clientY, stx:st.x, sty:st.y, geo};
     }
   });
   el.addEventListener("pointermove", e=>{
@@ -10593,7 +10606,7 @@ function initMapZoomListeners(containerId){
     } else if(pointers.size===1 && panStart){
       st.x = panStart.stx + (e.clientX-panStart.px);
       st.y = panStart.sty + (e.clientY-panStart.py);
-      clampMapPan(el, st, containerId);
+      clampMapPan(st, containerId, panStart.geo);
       applyMapTransform(el, svg, st);
     }
   });
