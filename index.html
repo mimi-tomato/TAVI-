@@ -10421,10 +10421,12 @@ function drawMyMapWorld(){
     const title = row ? `${name}(${t('x.trip.stopNights',{n:row.night_count})})` : name;
     return `<path d="${co.d}" class="${cls}" transform="translate(${dx},0)"><title>${esc(title)}</title></path>`;
   }).join("");
-  // 横方向の無限スクロールのため、世界地図を3面(中央+左右)複製して並べる。経度180度をまたぐ国
-  // (ロシア・フィジー等)はd3の投影計算で左右両端に分裂して出力されるため、隣の面との継ぎ目で
-  // 自然につながって見える
-  const paths = drawTile(-tileW) + drawTile(0) + drawTile(tileW);
+  // 横方向の無限スクロールのため、世界地図を複製して並べる。経度180度をまたぐ国(ロシア・
+  // フィジー等)はd3の投影計算で左右両端に分裂して出力されるため、隣の面との継ぎ目で自然に
+  // つながって見える。何面分並べるかはgetVisibleWorldOffsets()に切り出してあり、現在のズーム
+  // 範囲(1〜8倍)では[-1,0,1]の3面で常に画面を覆えるが、将来ズーム範囲やマーカー表示の都合で
+  // 動的な枚数計算に差し替える場合もここだけを直せばよい
+  const paths = getVisibleWorldOffsets("myMapWorld").map(k=>drawTile(k*tileW)).join("");
   c.innerHTML = `<svg viewBox="${window.WORLD_MERCATOR_VIEWBOX}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
   resetMapZoom("myMapWorld");
 }
@@ -10562,6 +10564,48 @@ function clampMapPan(st, containerId, geo){
   if(containerId==="myMapWorld") wrapMapPanX(st, geo); else clampMapPanX(st, geo);
   clampMapPanY(st, geo);
 }
+/* コンテナ・svgの実測サイズをまとめて計測するヘルパー(ドラッグ開始時・ズーム直後の
+   両方から呼ぶため関数に切り出した) */
+function measureMapGeo(el){
+  const rect = el.getBoundingClientRect();
+  const svg = el.querySelector("svg");
+  return { width: rect.width, height: rect.height,
+    tileWidthPx: svg ? svg.getBoundingClientRect().width : rect.width };
+}
+/* 世界地図の横方向の複製枚数(tileWidth単位のオフセット一覧)を決める。現在のズーム範囲
+   (1〜8倍)では画面に1面を超える幅が同時に映ることは無いため固定の[-1,0,1]で常に画面を
+   覆えるが、将来ズーム範囲を広げる場合やマーカー・クラスタリング実装時にビューポート幅
+   から動的な枚数を計算する方式へ差し替えられるよう、呼び出し側と切り離して関数化してある */
+function getVisibleWorldOffsets(containerId){
+  return containerId==="myMapWorld" ? [-1,0,1] : [0];
+}
+/* 現在の世界地図の画面中央が指す経度(-180〜180)を返す(正規化ずみの「仮想経度」への変換)。
+   検索ジャンプや、投稿マーカー実装時の表示領域クエリのための土台として今のうちに用意して
+   おく(呼び出し側はまだ無い)。st.xそのものはラップせず、ここで変換するときだけ周期的に
+   正規化する(状態を早期にラップしないほうが、将来マーカーの位置計算等で扱いやすいため) */
+function worldMapCenterLongitude(){
+  const st = MAP_ZOOM_STATE["myMapWorld"]; if(!st) return 0;
+  const el = document.getElementById("myMapWorld"); if(!el) return 0;
+  const svg = el.querySelector("svg"); if(!svg) return 0;
+  const tileWidthPx = svg.getBoundingClientRect().width; if(!tileWidthPx) return 0;
+  const tileWidthUnits = window.WORLD_MERCATOR_TILE_WIDTH || 2000;
+  // st.x=0(無移動)のとき画面中央に来るのはviewBoxの中央(=世界単位でtileWidthUnits/2、
+  // 経度0)なので、その基準からst.xぶんの移動量を差し引く(defaultWorldMapXの逆算)
+  const pxPerUnit = tileWidthPx / tileWidthUnits;
+  const worldUnitAtCenter = tileWidthUnits/2 - st.x/pxPerUnit;
+  const canonicalUnits = ((worldUnitAtCenter % tileWidthUnits) + tileWidthUnits) % tileWidthUnits;
+  return (canonicalUnits / tileWidthUnits) * 360 - 180;
+}
+/* 世界地図の初期中心位置(画面px)を決める。日本語UIなら日本(東経139.7度・東京付近)、
+   それ以外は経度0(グリニッジ)が画面中央に来るようにする */
+function defaultWorldMapX(svg){
+  const tileWidthPx = svg.getBoundingClientRect().width; if(!tileWidthPx) return 0;
+  const tileWidthUnits = window.WORLD_MERCATOR_TILE_WIDTH || 2000;
+  const targetLng = curLang()==="ja" ? 139.7 : 0;
+  const targetUnits = (targetLng + 180) / 360 * tileWidthUnits;
+  const pxPerUnit = tileWidthPx / tileWidthUnits;
+  return -(targetUnits - tileWidthUnits/2) * pxPerUnit;
+}
 /* drawMyMapJP/drawMyMapWorldはscreenMyMap()を丸ごと再生成するrerenderMyMapInPlace()経由で
    呼ばれるたびに、id="myMapJP"/"myMapWorld"のコンテナ自体も新しいDOM要素として作り直される
    (innerHTMLでの置換なので、以前の要素とそのリスナーは破棄される)。そのため「初回だけ登録」
@@ -10570,7 +10614,16 @@ function resetMapZoom(containerId){
   const el = document.getElementById(containerId); if(!el) return;
   const st = MAP_ZOOM_STATE[containerId] = {scale:1, x:0, y:0};
   const svg = el.querySelector("svg");
-  if(svg) applyMapTransform(el, svg, st);
+  if(svg){
+    if(svg.getBoundingClientRect().width===0){
+      // #screenのタブ切替アニメーション中など、幅が一瞬0で測れてしまうタイミングでは
+      // defaultWorldMapXの計算(経度→px変換)が狂うため、次フレームで測り直す
+      requestAnimationFrame(()=>resetMapZoom(containerId));
+    } else {
+      if(containerId==="myMapWorld") st.x = defaultWorldMapX(svg);
+    }
+    applyMapTransform(el, svg, st);
+  }
   initMapZoomListeners(containerId);
 }
 function initMapZoomListeners(containerId){
@@ -10587,11 +10640,7 @@ function initMapZoomListeners(containerId){
       pinchStartDist=dist(a,b); pinchStartScale=st.scale; panStart=null;
     } else if(pointers.size===1){
       // ドラッグ開始時に1回だけ実測してキャッシュする(pointermove中は再計測しない)
-      const rect = el.getBoundingClientRect();
-      const svgNow = el.querySelector("svg");
-      const geo = { width: rect.width, height: rect.height,
-        tileWidthPx: svgNow ? svgNow.getBoundingClientRect().width : rect.width };
-      panStart={px:e.clientX, py:e.clientY, stx:st.x, sty:st.y, geo};
+      panStart={px:e.clientX, py:e.clientY, stx:st.x, sty:st.y, geo:measureMapGeo(el)};
     }
   });
   el.addEventListener("pointermove", e=>{
@@ -10602,6 +10651,10 @@ function initMapZoomListeners(containerId){
       const [a,b]=[...pointers.values()];
       const d=dist(a,b);
       st.scale = Math.min(MAP_ZOOM_MAX, Math.max(1, pinchStartScale*(d/pinchStartDist)));
+      // ズームでsvgの実描画幅(=1面ぶんのpx幅)自体が変わるため、直後に必ず再計測してクランプ
+      // し直す(これをしないと、ズーム直後にパンを始めた瞬間、古い範囲を引きずって地図が
+      // 急にずれる/継ぎ目が見える不具合があった)
+      clampMapPan(st, containerId, measureMapGeo(el));
       applyMapTransform(el, svg, st);
     } else if(pointers.size===1 && panStart){
       st.x = panStart.stx + (e.clientX-panStart.px);
