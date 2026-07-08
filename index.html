@@ -114,7 +114,7 @@
   .place-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .mapwrap{margin-top:6px;background:#fbfcff;border:1px solid var(--line);border-radius:12px;padding:8px;overflow:hidden;touch-action:none}
   .mapwrap svg{width:100%;height:auto;display:block;touch-action:none;will-change:transform;overflow:visible}
-  .mapwrap svg path{fill:#e9eef7;stroke:#fff;stroke-width:.5;cursor:pointer;transition:.1s}
+  .mapwrap svg path{fill:#e9eef7;stroke:#fff;stroke-width:.5;cursor:pointer;transition:.1s;vector-effect:non-scaling-stroke}
   .mapwrap svg path:hover{fill:#c3d4f5}
   .mapwrap svg path.sel{fill:var(--accent);stroke:#fff}
   /* 1票でもしっかり色づくよう全体に一段濃く */
@@ -10422,7 +10422,7 @@ function drawMyMapWorld(){
     if(row){ const r=myMapScore(row)/maxScore; cls = r<=.2?"m1":r<=.4?"m2":r<=.6?"m3":r<1?"m4":"m5"; }
     const name = curLang()==="ja" ? co.name_ja : co.name_en;
     const title = row ? `${name}(${t('x.trip.stopNights',{n:row.night_count})})` : name;
-    return `<path d="${co.d}" class="${cls}"><title>${esc(title)}</title></path>`;
+    return `<path d="${co.d}" class="${cls}" data-code="${co.code}"><title>${esc(title)}</title></path>`;
   }).join("");
   // 横方向の無限スクロールのため、世界地図を複製して並べる。経度180度をまたぐ国(ロシア・
   // フィジー等)はd3の投影計算で左右両端に分裂して出力されるため、隣の面との継ぎ目で自然に
@@ -10644,20 +10644,35 @@ function defaultWorldMapX(svg){
 function resetMapZoom(containerId){
   const el = document.getElementById(containerId); if(!el) return;
   const st = MAP_ZOOM_STATE[containerId] = {scale:1, x:0, y:0};
+  positionMapZoom(containerId);
+  // initMapZoomListenersはここで1回だけ呼ぶ。以前はpositionMapZoom側のrequestAnimationFrame
+  // 再試行(幅0のタイミング対策)からも呼ばれており、同じコンテナに独立したリスナーの束が
+  // 二重に付いてしまうことがあった。二重リスナーが両方反応すると、1回のタップで選択の
+  // トグルが2回走り「選択→即解除」で何も選ばれないように見える不具合の真因だった
+  // (2026-07-10発覚、Chromium・WebKitともに実機検証で間欠的な再現を確認)
+  initMapZoomListeners(containerId);
+}
+function positionMapZoom(containerId){
+  const el = document.getElementById(containerId); if(!el) return;
+  const st = MAP_ZOOM_STATE[containerId]; if(!st) return;
   const svg = el.querySelector("svg");
   if(svg){
+    // defaultWorldMapXはsvgの実測幅(getBoundingClientRect)からpx/度を逆算するため、
+    // 拡大中(scale!=1)にリセットすると、まだ古いscaleを反映した幅のまま計算してしまい、
+    // 一発目のタップだけ位置がズレる不具合があった(2026-07-10発覚)。先にscale:1を
+    // 反映してから測り直す(ピンチズーム側で確立済みの手順と同じ考え方)
+    applyMapTransform(el, svg, st);
     if(svg.getBoundingClientRect().width===0){
       // #screenのタブ切替アニメーション中など、幅が一瞬0で測れてしまうタイミングでは
       // defaultWorldMapXの計算(経度→px変換)が狂うため、次フレームで測り直す
-      requestAnimationFrame(()=>resetMapZoom(containerId));
+      requestAnimationFrame(()=>positionMapZoom(containerId));
     } else {
       if(containerId==="myMapWorld"){
         st.x = defaultWorldMapX(svg);
       }
+      applyMapTransform(el, svg, st);
     }
-    applyMapTransform(el, svg, st);
   }
-  initMapZoomListeners(containerId);
 }
 function initMapZoomListeners(containerId){
   const el = document.getElementById(containerId); if(!el) return;
@@ -10708,12 +10723,58 @@ function initMapZoomListeners(containerId){
       applyMapTransform(el, svg, st);
     }
   });
+  // 世界地図は同じ国が最大3面(<g data-offset>)に複製されて別々の<path>として存在するため、
+  // タップした<path>だけにCSSの:hoverや.selを効かせると、日付変更線をまたぐロシア・
+  // フィジーのように「実際には同じ国なのに継ぎ目の反対側は選択されて見えない」不具合が
+  // 起きる(2026-07-10発覚)。data-codeが一致する全ての<path>(=同じ国の全複製)へ
+  // まとめて.selを付け外しする。
+  // タップ(ドラッグしていない)かどうかはpanStartからの移動量で判定する(ブラウザの
+  // click判定と同様の考え方)。"click"イベント・document.elementFromPointのどちらも使わない:
+  // "click"はpointerdown側のel.setPointerCapture()でe.targetがコンテナへ差し替わる上、
+  // clientX/clientYが整数に丸められる(pointerup/downは小数点を保持)ため境界付近で
+  // すり抜けることがあり、elementFromPointもcapture解放タイミングの非同期性の影響か、
+  // 同一操作で成功/失敗が再現性なく入れ替わることを実機検証で確認した(2026-07-10)。
+  // 代わりにSVG自身の幾何学的ヒットテスト(isPointInFill)を使う
+  function trySelectAt(e){
+    if(containerId!=="myMapWorld" || !panStart || pointers.size!==1) return;
+    const moved = Math.hypot(e.clientX-panStart.px, e.clientY-panStart.py);
+    if(moved >= 6) return;
+    const svg = el.querySelector("svg"); if(!svg) return;
+    // isPointInFillは「その要素自身のローカル座標系(祖先のtransformを適用した後)」の
+    // 点を要求するため、<g data-offset>ごとにtransformが異なる以上、外側のsvg基準の
+    // 1点を使い回すことはできない。<g>ごとにその<g>自身のgetScreenCTM()で変換し直す
+    const gs = [...svg.querySelectorAll("g[data-offset]")];
+    let hitPath = null;
+    for(let gi=gs.length-1; gi>=0 && !hitPath; gi--){
+      const g = gs[gi];
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      const localPt = pt.matrixTransform(g.getScreenCTM().inverse());
+      const paths = [...g.querySelectorAll("path[data-code]")];
+      for(let i=paths.length-1; i>=0; i--){
+        if(paths[i].isPointInFill(localPt)){ hitPath = paths[i]; break; }
+      }
+    }
+    if(hitPath){
+      const code = hitPath.getAttribute("data-code");
+      const alreadySelected = hitPath.classList.contains("sel");
+      svg.querySelectorAll("path.sel").forEach(p=>p.classList.remove("sel"));
+      if(!alreadySelected){
+        svg.querySelectorAll(`path[data-code="${code}"]`).forEach(p=>p.classList.add("sel"));
+      }
+    }
+  }
   function endPointer(e){
     pointers.delete(e.pointerId);
     if(pointers.size<2) pinchStartDist=0;
     if(pointers.size===0) panStart=null;
   }
-  el.addEventListener("pointerup", endPointer);
+  el.addEventListener("pointerup", e=>{ trySelectAt(e); endPointer(e); });
+  // pointercancelは操作が中断された合図であり、タップ完了とはみなさない。
+  // pointerupと両方に同じ選択処理を付けると、環境によっては1回のタップで
+  // pointerup・pointercancelの両方が発火してしまい、選択トグルが2回走って
+  // 結果的に「選択→即解除」で何も選ばれていないように見える不具合があった
+  // (2026-07-10発覚、WebKitで常時再現・Chromiumでも間欠的に再現を実機検証で確認)
   el.addEventListener("pointercancel", endPointer);
 }
 function toggleFactor(f,el){
