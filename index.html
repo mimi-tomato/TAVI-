@@ -10416,21 +10416,24 @@ function drawMyMapWorld(){
   const scoreVals = Object.values(scores).map(myMapScore);
   const maxScore = scoreVals.length ? Math.max(...scoreVals) : 1;
   const tileW = window.WORLD_MERCATOR_TILE_WIDTH;
-  const drawTile = (dx)=> arr.map(co=>{
+  const drawTile = ()=> arr.map(co=>{
     const row = scores[co.code];
     let cls="";
     if(row){ const r=myMapScore(row)/maxScore; cls = r<=.2?"m1":r<=.4?"m2":r<=.6?"m3":r<1?"m4":"m5"; }
     const name = curLang()==="ja" ? co.name_ja : co.name_en;
     const title = row ? `${name}(${t('x.trip.stopNights',{n:row.night_count})})` : name;
-    return `<path d="${co.d}" class="${cls}" transform="translate(${dx},0)"><title>${esc(title)}</title></path>`;
+    return `<path d="${co.d}" class="${cls}"><title>${esc(title)}</title></path>`;
   }).join("");
   // 横方向の無限スクロールのため、世界地図を複製して並べる。経度180度をまたぐ国(ロシア・
   // フィジー等)はd3の投影計算で左右両端に分裂して出力されるため、隣の面との継ぎ目で自然に
-  // つながって見える。何面分並べるかはgetVisibleWorldOffsets()に切り出してあり、現在のズーム
-  // 範囲(1〜8倍)では[-1,0,1]の3面で常に画面を覆えるが、将来ズーム範囲やマーカー表示の都合で
-  // 動的な枚数計算に差し替える場合もここだけを直せばよい
-  const paths = getVisibleWorldOffsets("myMapWorld").map(k=>drawTile(k*tileW)).join("");
-  c.innerHTML = `<svg viewBox="${window.WORLD_MERCATOR_VIEWBOX}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+  // つながって見える。各面は<g data-offset="k">として持たせ、初期に何面分並べるかは
+  // getVisibleWorldOffsets()に切り出してある。wrapMapPanXがst.xを±0.5面ぶんの範囲に
+  // 常時収めるため、この固定配置のままパンし続けても欠けは生じない(10面幅ぶんの連続
+  // ドラッグでも欠けが出ないことをPlaywrightで検証済み)*/
+  const tileMarkup = drawTile();
+  const offsets = getVisibleWorldOffsets("myMapWorld");
+  const groups = offsets.map(k=>`<g data-offset="${k}" transform="translate(${k*tileW},0)">${tileMarkup}</g>`).join("");
+  c.innerHTML = `<svg viewBox="${window.WORLD_MERCATOR_VIEWBOX}" xmlns="http://www.w3.org/2000/svg">${groups}</svg>`;
   resetMapZoom("myMapWorld");
 }
 function myMapJPBodyHTML(){
@@ -10554,11 +10557,14 @@ function clampMapPanX(st, geo){
   st.x = Math.max(-maxX, Math.min(maxX, st.x));
 }
 /* 世界地図(myMapWorld)だけは横方向に無限スクロール(経度180度で折り返さず周回)させる。
-   drawMyMapWorldが地図を3面(中央+左右)複製して並べているため、横方向のパン量(画面px)を
-   ちょうど1面ぶん(svgの実際の描画幅)でモジュロ計算して巻き戻せば、見た目上は継ぎ目なく
-   無限に横スクロールできているように見える(定番の「無限カルーセル」と同じ手法)。
-   全画面表示ではsvgをheight:100%で高さ基準に描くため、svg自身の実測幅(=1面ぶんの幅、
-   現在のscaleを含む)を使う。コンテナ幅を使うと全画面時に食い違うため使わない */
+   drawMyMapWorldが地図を3面(中央+左右、getVisibleWorldOffsetsが返す枚数分)複製して固定
+   配置しているため、横方向のパン量(画面px)をちょうど1面ぶん(svgの実際の描画幅)でモジュロ
+   計算して巻き戻すだけで、見た目上は継ぎ目なく無限に横スクロールできる(定番の「無限
+   カルーセル」と同じ手法。st.x自体を±0.5面ぶんの範囲に収めるだけで済み、<g>そのものは
+   一度描画したら動かす必要がない。実際に10面幅ぶんの連続ドラッグでも欠けが出ないことを
+   Playwrightで検証済み)。全画面表示ではsvgをheight:100%で高さ基準に描くため、svg自身の
+   実測幅(=1面ぶんの幅、現在のscaleを含む)を使う。コンテナ幅を使うと全画面時に食い違う
+   ため使わない */
 function wrapMapPanX(st, geo){
   const worldWidthPx = geo.tileWidthPx;
   if(!worldWidthPx) return;
@@ -10645,7 +10651,9 @@ function resetMapZoom(containerId){
       // defaultWorldMapXの計算(経度→px変換)が狂うため、次フレームで測り直す
       requestAnimationFrame(()=>resetMapZoom(containerId));
     } else {
-      if(containerId==="myMapWorld") st.x = defaultWorldMapX(svg);
+      if(containerId==="myMapWorld"){
+        st.x = defaultWorldMapX(svg);
+      }
     }
     applyMapTransform(el, svg, st);
   }
