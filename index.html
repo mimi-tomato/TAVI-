@@ -10675,10 +10675,22 @@ function initMapZoomListeners(containerId){
     if(pointers.size===2){
       const [a,b]=[...pointers.values()];
       const d=dist(a,b);
-      st.scale = Math.min(MAP_ZOOM_MAX, Math.max(1, pinchStartScale*(d/pinchStartDist)));
-      // ズームでsvgの実描画幅(=1面ぶんのpx幅)自体が変わるため、直後に必ず再計測してクランプ
-      // し直す(これをしないと、ズーム直後にパンを始めた瞬間、古い範囲を引きずって地図が
-      // 急にずれる/継ぎ目が見える不具合があった)
+      const newScale = Math.min(MAP_ZOOM_MAX, Math.max(1, pinchStartScale*(d/pinchStartDist)));
+      // transform-originがsvg自身の中心(=常にグリニッジ相当の固定点。日本語UIならstart.xの
+      // 分だけずらして日本を中央に表示しているだけで、transform-origin自体はsvgの中心のまま)
+      // にあるため、scaleだけを変えるとその固定点を軸に拡大縮小され、パンして画面中央に
+      // 据えていた経度がズームのたびにグリニッジ側へずれて見える不具合があった。今まさに
+      // 画面中央に映っている地点を軸にズームするよう、st.x/st.yをscaleの変化比で
+      // スケールし直す(「中心を保ったままズームする」ための標準的な手法)
+      const ratio = newScale / st.scale;
+      st.x *= ratio;
+      st.y *= ratio;
+      st.scale = newScale;
+      // measureMapGeo()はsvgの「現在実際に描画されているサイズ」をgetBoundingClientRect()で
+      // 実測するため、CSS変形(transform)へ新しいscaleを反映する前に測ると、古いscale基準の
+      // サイズのままクランプ計算をしてしまい、地図がガクッとずれる不具合があった。先に新しい
+      // scaleを反映させてから測り直し、クランプ結果に応じてもう一度反映する
+      applyMapTransform(el, svg, st);
       clampMapPan(st, containerId, measureMapGeo(el));
       applyMapTransform(el, svg, st);
     } else if(pointers.size===1 && panStart){
@@ -10942,6 +10954,11 @@ async function resendCode(){
 }
 
 function renderApp(){
+  // マイマップの全画面モード中はbody.mymap-fullでスクロールを止めているが、mymap以外の
+  // viewへ移った時にこのクラスを消す処理がどこにも無く、戻った後も他画面が縦スクロール
+  // できなくなる不具合があった。マイマップ以外に居るときは必ず外しておく(mymap自身の
+  // 付け外しはapplyMyMapChrome()が担当するので、ここでは「消し忘れ」の保険として働く)
+  if(S.view!=="mymap") document.body.classList.remove("mymap-full");
   // ===== 認証ゲート: 未ログインかつ未スキップならログイン画面 =====
   if(!isSignedIn()){
     document.documentElement.setAttribute("data-theme", S.theme||"light");
