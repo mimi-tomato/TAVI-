@@ -152,11 +152,30 @@
     .mymap-fs-modes{margin-left:0}
     .mymap-fs-bottom{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;gap:8px;
       padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+    .mymap-fs-searchwrap{position:relative;flex:1;min-width:0}
     /* Google検索窓のような、控えめで主張の少ない丸型の入力欄 */
-    .mymap-fs-search{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:24px;
+    .mymap-fs-search{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--card);border-radius:24px;
       padding:11px 18px;font-size:0.875rem;color:var(--ink-soft);box-shadow:0 1px 6px rgba(0,0,0,.1)}
     .mymap-fs-search:disabled{opacity:.7;cursor:default}
+    /* 検索結果は下部バーの入力欄の上に、フローティングで伸びる(下部バーのため下方向に伸ばせない) */
+    .mymap-search-results{position:absolute;left:0;right:0;bottom:calc(100% + 8px);max-height:260px;
+      overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;
+      box-shadow:0 4px 18px rgba(0,0,0,.18);padding:4px}
+    .mymap-search-results:empty{display:none}
+    /* 大国強調: 国名ラベル(地図座標に追従せず、画面上の固定位置に表示) */
+    .mymap-country-label{position:absolute;left:50%;top:16%;transform:translateX(-50%);z-index:5;
+      font-size:1.0625rem;font-weight:800;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.65),0 0 3px rgba(0,0,0,.5);
+      pointer-events:none;white-space:nowrap}
+    /* 小国強調: 代表地点に追従する固定サイズの円 */
+    .mymap-country-pin-circle{position:absolute;width:32px;height:32px;margin:-16px 0 0 -16px;
+      border-radius:50%;border:3px solid var(--accent);background:rgba(59,110,245,.22);
+      box-shadow:0 0 0 3px rgba(59,110,245,.15);pointer-events:none;z-index:4}
   }
+  @keyframes mymapCountryFocusPulse{
+    0%,100%{stroke:var(--accent)}
+    50%{stroke:#ffb020}
+  }
+  .mapwrap svg path.mymap-country-focus{animation:mymapCountryFocusPulse 2.2s ease-in-out infinite;stroke-width:2.5}
   .selpref{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:8px}
   .selpref .chip{background:#eef2fb}
   /* 海外 国カード(景色背景+国旗) */
@@ -1726,7 +1745,8 @@ const I18N = {
     "x.map.modeJP":"日本", "x.map.modeWorld":"世界",
     "x.map.regionComingSoon":"このエリアは近日公開予定です",
     "x.map.worldLoadError":"世界地図の読み込みに失敗しました",
-    "x.map.searchPlaceholder":"国名で検索（近日対応）",
+    "x.map.searchPlaceholder":"国名で検索",
+    "x.map.searchNoResults":"該当する国が見つかりませんでした",
     "x.aria.mapBack":"戻る", "x.aria.mapReset":"表示をリセット",
     "x.map.regionPickNote":"エリアを選ぶと、国ごとの訪問状況が地図で見られます。",
     "x.map.region.east_asia":"東アジア", "x.map.region.west_asia":"西アジア",
@@ -2191,7 +2211,8 @@ const I18N = {
     "x.map.modeJP":"Japan", "x.map.modeWorld":"World",
     "x.map.regionComingSoon":"This region is coming soon",
     "x.map.worldLoadError":"Failed to load the world map",
-    "x.map.searchPlaceholder":"Search by country (coming soon)",
+    "x.map.searchPlaceholder":"Search by country",
+    "x.map.searchNoResults":"No matching country found",
     "x.aria.mapBack":"Back", "x.aria.mapReset":"Reset map view",
     "x.map.regionPickNote":"Pick a region to see your visited countries on the map.",
     "x.map.region.east_asia":"East Asia", "x.map.region.west_asia":"West Asia",
@@ -10485,7 +10506,12 @@ function myMapFullscreenShell(containerId){
       </div>
     </div>
     <div class="mymap-fs-bottom">
-      <input class="mymap-fs-search" type="text" placeholder="${esc(t('x.map.searchPlaceholder'))}" disabled>
+      <div class="mymap-fs-searchwrap">
+        <div class="mymap-search-results" id="mymapSearchResults"></div>
+        <input class="mymap-fs-search" type="text" id="mymapCountrySearchInput"
+          placeholder="${esc(t('x.map.searchPlaceholder'))}"
+          ${containerId==='myMapWorld' ? `oninput="onMyMapCountrySearchInput('${containerId}')"` : 'disabled'}>
+      </div>
       <button class="icon-btn" onclick="resetMapZoom('${containerId}')" aria-label="${esc(t('x.aria.mapReset'))}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
       </button>
@@ -10644,6 +10670,13 @@ function defaultWorldMapX(svg){
 function resetMapZoom(containerId){
   const el = document.getElementById(containerId); if(!el) return;
   const st = MAP_ZOOM_STATE[containerId] = {scale:1, x:0, y:0};
+  clearCountryHighlight(containerId);
+  if(containerId==="myMapWorld"){
+    const searchInput = document.getElementById("mymapCountrySearchInput");
+    if(searchInput) searchInput.value = "";
+    const resultsEl = document.getElementById("mymapSearchResults");
+    if(resultsEl) resultsEl.innerHTML = "";
+  }
   positionMapZoom(containerId);
   // initMapZoomListenersはここで1回だけ呼ぶ。以前はpositionMapZoom側のrequestAnimationFrame
   // 再試行(幅0のタイミング対策)からも呼ばれており、同じコンテナに独立したリスナーの束が
@@ -10716,11 +10749,13 @@ function initMapZoomListeners(containerId){
       applyMapTransform(el, svg, st);
       clampMapPan(st, containerId, measureMapGeo(el));
       applyMapTransform(el, svg, st);
+      updateCountryHighlightOverlay(containerId);
     } else if(pointers.size===1 && panStart){
       st.x = panStart.stx + (e.clientX-panStart.px);
       st.y = panStart.sty + (e.clientY-panStart.py);
       clampMapPan(st, containerId, panStart.geo);
       applyMapTransform(el, svg, st);
+      updateCountryHighlightOverlay(containerId);
     }
   });
   // 世界地図は同じ国が最大3面(<g data-offset>)に複製されて別々の<path>として存在するため、
@@ -10758,10 +10793,10 @@ function initMapZoomListeners(containerId){
     if(hitPath){
       const code = hitPath.getAttribute("data-code");
       const alreadySelected = hitPath.classList.contains("sel");
-      svg.querySelectorAll("path.sel").forEach(p=>p.classList.remove("sel"));
-      if(!alreadySelected){
-        svg.querySelectorAll(`path[data-code="${code}"]`).forEach(p=>p.classList.add("sel"));
-      }
+      // タップ選択は検索ジャンプ専用の追加演出(ラベル・枠点滅・円)を伴わないシンプルな
+      // .selのみの選択のため、前回検索ジャンプで付いた強調表示が残っていれば消す
+      clearCountryHighlight(containerId);
+      selectCountryByCode(containerId, alreadySelected ? null : code);
     }
   }
   function endPointer(e){
@@ -10776,6 +10811,234 @@ function initMapZoomListeners(containerId){
   // 結果的に「選択→即解除」で何も選ばれていないように見える不具合があった
   // (2026-07-10発覚、WebKitで常時再現・Chromiumでも間欠的に再現を実機検証で確認)
   el.addEventListener("pointercancel", endPointer);
+}
+/* タップ選択(trySelectAt)・検索ジャンプ(jumpToCountry)の両方から呼ぶ共通の選択処理。
+   同じ国が最大3面(<g data-offset>)に複製されているため、全複製へまとめて.selを
+   付け外しする(継ぎ目をまたぐロシア・フィジーでも同期して選択される)。codeにnullを
+   渡すと選択解除のみ行う */
+function selectCountryByCode(containerId, code){
+  const el = document.getElementById(containerId); if(!el) return;
+  const svg = el.querySelector("svg"); if(!svg) return;
+  svg.querySelectorAll("path.sel").forEach(p=>p.classList.remove("sel"));
+  if(code) svg.querySelectorAll(`path[data-code="${code}"]`).forEach(p=>p.classList.add("sel"));
+}
+/* 「小国」として円で位置を示す61か国(ユーザー指定、2026-07-10)。表記の変更に影響されない
+   よう、name_jaではなくdata-codeと同じ国コードで判定する。リストにない国はすべて「大国」
+   (中央移動+ラベル+枠点滅)として扱う */
+const MYMAP_SMALL_COUNTRY_CODES = new Set([
+  "VA","MC","NR","TV","SM","LI","MH","KN","MV","MT", // バチカン市国・モナコ・ナウル・ツバル・サンマリノ・リヒテンシュタイン・マーシャル諸島・セントクリストファー・ネイビス・モルディブ・マルタ
+  "GD","VC","BB","AG","SC","PW","AD","LC","FM","SG", // グレナダ・セントビンセント・グレナディーン・バルバドス・アンティグア・バーブーダ・セーシェル・パラオ・アンドラ・セントルシア・ミクロネシア連邦・シンガポール
+  "TO","DM","BH","KI","ST","KM","MU","LU","WS","CV", // トンガ・ドミニカ国・バーレーン・キリバス・サントメ・プリンシペ・コモロ・モーリシャス・ルクセンブルク・サモア・カーボベルデ
+  "TT","BN","PS","CY","LB","JM","GM","QA","VU","BS", // トリニダード・トバゴ・ブルネイ・パレスチナ・キプロス・レバノン・ジャマイカ・ガンビア・カタール・バヌアツ・バハマ
+  "ME","TL","SZ","KW","FJ","SI","SV","IL","BZ","DJ", // モンテネグロ・東ティモール・エスワティニ・クウェート・フィジー・スロベニア・エルサルバドル・イスラエル・ベリーズ・ジブチ
+  "MK","RW","HT","BI","GQ","AL","SB","AM","LS","BE", // 北マケドニア・ルワンダ・ハイチ・ブルンジ・赤道ギニア・アルバニア・ソロモン諸島・アルメニア・レソト・ベルギー
+  "MD" // モルドバ
+]);
+/* 国土が複数の島嶼群に大きく分散しており、bboxの中心(getCountryFocusPointの既定値)が
+   海上(どの陸地にも属さない場所)になりうる国。最大の陸地(サブパスのbbox面積が最大のもの)
+   の中心座標を手動で設定する(world-mercator.jsのローカル座標系。値はnode script実行時に
+   実データから算出し、目視確認済み)。該当しない国は自動的にbbox中心にフォールバックする */
+const MYMAP_FOCUS_OVERRIDES = {
+  KI: {x:125.68,  y:1261.28}, // キリバス: ライン諸島(キリティマティ島)
+  MH: {x:1942.57, y:1238.79}, // マーシャル諸島
+  FM: {x:1879.07, y:1233.32}, // ミクロネシア連邦
+  TV: {x:1995.58, y:1319.06}, // ツバル
+  SB: {x:1884.32, y:1316.51}, // ソロモン諸島
+  FJ: {x:1988.78, y:1372.11}, // フィジー
+};
+/* 国コード→bbox({minX,maxX,minY,maxY,w,h,cx,cy}、world-mercator.jsのローカル座標系)。
+   描画済みDOM要素のgetBBox()(実際の描画結果に基づく)を優先し、要素が見つからない場合のみ
+   d文字列からの正規表現抽出にフォールバックする。コンテナ・ズーム状態に依存しない値なので
+   一度計算したらキャッシュする */
+const MYMAP_BBOX_CACHE = new Map();
+function getCountryBBox(containerId, code){
+  if(MYMAP_BBOX_CACHE.has(code)) return MYMAP_BBOX_CACHE.get(code);
+  let bbox = null;
+  const el = document.getElementById(containerId);
+  const path = el && el.querySelector(`g[data-offset="0"] path[data-code="${code}"]`);
+  if(path){
+    try{
+      const b = path.getBBox();
+      if(b.width>0 || b.height>0){
+        bbox = {minX:b.x, minY:b.y, maxX:b.x+b.width, maxY:b.y+b.height, w:b.width, h:b.height, cx:b.x+b.width/2, cy:b.y+b.height/2};
+      }
+    }catch(e){}
+  }
+  if(!bbox){
+    const co = (window.WORLD_MERCATOR||[]).find(c=>c.code===code);
+    if(co && co.d){
+      const nums = (co.d.match(/-?\d+\.?\d*/g)||[]).map(Number);
+      let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+      for(let i=0;i+1<nums.length;i+=2){
+        const x=nums[i], y=nums[i+1];
+        if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+      }
+      if(minX<maxX || minY<maxY){
+        bbox = {minX,maxX,minY,maxY, w:maxX-minX, h:maxY-minY, cx:(minX+maxX)/2, cy:(minY+maxY)/2};
+      }
+    }
+  }
+  MYMAP_BBOX_CACHE.set(code, bbox);
+  return bbox;
+}
+/* 検索ジャンプ・小国円表示のための代表点を返す(world-mercator.jsのローカル座標系)。
+   「必ず陸地上に来る」ことは保証しない: 通常国はbboxの中心をそのまま使う軽量な方式で、
+   分散した島嶼国(MYMAP_FOCUS_OVERRIDES)だけ手動設定した値にフォールバックする */
+function getCountryFocusPoint(containerId, code){
+  if(MYMAP_FOCUS_OVERRIDES[code]) return MYMAP_FOCUS_OVERRIDES[code];
+  const bbox = getCountryBBox(containerId, code);
+  return bbox ? {x:bbox.cx, y:bbox.cy} : null;
+}
+/* 検索ジャンプによる強調表示の現在状態(containerId -> {code,isSmall,labelEl,circleEl}) */
+const MYMAP_HIGHLIGHT = {};
+function clearCountryHighlight(containerId){
+  const el = document.getElementById(containerId);
+  if(el){
+    const svg = el.querySelector("svg");
+    if(svg) svg.querySelectorAll(".mymap-country-focus").forEach(p=>p.classList.remove("mymap-country-focus"));
+    const label = el.querySelector(".mymap-country-label"); if(label) label.remove();
+    const circle = el.querySelector(".mymap-country-pin-circle"); if(circle) circle.remove();
+  }
+  delete MYMAP_HIGHLIGHT[containerId];
+}
+/* 検索ジャンプ完了後に呼ぶ。大国(MYMAP_SMALL_COUNTRY_CODESに無い国)は中央移動済みの
+   全複製pathに.mymap-country-focus(枠点滅)を付け、画面固定位置に国名ラベルを表示する。
+   小国はgetCountryFocusPointの位置に追従する円を表示する */
+function applyCountryHighlight(containerId, code, isSmall){
+  const el = document.getElementById(containerId); if(!el) return;
+  const svg = el.querySelector("svg"); if(!svg) return;
+  MYMAP_HIGHLIGHT[containerId] = {code, isSmall};
+  if(isSmall){
+    const circle = document.createElement("div");
+    circle.className = "mymap-country-pin-circle";
+    el.appendChild(circle);
+    MYMAP_HIGHLIGHT[containerId].circleEl = circle;
+    updateCountryHighlightOverlay(containerId);
+  } else {
+    svg.querySelectorAll(`path[data-code="${code}"]`).forEach(p=>p.classList.add("mymap-country-focus"));
+    const co = (window.WORLD_MERCATOR||[]).find(c=>c.code===code);
+    const label = document.createElement("div");
+    label.className = "mymap-country-label";
+    label.textContent = co ? (curLang()==="ja" ? co.name_ja : co.name_en) : code;
+    el.appendChild(label);
+    MYMAP_HIGHLIGHT[containerId].labelEl = label;
+  }
+}
+/* 小国の円は「位置を示す」役割があるため、地図座標に追従させる必要がある(大国のラベルは
+   画面固定位置のため追従不要)。パン・ピンチズーム・ジャンプアニメーションの各フレームから
+   呼ぶ。同じ国コードが複数面(<g data-offset>)に複製されている場合、現在画面中央に最も
+   近い複製を採用する */
+function updateCountryHighlightOverlay(containerId){
+  const h = MYMAP_HIGHLIGHT[containerId]; if(!h || !h.isSmall || !h.circleEl) return;
+  const el = document.getElementById(containerId); if(!el) return;
+  const svg = el.querySelector("svg"); if(!svg) return;
+  const focus = getCountryFocusPoint(containerId, h.code); if(!focus) return;
+  const elRect = el.getBoundingClientRect();
+  const cx0 = elRect.left+elRect.width/2, cy0 = elRect.top+elRect.height/2;
+  const gs = [...svg.querySelectorAll("g[data-offset]")];
+  let bestPt=null, bestDist=Infinity;
+  for(const g of gs){
+    const path = g.querySelector(`path[data-code="${h.code}"]`); if(!path) continue;
+    const pt = svg.createSVGPoint(); pt.x=focus.x; pt.y=focus.y;
+    const screenPt = pt.matrixTransform(g.getScreenCTM());
+    const d = Math.hypot(screenPt.x-cx0, screenPt.y-cy0);
+    if(d<bestDist){ bestDist=d; bestPt=screenPt; }
+  }
+  if(!bestPt) return;
+  h.circleEl.style.left = (bestPt.x - elRect.left) + "px";
+  h.circleEl.style.top = (bestPt.y - elRect.top) + "px";
+}
+/* 現在の{scale,x,y}から目標値までrequestAnimationFrameでトゥイーンする(ease-outカーブ)。
+   毎フレームupdateCountryHighlightOverlayも呼び、小国の円がアニメーション中も追従するように
+   する(大国のラベル・枠点滅はアニメーション完了後にapplyCountryHighlightで付与する) */
+function tweenMapTo(containerId, targetScale, targetX, targetY, duration, onDone){
+  const el = document.getElementById(containerId); if(!el) return;
+  const svg = el.querySelector("svg"); if(!svg) return;
+  const st = MAP_ZOOM_STATE[containerId]; if(!st) return;
+  const startScale=st.scale, startX=st.x, startY=st.y, startTime=performance.now();
+  function frame(now){
+    const t = Math.min(1, (now-startTime)/duration);
+    const eased = 1 - Math.pow(1-t, 3); // ease-out cubic
+    st.scale = startScale + (targetScale-startScale)*eased;
+    st.x = startX + (targetX-startX)*eased;
+    st.y = startY + (targetY-startY)*eased;
+    applyMapTransform(el, svg, st);
+    updateCountryHighlightOverlay(containerId);
+    if(t<1) requestAnimationFrame(frame);
+    else if(onDone) onDone();
+  }
+  requestAnimationFrame(frame);
+}
+/* 検索結果タップで呼ばれる。対象国が画面に収まる(大国)/視認できる(小国)倍率・位置まで
+   アニメーションし、完了後に選択状態(.sel)と強調表示(ラベル+枠点滅、または円)を適用する */
+function jumpToCountry(containerId, code){
+  const el = document.getElementById(containerId); if(!el) return;
+  const svg = el.querySelector("svg"); if(!svg) return;
+  const st = MAP_ZOOM_STATE[containerId]; if(!st) return;
+  const bbox = getCountryBBox(containerId, code); if(!bbox) return;
+  const focus = getCountryFocusPoint(containerId, code) || {x:bbox.cx, y:bbox.cy};
+  const isSmall = MYMAP_SMALL_COUNTRY_CODES.has(code);
+  const searchInput = document.getElementById("mymapCountrySearchInput");
+  const resultsEl = document.getElementById("mymapSearchResults");
+  if(searchInput) searchInput.blur();
+  if(resultsEl) resultsEl.innerHTML = "";
+  const geo = measureMapGeo(el);
+  const tileWidthUnits = window.WORLD_MERCATOR_TILE_WIDTH || 2000;
+  const vbParts = (window.WORLD_MERCATOR_VIEWBOX||"0 0 2000 1316").split(" ").map(Number);
+  const vbMinY = vbParts[1]||0, vbH = vbParts[3]||1316;
+  let targetScale;
+  if(isSmall){
+    // 代表点さえ視認できればよいため、無理にbboxへフィットさせず軽くズームインする程度にとどめる
+    targetScale = Math.max(st.scale, Math.min(MAP_ZOOM_MAX, 3));
+  } else {
+    const fitScale = Math.min(geo.width/bbox.w, geo.height/bbox.h) * 0.7;
+    targetScale = Math.max(1, Math.min(MAP_ZOOM_MAX, fitScale));
+  }
+  // st.x/yは「現在描画されているscaleでの画面px」単位のため、scale=1相当の基準幅に戻してから
+  // 目標scaleぶんを掛け直す(ピンチズーム側のst.x *= ratioと同じ考え方)
+  const baseWidthPx = geo.tileWidthPx / (st.scale||1);
+  const baseHeightPx = svg.getBoundingClientRect().height / (st.scale||1);
+  const pxPerUnitX = baseWidthPx / tileWidthUnits;
+  const pxPerUnitY = baseHeightPx / vbH;
+  let targetX = -(focus.x - tileWidthUnits/2) * pxPerUnitX * targetScale;
+  const targetY = -(focus.y - (vbMinY+vbH/2)) * pxPerUnitY * targetScale;
+  // 無限スクロールで世界を何周もしている場合に遠回りしないよう、目標scaleでの1面幅ぶんの
+  // 周期で、現在のst.xから見て最短距離になるtargetXを選ぶ
+  const period = baseWidthPx * targetScale;
+  if(period>0){
+    while(targetX - st.x > period/2) targetX -= period;
+    while(targetX - st.x < -period/2) targetX += period;
+  }
+  clearCountryHighlight(containerId);
+  tweenMapTo(containerId, targetScale, targetX, targetY, 500, ()=>{
+    clampMapPan(st, containerId, measureMapGeo(el));
+    applyMapTransform(el, svg, st);
+    selectCountryByCode(containerId, code);
+    applyCountryHighlight(containerId, code, isSmall);
+  });
+}
+/* 世界地図の国名検索(WORLD_MERCATOR、既にクライアントに読み込み済みの209件)へのローカルな
+   部分一致フィルタ。Nominatimを叩く投稿の位置情報検索と違い外部APIを使わないため、
+   デバウンス・非同期処理は不要(キー入力のたびに同期的に絞り込む) */
+function onMyMapCountrySearchInput(containerId){
+  const input = document.getElementById("mymapCountrySearchInput");
+  const resultsEl = document.getElementById("mymapSearchResults");
+  if(!input || !resultsEl) return;
+  const q = input.value.trim().toLowerCase();
+  if(!q){ resultsEl.innerHTML = ""; return; }
+  const arr = window.WORLD_MERCATOR || [];
+  const matches = arr.filter(co=>
+    (co.name_ja && co.name_ja.toLowerCase().includes(q)) ||
+    (co.name_en && co.name_en.toLowerCase().includes(q))
+  ).slice(0, 10);
+  if(!matches.length){
+    resultsEl.innerHTML = `<div class="loc-status">${t("x.map.searchNoResults")}</div>`;
+    return;
+  }
+  resultsEl.innerHTML = matches.map(co=>`
+    <button class="loc-result-item" onclick="jumpToCountry('${containerId}','${co.code}')">
+      <span class="loc-result-name">${esc(curLang()==="ja" ? co.name_ja : co.name_en)}</span>
+    </button>`).join("");
 }
 function toggleFactor(f,el){
   const i=MYPREFS.indexOf(f);
