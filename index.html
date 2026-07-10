@@ -116,7 +116,12 @@
   .mapwrap svg{width:100%;height:auto;display:block;touch-action:none;will-change:transform;overflow:visible}
   .mapwrap svg path{fill:#e9eef7;stroke:#fff;stroke-width:.5;cursor:pointer;transition:.1s;vector-effect:non-scaling-stroke}
   .mapwrap svg path:hover{fill:#c3d4f5}
-  .mapwrap svg path.sel{fill:var(--accent);stroke:#fff}
+  /* strokeをfillと同色にする: ロシア・フィジーのように日付変更線をまたぐ国は、投影の都合上
+     内部に境界線を持つ複数の図形として描かれており、選択時に白い枠線のままだと国土の
+     途中に不自然な線(日付変更線の継ぎ目)が見えてしまう。strokeをfillと一致させることで
+     この内部の継ぎ目を視覚的に消す(海岸線の輪郭は塗り色と背景色の対比で見えるため、
+     枠線が無くても支障はない) */
+  .mapwrap svg path.sel{fill:var(--accent);stroke:var(--accent)}
   /* 1票でもしっかり色づくよう全体に一段濃く */
   .mapwrap svg path.m1{fill:var(--map1)}.mapwrap svg path.m2{fill:var(--map2)}.mapwrap svg path.m3{fill:var(--map3)}
   .mapwrap svg path.m4{fill:var(--map4)}.mapwrap svg path.m5{fill:var(--map5)}
@@ -172,8 +177,8 @@
   }
   /* 大国強調: 枠線(太さ・色)は変えず、塗りつぶし色をグラデーション風に点滅させる */
   @keyframes mymapCountryFocusPulse{
-    0%,100%{fill:var(--accent)}
-    50%{fill:#ffb020}
+    0%,100%{fill:var(--accent);stroke:var(--accent)}
+    50%{fill:#ffb020;stroke:#ffb020}
   }
   .mapwrap svg path.mymap-country-focus{animation:mymapCountryFocusPulse 2.2s ease-in-out infinite}
   .selpref{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:8px}
@@ -10510,7 +10515,7 @@ function myMapFullscreenShell(containerId){
         <div class="mymap-search-results" id="mymapSearchResults"></div>
         <input class="mymap-fs-search" type="text" id="mymapCountrySearchInput"
           placeholder="${esc(t('x.map.searchPlaceholder'))}"
-          ${containerId==='myMapWorld' ? `oninput="onMyMapCountrySearchInput('${containerId}')"` : 'disabled'}>
+          ${containerId==='myMapWorld' ? `oninput="onMyMapCountrySearchInput('${containerId}')" onkeydown="onMyMapCountrySearchKeydown(event,'${containerId}')"` : 'disabled'}>
       </div>
       <button class="icon-btn" onclick="resetMapZoom('${containerId}')" aria-label="${esc(t('x.aria.mapReset'))}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
@@ -10998,10 +11003,12 @@ function jumpToCountry(containerId, code){
   let targetScale;
   if(isSmall){
     // 代表点さえ視認できればよいため、無理にbboxへフィットさせず軽くズームインする程度にとどめる
-    targetScale = Math.max(st.scale, Math.min(MAP_ZOOM_MAX, 1.5));
+    targetScale = Math.max(st.scale, 1.5);
   } else {
+    // 大国も上限は小国と揃えて最大1.5倍にとどめる(bboxへのフィット計算上1.5倍未満で
+    // 済む国はそのまま、1.5倍を超える国は1.5倍でクランプする)
     const fitScale = Math.min(geo.width/(bbox.w*pxPerUnitX), geo.height/(bbox.h*pxPerUnitY)) * 0.35;
-    targetScale = Math.max(1, Math.min(MAP_ZOOM_MAX, fitScale));
+    targetScale = Math.max(1, Math.min(1.5, fitScale));
   }
   let targetX = -(focus.x - tileWidthUnits/2) * pxPerUnitX * targetScale;
   const targetY = -(focus.y - (vbMinY+vbH/2)) * pxPerUnitY * targetScale;
@@ -11023,15 +11030,22 @@ function jumpToCountry(containerId, code){
 /* 世界地図の国名検索(WORLD_MERCATOR、既にクライアントに読み込み済みの209件)へのローカルな
    部分一致フィルタ。Nominatimを叩く投稿の位置情報検索と違い外部APIを使わないため、
    デバウンス・非同期処理は不要(キー入力のたびに同期的に絞り込む) */
+/* ひらがな→カタカナ変換(Unicode符号点シフト、U+3041-3096→U+30A1-30F6)。国名の多くは
+   カタカナ表記(例:シンガポール)のため、ひらがな入力(しんがぽーる)でも一致するよう、
+   検索時は入力・国名の双方をこの関数でカタカナに正規化してから比較する。漢字表記の国名
+   (日本・中国等)はひらがな範囲外なので変換の影響を受けない */
+function mymapKatakanaNormalize(str){
+  return str.replace(/[ぁ-ゖ]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+}
 function onMyMapCountrySearchInput(containerId){
   const input = document.getElementById("mymapCountrySearchInput");
   const resultsEl = document.getElementById("mymapSearchResults");
   if(!input || !resultsEl) return;
-  const q = input.value.trim().toLowerCase();
+  const q = mymapKatakanaNormalize(input.value.trim().toLowerCase());
   if(!q){ resultsEl.innerHTML = ""; return; }
   const arr = window.WORLD_MERCATOR || [];
   const matches = arr.filter(co=>
-    (co.name_ja && co.name_ja.toLowerCase().includes(q)) ||
+    (co.name_ja && mymapKatakanaNormalize(co.name_ja.toLowerCase()).includes(q)) ||
     (co.name_en && co.name_en.toLowerCase().includes(q))
   ).slice(0, 10);
   if(!matches.length){
@@ -11042,6 +11056,21 @@ function onMyMapCountrySearchInput(containerId){
     <button class="loc-result-item" onclick="jumpToCountry('${containerId}','${co.code}')">
       <span class="loc-result-name">${esc(curLang()==="ja" ? co.name_ja : co.name_en)}</span>
     </button>`).join("");
+}
+/* Enterキーで、候補一覧からタップしなくても全文一致した国へ直接ジャンプする。
+   複数言語(name_ja/name_en)・ひらがな入力のどちらでも全文一致すれば確定する */
+function onMyMapCountrySearchKeydown(e, containerId){
+  if(e.key !== "Enter") return;
+  const input = document.getElementById("mymapCountrySearchInput");
+  if(!input) return;
+  const q = mymapKatakanaNormalize(input.value.trim().toLowerCase());
+  if(!q) return;
+  const arr = window.WORLD_MERCATOR || [];
+  const exact = arr.find(co=>
+    (co.name_ja && mymapKatakanaNormalize(co.name_ja.toLowerCase())===q) ||
+    (co.name_en && co.name_en.toLowerCase()===q)
+  );
+  if(exact) jumpToCountry(containerId, exact.code);
 }
 function toggleFactor(f,el){
   const i=MYPREFS.indexOf(f);
