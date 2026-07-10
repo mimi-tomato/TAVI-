@@ -162,20 +162,20 @@
       overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;
       box-shadow:0 4px 18px rgba(0,0,0,.18);padding:4px}
     .mymap-search-results:empty{display:none}
-    /* 大国強調: 国名ラベル(地図座標に追従せず、画面上の固定位置に表示) */
+    /* 検索ジャンプで選択した国の国名ラベル(大国・小国共通、地図座標に追従せず画面上の固定位置に表示) */
     .mymap-country-label{position:absolute;left:50%;top:16%;transform:translateX(-50%);z-index:5;
       font-size:1.0625rem;font-weight:800;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.65),0 0 3px rgba(0,0,0,.5);
       pointer-events:none;white-space:nowrap}
-    /* 小国強調: 代表地点に追従する固定サイズの円 */
+    /* 小国強調: 代表地点に追従する固定サイズの円(枠のみ、内側の塗り・影は無し) */
     .mymap-country-pin-circle{position:absolute;width:32px;height:32px;margin:-16px 0 0 -16px;
-      border-radius:50%;border:3px solid var(--accent);background:rgba(59,110,245,.22);
-      box-shadow:0 0 0 3px rgba(59,110,245,.15);pointer-events:none;z-index:4}
+      border-radius:50%;border:3px solid var(--accent);pointer-events:none;z-index:4}
   }
+  /* 大国強調: 枠線(太さ・色)は変えず、塗りつぶし色をグラデーション風に点滅させる */
   @keyframes mymapCountryFocusPulse{
-    0%,100%{stroke:var(--accent)}
-    50%{stroke:#ffb020}
+    0%,100%{fill:var(--accent)}
+    50%{fill:#ffb020}
   }
-  .mapwrap svg path.mymap-country-focus{animation:mymapCountryFocusPulse 2.2s ease-in-out infinite;stroke-width:2.5}
+  .mapwrap svg path.mymap-country-focus{animation:mymapCountryFocusPulse 2.2s ease-in-out infinite}
   .selpref{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:8px}
   .selpref .chip{background:#eef2fb}
   /* 海外 国カード(景色背景+国旗) */
@@ -10901,13 +10901,20 @@ function clearCountryHighlight(containerId){
   }
   delete MYMAP_HIGHLIGHT[containerId];
 }
-/* 検索ジャンプ完了後に呼ぶ。大国(MYMAP_SMALL_COUNTRY_CODESに無い国)は中央移動済みの
-   全複製pathに.mymap-country-focus(枠点滅)を付け、画面固定位置に国名ラベルを表示する。
-   小国はgetCountryFocusPointの位置に追従する円を表示する */
+/* 検索ジャンプ完了後に呼ぶ。国名ラベル(画面固定位置)は大国・小国共通で表示する。
+   大国(MYMAP_SMALL_COUNTRY_CODESに無い国)は中央移動済みの全複製pathに
+   .mymap-country-focus(塗りつぶし色の点滅)を追加で付ける。小国はgetCountryFocusPointの
+   位置に追従する円を追加で表示する */
 function applyCountryHighlight(containerId, code, isSmall){
   const el = document.getElementById(containerId); if(!el) return;
   const svg = el.querySelector("svg"); if(!svg) return;
   MYMAP_HIGHLIGHT[containerId] = {code, isSmall};
+  const co = (window.WORLD_MERCATOR||[]).find(c=>c.code===code);
+  const label = document.createElement("div");
+  label.className = "mymap-country-label";
+  label.textContent = co ? (curLang()==="ja" ? co.name_ja : co.name_en) : code;
+  el.appendChild(label);
+  MYMAP_HIGHLIGHT[containerId].labelEl = label;
   if(isSmall){
     const circle = document.createElement("div");
     circle.className = "mymap-country-pin-circle";
@@ -10916,12 +10923,6 @@ function applyCountryHighlight(containerId, code, isSmall){
     updateCountryHighlightOverlay(containerId);
   } else {
     svg.querySelectorAll(`path[data-code="${code}"]`).forEach(p=>p.classList.add("mymap-country-focus"));
-    const co = (window.WORLD_MERCATOR||[]).find(c=>c.code===code);
-    const label = document.createElement("div");
-    label.className = "mymap-country-label";
-    label.textContent = co ? (curLang()==="ja" ? co.name_ja : co.name_en) : code;
-    el.appendChild(label);
-    MYMAP_HIGHLIGHT[containerId].labelEl = label;
   }
 }
 /* 小国の円は「位置を示す」役割があるため、地図座標に追従させる必要がある(大国のラベルは
@@ -10986,20 +10987,22 @@ function jumpToCountry(containerId, code){
   const tileWidthUnits = window.WORLD_MERCATOR_TILE_WIDTH || 2000;
   const vbParts = (window.WORLD_MERCATOR_VIEWBOX||"0 0 2000 1316").split(" ").map(Number);
   const vbMinY = vbParts[1]||0, vbH = vbParts[3]||1316;
-  let targetScale;
-  if(isSmall){
-    // 代表点さえ視認できればよいため、無理にbboxへフィットさせず軽くズームインする程度にとどめる
-    targetScale = Math.max(st.scale, Math.min(MAP_ZOOM_MAX, 3));
-  } else {
-    const fitScale = Math.min(geo.width/bbox.w, geo.height/bbox.h) * 0.7;
-    targetScale = Math.max(1, Math.min(MAP_ZOOM_MAX, fitScale));
-  }
   // st.x/yは「現在描画されているscaleでの画面px」単位のため、scale=1相当の基準幅に戻してから
-  // 目標scaleぶんを掛け直す(ピンチズーム側のst.x *= ratioと同じ考え方)
+  // 目標scaleぶんを掛け直す(ピンチズーム側のst.x *= ratioと同じ考え方)。bboxはworld-mercator.js
+  // のローカル単位系(px単位ではない)のため、scale=1でのpx/unit換算を経由しないと
+  // 「画面に収まる倍率」を正しく計算できない
   const baseWidthPx = geo.tileWidthPx / (st.scale||1);
   const baseHeightPx = svg.getBoundingClientRect().height / (st.scale||1);
   const pxPerUnitX = baseWidthPx / tileWidthUnits;
   const pxPerUnitY = baseHeightPx / vbH;
+  let targetScale;
+  if(isSmall){
+    // 代表点さえ視認できればよいため、無理にbboxへフィットさせず軽くズームインする程度にとどめる
+    targetScale = Math.max(st.scale, Math.min(MAP_ZOOM_MAX, 1.5));
+  } else {
+    const fitScale = Math.min(geo.width/(bbox.w*pxPerUnitX), geo.height/(bbox.h*pxPerUnitY)) * 0.35;
+    targetScale = Math.max(1, Math.min(MAP_ZOOM_MAX, fitScale));
+  }
   let targetX = -(focus.x - tileWidthUnits/2) * pxPerUnitX * targetScale;
   const targetY = -(focus.y - (vbMinY+vbH/2)) * pxPerUnitY * targetScale;
   // 無限スクロールで世界を何周もしている場合に遠回りしないよう、目標scaleでの1面幅ぶんの
