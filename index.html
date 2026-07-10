@@ -10839,9 +10839,12 @@ const MYMAP_SMALL_COUNTRY_CODES = new Set([
   "MK","RW","HT","BI","GQ","AL","SB","AM","LS","BE", // 北マケドニア・ルワンダ・ハイチ・ブルンジ・赤道ギニア・アルバニア・ソロモン諸島・アルメニア・レソト・ベルギー
   "MD" // モルドバ
 ]);
-/* 国土が複数の島嶼群に大きく分散しており、bboxの中心(getCountryFocusPointの既定値)が
-   海上(どの陸地にも属さない場所)になりうる国。最大の陸地(サブパスのbbox面積が最大のもの)
-   の中心座標を手動で設定する(world-mercator.jsのローカル座標系。値はnode script実行時に
+/* bboxの中心(getCountryFocusPointの既定値)が、その国の本土・主要な陸地から外れた場所に
+   来てしまう国。理由は2種類ある: ①国土が複数の島嶼群に大きく分散しており中心が海上になる
+   (キリバス等)、②ロシア・アメリカのように日付変更線をまたいで投影上2つに分裂しており、
+   bboxがタイル全体近くまで広がってしまう(ロシア: 極東の一部/アメリカ: アラスカ・ハワイが
+   本土から離れた位置にあるため)。いずれも最大の陸地(サブパスのbbox面積が最大のもの)の
+   中心座標を手動で設定する(world-mercator.jsのローカル座標系。値はnode script実行時に
    実データから算出し、目視確認済み)。該当しない国は自動的にbbox中心にフォールバックする */
 const MYMAP_FOCUS_OVERRIDES = {
   KI: {x:125.68,  y:1261.28}, // キリバス: ライン諸島(キリティマティ島)
@@ -10850,6 +10853,8 @@ const MYMAP_FOCUS_OVERRIDES = {
   TV: {x:1995.58, y:1319.06}, // ツバル
   SB: {x:1884.32, y:1316.51}, // ソロモン諸島
   FJ: {x:1988.78, y:1372.11}, // フィジー
+  RU: {x:1575.91, y:790.8},   // ロシア: 本土(極東の飛び地部分を除く最大の陸地)中心
+  US: {x:467.46,  y:1039.44}, // アメリカ: 本土48州(アラスカ・ハワイを除く最大の陸地)中心
 };
 /* 国コード→bbox({minX,maxX,minY,maxY,w,h,cx,cy}、world-mercator.jsのローカル座標系)。
    描画済みDOM要素のgetBBox()(実際の描画結果に基づく)を優先し、要素が見つからない場合のみ
@@ -11037,6 +11042,15 @@ function jumpToCountry(containerId, code){
 function mymapKatakanaNormalize(str){
   return str.replace(/[ぁ-ゖ]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
 }
+/* 通称(name_ja/name_en)以外に、検索でも一致させたい正式名称等の別名。国コード→配列 */
+const MYMAP_SEARCH_ALIASES = {
+  CN: ["中華人民共和国"],
+  KR: ["大韓民国"],
+};
+function mymapCountrySearchTexts(co){
+  const texts = [co.name_ja, co.name_en, ...(MYMAP_SEARCH_ALIASES[co.code]||[])];
+  return texts.filter(Boolean);
+}
 function onMyMapCountrySearchInput(containerId){
   const input = document.getElementById("mymapCountrySearchInput");
   const resultsEl = document.getElementById("mymapSearchResults");
@@ -11045,8 +11059,7 @@ function onMyMapCountrySearchInput(containerId){
   if(!q){ resultsEl.innerHTML = ""; return; }
   const arr = window.WORLD_MERCATOR || [];
   const matches = arr.filter(co=>
-    (co.name_ja && mymapKatakanaNormalize(co.name_ja.toLowerCase()).includes(q)) ||
-    (co.name_en && co.name_en.toLowerCase().includes(q))
+    mymapCountrySearchTexts(co).some(txt => mymapKatakanaNormalize(txt.toLowerCase()).includes(q))
   ).slice(0, 10);
   if(!matches.length){
     resultsEl.innerHTML = `<div class="loc-status">${t("x.map.searchNoResults")}</div>`;
@@ -11058,7 +11071,7 @@ function onMyMapCountrySearchInput(containerId){
     </button>`).join("");
 }
 /* Enterキーで、候補一覧からタップしなくても全文一致した国へ直接ジャンプする。
-   複数言語(name_ja/name_en)・ひらがな入力のどちらでも全文一致すれば確定する */
+   通称・別名(MYMAP_SEARCH_ALIASES)・ひらがな入力のどれで全文一致しても確定する */
 function onMyMapCountrySearchKeydown(e, containerId){
   if(e.key !== "Enter") return;
   const input = document.getElementById("mymapCountrySearchInput");
@@ -11067,8 +11080,7 @@ function onMyMapCountrySearchKeydown(e, containerId){
   if(!q) return;
   const arr = window.WORLD_MERCATOR || [];
   const exact = arr.find(co=>
-    (co.name_ja && mymapKatakanaNormalize(co.name_ja.toLowerCase())===q) ||
-    (co.name_en && co.name_en.toLowerCase()===q)
+    mymapCountrySearchTexts(co).some(txt => mymapKatakanaNormalize(txt.toLowerCase())===q)
   );
   if(exact) jumpToCountry(containerId, exact.code);
 }
