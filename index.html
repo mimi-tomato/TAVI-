@@ -2939,7 +2939,8 @@ function confirmSignOut(){
 /* パスワード再設定メール */
 async function authResetPassword(email){
   if(!window.SB){ toast(t("x.auth.noConn")); return; }
-  const { error } = await window.SB.auth.resetPasswordForEmail(email);
+  const redirectTo = location.origin + location.pathname;
+  const { error } = await window.SB.auth.resetPasswordForEmail(email, { redirectTo });
   if(error){ toast(translateAuthError(error.message)); return; }
   toast(t("x.auth.resetSent"));
 }
@@ -8270,7 +8271,8 @@ async function requestAccountPasswordReset(){
   if(!window.SB || !isSignedIn()) return;
   try{
     const email = authUser().email;
-    const { error } = await window.SB.auth.resetPasswordForEmail(email);
+    const redirectTo = location.origin + location.pathname;
+    const { error } = await window.SB.auth.resetPasswordForEmail(email, { redirectTo });
     if(error){ toast(t('x.auth.noConn')); return; }
     toast(t('x.acct.resetSent'));
   }catch(e){ console.log("[account] reset exception:", e); }
