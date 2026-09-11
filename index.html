@@ -1622,6 +1622,7 @@ const I18N = {
     "x.notif.msg.collabLeft":"{name}さんが共同投稿から離脱しました",
     "x.notif.msg.postDeleted":"{name}さんが共同投稿を削除しました",
     "x.notif.msg.collabRemoved":"{name}さんがあなたを共同投稿から外しました",
+    "x.notif.msg.groupInvite":"{name}さんが旅の計画に招待しました",
     "x.chat.sendFailed":"メッセージの送信に失敗しました",
     "x.chat.read":"既読",
     "settings.chatManage":"チャットを管理", "settings.readReceipts":"既読の表示",
@@ -2088,6 +2089,7 @@ const I18N = {
     "x.notif.msg.collabLeft":"{name} left the collaborative post",
     "x.notif.msg.postDeleted":"{name} deleted the collaborative post",
     "x.notif.msg.collabRemoved":"{name} removed you from a collaborative post",
+    "x.notif.msg.groupInvite":"{name} invited you to a trip plan",
     "x.chat.sendFailed":"Failed to send message",
     "x.chat.read":"Read",
     "settings.chatManage":"Manage chat", "settings.readReceipts":"Read receipts",
@@ -2953,7 +2955,7 @@ window.onAuthChanged = async function(user){
       // 利用再開の可否を確認する専用画面だけを表示する
       S.view = "reactivate";
     }else{
-      await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips(); await loadMyMapStats();
+      await loadBlocks(); await loadPosts(); await loadCalendarAvailability(); await loadFollowState(); await loadNotifications(); await loadCollabInvites(); await loadTrips(); await loadMyMapStats(); await loadTripGroups();
     }
   }
   if(typeof renderApp === "function") renderApp();
@@ -3552,12 +3554,28 @@ function onCoverPick(e){
   r.onload=()=>{ g.img=r.result; toast(t("toast.coverSet")); render({noscroll:true}); };
   r.readAsDataURL(f);
 }
-function doCreate(){
+async function doCreate(){
   const rn=$("#roomName").value.trim(); if(!rn){toast(t("toast.needRoomName"));return;}
   S.roomName=rn; S.limitDays=parseInt($("#limit").value,10);
   if(S.mode==="decided"){const d=$("#dest").value.trim(); if(!d){toast(t("toast.needDest"));return;} S.destination=d;}
-  if(activeGid){ const g=GROUPS.find(x=>x.id===activeGid); if(g) g.name=rn; }
+  if(activeGid){
+    const g=GROUPS.find(x=>x.id===activeGid);
+    if(g){ g.name=rn; await persistTripGroup(g.id, rn, S.destKind, S.destination||null); }
+  }
   S.step=2; render();
+}
+/* グループ本体+自分の参加をSupabaseへ書き込む(upsertなので同じグループへの複数回呼び出しも安全) */
+async function persistTripGroup(gid, name, destKind, destination){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  const uid=authUser().id;
+  try{
+    const { error } = await window.SB.from("trip_groups")
+      .upsert({ id:gid, name, dest_kind:destKind||"domestic", destination, created_by:uid }, { onConflict:"id" });
+    if(error){ console.log("[trip_groups] upsert error:", error.message); return; }
+    const { error: me1 } = await window.SB.from("trip_group_members")
+      .upsert({ group_id:gid, user_id:uid, role:"owner" }, { onConflict:"group_id,user_id" });
+    if(me1) console.log("[trip_group_members] self upsert error:", me1.message);
+  }catch(e){ console.log("[trip_groups] persist exception:", e); }
 }
 
 /* ===== 画面2 参加(フォロー中の友達を追加) ===== */
@@ -3593,7 +3611,7 @@ function drawFriendPick(){
     </button>`;
   }).join("");
 }
-/* 友達をメンバーに追加/解除(refIdで対応付け) */
+/* 友達をメンバーに追加/解除。IDは常にプロフィールの実uuid(=trip_group_membersのuser_id)と一致させる */
 function toggleFriendMember(pid){
   const p=(typeof PEOPLE!=="undefined"?PEOPLE:[]).find(x=>x.id===pid); if(!p)return;
   const idx=S.members.findIndex(m=>m.refId===pid);
@@ -3602,10 +3620,19 @@ function toggleFriendMember(pid){
     S.members.splice(idx,1);
     if(S.me===removed.id) S.me=S.members.length?S.members[0].id:null;
     toast(t("toast.memberRemoved",{name:p.name}));
+    if(activeGid && window.SB && isSignedIn()){
+      window.SB.from("trip_group_members").delete().eq("group_id",activeGid).eq("user_id",pid)
+        .then(({error})=>{ if(error) console.log("[trip_group_members] remove error:", error.message); });
+    }
   }else{
-    const m={id:uid(),name:p.name,refId:pid};
+    const m={id:p.id,name:p.name,photo:p.photo||null,photoFull:p.photoFull||null,refId:pid};
     S.members.push(m); if(!S.me)S.me=m.id;
     toast(t("toast.memberAdded",{name:p.name}));
+    if(activeGid && window.SB && isSignedIn()){
+      window.SB.from("trip_group_members").upsert({ group_id:activeGid, user_id:pid, role:"member" }, { onConflict:"group_id,user_id" })
+        .then(({error})=>{ if(error) console.log("[trip_group_members] add error:", error.message);
+          else createNotification(pid, "group_invite", { groupId: activeGid }); });
+    }
   }
   drawFriendPick(); drawRoster(); renderSteps();
 }
@@ -3945,6 +3972,7 @@ function onDateClick(key){
     const idx=SLOT_CYCLE.indexOf(cur);
     const next=SLOT_CYCLE[(idx+1)%SLOT_CYCLE.length];
     if(next)mine[key]=next; else delete mine[key];
+    saveTripDateVote(activeGid, key, next||null);
     drawCalendar(); return;
   }
   // range は終日で塗る
@@ -3954,16 +3982,18 @@ function onDateClick(key){
   const today=new Date();today.setHours(0,0,0,0);
   let cur=new Date(a);
   const end=new Date(b);
+  const touched=[];
   while(cur<=end){
     const k=ymd(cur.getFullYear(),cur.getMonth()+1,cur.getDate());
     const dd=new Date(k);dd.setHours(0,0,0,0);
-    if(dd>=today)mine[k]="full";
+    if(dd>=today){ mine[k]="full"; touched.push(k); }
     cur.setDate(cur.getDate()+1);
   }
+  saveTripDateVotesBulk(activeGid, touched, "full");
   S.rangeStart=null; drawCalendar();
   toast(t("toast.rangeSel"));
 }
-/* マイカレンダーの内容を、この人の空き回答へ反映 */
+/* マイカレンダーの内容を、この人の空き回答へ反映(この旅専用の投票。My Calendarと独立して保持) */
 function applyMyCalToAvail(force){
   const mine=S.avail[S.me]||(S.avail[S.me]={});
   if(!force){
@@ -3972,9 +4002,122 @@ function applyMyCalToAvail(force){
   } else {
     // 上書き反映
     Object.keys(mine).forEach(k=>delete mine[k]);
+    clearTripDateVotes(activeGid);
   }
   Object.keys(MYCAL).forEach(k=>{ mine[k]=MYCAL[k]; });
+  saveTripDateVotesFromMap(activeGid, MYCAL);
   return true;
+}
+
+/* ===== 日程調整投票のSupabase連携(trip_date_votes) =====
+   「行ける日」はこの旅専用の記名投票であり、My Calendar(全般の空き予定)とは別に保持する。
+   My Calendarからの反映はあくまで入力の手間を省く一括コピーであり、双方向同期はしない。 */
+async function loadTripDateVotes(gid){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  try{
+    const { data, error } = await window.SB.from("trip_date_votes")
+      .select("user_id, date, slot").eq("group_id", gid);
+    if(error){ console.log("[trip_date_votes] load error:", error.message); return; }
+    const avail={};
+    (data||[]).forEach(r=>{ (avail[r.user_id]=avail[r.user_id]||{})[r.date]=r.slot; });
+    S.avail = avail;
+    const g=GROUPS.find(x=>x.id===gid); if(g) g.room.avail=avail;
+  }catch(e){ console.log("[trip_date_votes] load exception:", e); }
+}
+async function saveTripDateVote(gid, dateKey, slot){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  const uid=authUser().id;
+  try{
+    if(slot){
+      const { error } = await window.SB.from("trip_date_votes")
+        .upsert({ group_id:gid, user_id:uid, date:dateKey, slot }, { onConflict:"group_id,user_id,date" });
+      if(error) console.log("[trip_date_votes] upsert error:", error.message);
+    }else{
+      const { error } = await window.SB.from("trip_date_votes")
+        .delete().eq("group_id",gid).eq("user_id",uid).eq("date",dateKey);
+      if(error) console.log("[trip_date_votes] delete error:", error.message);
+    }
+  }catch(e){ console.log("[trip_date_votes] save exception:", e); }
+}
+async function saveTripDateVotesBulk(gid, keys, slot){
+  if(!window.SB || !isSignedIn() || !gid || !keys.length) return;
+  for(const k of keys){ await saveTripDateVote(gid, k, slot); }
+}
+async function saveTripDateVotesFromMap(gid, map){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  for(const [k,v] of Object.entries(map)){ await saveTripDateVote(gid, k, v); }
+}
+async function clearTripDateVotes(gid){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  try{
+    const { error } = await window.SB.from("trip_date_votes")
+      .delete().eq("group_id", gid).eq("user_id", authUser().id);
+    if(error) console.log("[trip_date_votes] clear error:", error.message);
+  }catch(e){ console.log("[trip_date_votes] clear exception:", e); }
+}
+
+/* ===== スポット(場所)投票のSupabase連携(trip_spot_candidates / trip_spot_votes) =====
+   ローカルのS.spotPool/S.spotVotesは名前(文字列)をキーにしたまま扱う設計を踏襲し、
+   候補名→candidate_id の対応だけを別途 TRIP_SPOT_IDS に保持する。 */
+let TRIP_SPOT_IDS = {}; // { [groupId]: { [spotName]: candidateId } }
+async function loadTripSpots(gid){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  try{
+    const { data: cands, error } = await window.SB.from("trip_spot_candidates")
+      .select("id, name").eq("group_id", gid);
+    if(error){ console.log("[trip_spot_candidates] load error:", error.message); return; }
+    const idMap={}; (cands||[]).forEach(c=>{ idMap[c.name]=c.id; });
+    TRIP_SPOT_IDS[gid]=idMap;
+    const pool=(cands||[]).map(c=>c.name);
+    let votes={};
+    if((cands||[]).length){
+      const ids=cands.map(c=>c.id);
+      const nameById={}; cands.forEach(c=>{ nameById[c.id]=c.name; });
+      const { data: vrows, error: ve } = await window.SB.from("trip_spot_votes")
+        .select("candidate_id, user_id").in("candidate_id", ids);
+      if(ve) console.log("[trip_spot_votes] load error:", ve.message);
+      (vrows||[]).forEach(v=>{ (votes[v.user_id]=votes[v.user_id]||[]).push(nameById[v.candidate_id]); });
+    }
+    S.spotPool=pool; S.spotVotes=votes;
+    const g=GROUPS.find(x=>x.id===gid); if(g){ g.room.spotPool=pool; g.room.spotVotes=votes; }
+  }catch(e){ console.log("[trip_spot_candidates] load exception:", e); }
+}
+async function saveTripSpotAdd(gid, name){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  try{
+    let cid=(TRIP_SPOT_IDS[gid]||{})[name];
+    if(!cid){
+      cid=crypto.randomUUID();
+      const { error } = await window.SB.from("trip_spot_candidates")
+        .insert({ id:cid, group_id:gid, name, added_by:authUser().id });
+      if(error){
+        if(error.code==="23505"){
+          const { data } = await window.SB.from("trip_spot_candidates")
+            .select("id").eq("group_id",gid).eq("name",name).maybeSingle();
+          if(data) cid=data.id; else return;
+        }else{ console.log("[trip_spot_candidates] insert error:", error.message); return; }
+      }
+      (TRIP_SPOT_IDS[gid]=TRIP_SPOT_IDS[gid]||{})[name]=cid;
+    }
+    const { error: ve } = await window.SB.from("trip_spot_votes")
+      .upsert({ candidate_id:cid, group_id:gid, user_id:authUser().id }, { onConflict:"candidate_id,user_id" });
+    if(ve) console.log("[trip_spot_votes] upsert error:", ve.message);
+  }catch(e){ console.log("[trip_spot_candidates] add exception:", e); }
+}
+async function saveTripSpotVoteToggle(gid, name, adding){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  const cid=(TRIP_SPOT_IDS[gid]||{})[name]; if(!cid) return;
+  try{
+    if(adding){
+      const { error } = await window.SB.from("trip_spot_votes")
+        .upsert({ candidate_id:cid, group_id:gid, user_id:authUser().id }, { onConflict:"candidate_id,user_id" });
+      if(error) console.log("[trip_spot_votes] insert error:", error.message);
+    }else{
+      const { error } = await window.SB.from("trip_spot_votes")
+        .delete().eq("candidate_id",cid).eq("user_id",authUser().id);
+      if(error) console.log("[trip_spot_votes] delete error:", error.message);
+    }
+  }catch(e){ console.log("[trip_spot_votes] toggle exception:", e); }
 }
 function toggleWeek(w){
   const y=S.calYear,m=S.calMonth;
@@ -3987,6 +4130,7 @@ function toggleWeek(w){
   const mine=S.avail[S.me]||(S.avail[S.me]={});
   const allSel=keys.length>0&&keys.every(k=>mine[k]);
   keys.forEach(k=>{if(allSel)delete mine[k];else mine[k]="full";});
+  saveTripDateVotesBulk(activeGid, keys, allSel?null:"full");
   drawCalendar();
 }
 function drawDateSummary(){
@@ -4279,11 +4423,15 @@ function addSpotToPool(){
   inp.value="";
   render({noscroll:true});
   toast(t("toast.placeAdded",{v}));
+  saveTripSpotAdd(activeGid, v);
 }
 function toggleSpot(s,ev){
   const a=S.spotVotes[S.me]||(S.spotVotes[S.me]=[]);
-  const i=a.indexOf(s);if(i>=0)a.splice(i,1);else a.push(s);
+  const i=a.indexOf(s);
+  const adding=i<0;
+  if(i>=0)a.splice(i,1);else a.push(s);
   render({noscroll:true});
+  saveTripSpotVoteToggle(activeGid, s, adding);
 }
 
 /* ===== 画面5.7 スポット集計 + 巡回順(ドラッグ) ===== */
@@ -4923,39 +5071,54 @@ async function processAndUploadImage(source, hq){
   return { thumb: thumbUrl, mid: midUrl, full: fullUrl };
 }
 
-const GROUPS = [
-  {id:"g1", name:"3年ゼミ 卒業旅行", joined:true, cover:"linear-gradient(135deg,#3b6ef5,#9bb6ff)", img:null,
-   pinned:true, archived:false, tripDate:"", createdAt:Date.now()-2*86400000, pollDeadlineTs:Date.now()+18*3600000,
-   room:blankRoom({roomName:"3年ゼミ 卒業旅行", step:5.6, mode:"undecided", destination:"京都・大阪",
-     members:mkMembers(["ゆうき","あおい","けんと","みお","そうた"]),
-     spotPool:["清水寺","伏見稲荷","嵐山の竹林","錦市場"],
-     spotOrder:["清水寺","伏見稲荷","嵐山"]}),
-   chat:[
-     {who:"ゆうき", t:"スポット投票はじまったよ〜", mine:false, ago:"5分前", reactions:{"👍":["あおい","けんと"]}, readBy:4},
-     {who:"あおい", t:"伏見稲荷は外せない！", mine:false, ago:"3分前", reactions:{"❤️":["ゆうき"]}, readBy:3},
-   ],
-   albums:[
-     {id:"al1", title:"下見ロケハン", cover:null, by:"ゆうき", items:[]},
-   ]},
-  {id:"g2", name:"サークル夏合宿", joined:true, cover:"linear-gradient(135deg,#f2994a,#f6c177)", img:null,
-   pinned:false, archived:false, tripDate:"", createdAt:Date.now()-20*86400000, pollDeadlineTs:Date.now()+30*3600000,
-   room:blankRoom({roomName:"サークル夏合宿", step:3, mode:"undecided",
-     members:mkMembers(["たく","なな","ひろ","ふみ"])}),
-   chat:[{who:"たく", t:"行き先どこがいい？", mine:false, ago:"1時間前", reactions:{}, readBy:2}],
-   albums:[]},
-  {id:"g3", name:"家族旅行2026", joined:true, cover:"linear-gradient(135deg,#2e9e6b,#7fd3a8)", img:null,
-   pinned:false, archived:false, tripDate:"2026-08-12", createdAt:Date.now()-26*3600000, pollDeadlineTs:null,
-   room:blankRoom({roomName:"家族旅行2026", step:4.5, mode:"decided", destination:"沖縄", destKind:"domestic",
-     members:mkMembers(["父","母","兄","私"])}),
-   chat:[{who:"母", t:"日程そろそろ決めましょう", mine:false, ago:"昨日", reactions:{}, readBy:3}],
-   albums:[]},
-  {id:"g4", name:"高校の友達と海外", joined:true, cover:"linear-gradient(135deg,#8b5cf6,#c4b5fd)", img:TAIWAN_IMG_OK(),
-   pinned:false, archived:true, tripDate:"2025-09-14", tripDateEnd:"2025-09-17",
-   room:blankRoom({roomName:"高校の友達と海外", step:7, mode:"decided", destination:"台湾", destKind:"overseas",
-     members:mkMembers(["R","K","Y"]), spotPool:["九份","十分","台北101","士林夜市"], spotOrder:["九份","十分","台北101"]}),
-   chat:[{who:"K", t:"台湾3泊4日で確定〜！", mine:false, ago:"先週", reactions:{"🎉":["R","Y"]}, readBy:2}],
-   albums:[{id:"al4", title:"台湾の思い出", cover:null, by:"K", items:[]}]},
-];
+/* 旅行計画(グループ)一覧。Supabaseのtrip_groups/trip_group_membersから loadTripGroups() で満たされる
+   (ログイン完了時に自動取得)。以前はモックの固定4件だったが、Supabase化にともない撤去した */
+let GROUPS = [];
+async function loadTripGroups(){
+  if(!window.SB || !isSignedIn()){ GROUPS=[]; return; }
+  try{
+    const uid=authUser().id;
+    const { data: myRows, error: e1 } = await window.SB.from("trip_group_members")
+      .select("group_id").eq("user_id", uid);
+    if(e1){ console.log("[trip_group_members] load error:", e1.message); return; }
+    const gids=[...new Set((myRows||[]).map(r=>r.group_id))];
+    if(!gids.length){ GROUPS=[]; return; }
+    const { data: groups, error: e2 } = await window.SB.from("trip_groups")
+      .select("id, name, dest_kind, destination, created_by, created_at").in("id", gids)
+      .order("created_at", { ascending:false });
+    if(e2){ console.log("[trip_groups] load error:", e2.message); return; }
+    const { data: allMembers, error: e3 } = await window.SB.from("trip_group_members")
+      .select("group_id, user_id, role").in("group_id", gids);
+    if(e3) console.log("[trip_group_members] load all error:", e3.message);
+    const memberIds=[...new Set((allMembers||[]).map(r=>r.user_id))];
+    let profMap={};
+    if(memberIds.length){
+      const { data: profs, error: e4 } = await window.SB.from("profiles")
+        .select("id, display_name, avatar_url, avatar_url_full").in("id", memberIds);
+      if(e4) console.log("[profiles] load members error:", e4.message);
+      (profs||[]).forEach(p=>{ profMap[p.id]=p; });
+    }
+    const covers=["linear-gradient(135deg,#3b6ef5,#9bb6ff)","linear-gradient(135deg,#f2994a,#f6c177)",
+      "linear-gradient(135deg,#2e9e6b,#7fd3a8)","linear-gradient(135deg,#8b5cf6,#c4b5fd)","linear-gradient(135deg,#e2574c,#f29b95)"];
+    const oldById={}; GROUPS.forEach(g=>{ oldById[g.id]=g; });
+    GROUPS=(groups||[]).map((g,i)=>{
+      const mems=(allMembers||[]).filter(r=>r.group_id===g.id).map(r=>{
+        const p=profMap[r.user_id]||{};
+        return { id:r.user_id, name:p.display_name||t("post.noName"), photo:p.avatar_url||null, photoFull:p.avatar_url_full||null };
+      });
+      const prev=oldById[g.id];
+      return {
+        id:g.id, name:g.name, joined:true, cover:(prev&&prev.cover)||covers[i%covers.length], img:(prev&&prev.img)||null,
+        pinned:(prev&&prev.pinned)||false, archived:(prev&&prev.archived)||false,
+        tripDate:(prev&&prev.tripDate)||"", tripDateEnd:(prev&&prev.tripDateEnd)||"",
+        createdAt:new Date(g.created_at).getTime(), pollDeadlineTs:null,
+        room:blankRoom({ roomName:g.name, destination:g.destination||"", destKind:g.dest_kind||"domestic", members:mems }),
+        chat:(prev&&prev.chat)||[], albums:(prev&&prev.albums)||[]
+      };
+    });
+    console.log("[trip_groups] loaded", GROUPS.length, "groups");
+  }catch(e){ console.log("[trip_groups] load exception:", e); }
+}
 
 /* 状態:現在開いているグループ・チャット相手 */
 let activeGid = null;       // 開いている旅グループ
@@ -5058,13 +5221,16 @@ function applyViewAnim(){
   setTimeout(()=>{ sc.classList.remove(anim); }, 320);
 }
 /* グループを開く:そのグループの roomState を S に展開 */
-function openRoom(gid){
+async function openRoom(gid){
   commitRoom();
   const g=GROUPS.find(x=>x.id===gid); if(!g)return;
   activeGid=gid;
   Object.assign(S, g.room);
-  S.me = S.members.length?S.members[0].id:null;
+  S.me = isSignedIn() ? authUser().id : (S.members.length?S.members[0].id:null);
   S.view="room"; renderApp();
+  await Promise.all([loadTripDateVotes(gid), loadTripSpots(gid)]);
+  // 読み込み中に別の画面/別のルームへ移動していたら、その結果を今のSへ反映しない
+  if(activeGid===gid && S.view==="room") renderApp();
 }
 /* S の進行内容を現在のグループへ書き戻す */
 function commitRoom(){
@@ -8656,14 +8822,16 @@ function startNewTrip(){
   const covers=["linear-gradient(135deg,#3b6ef5,#9bb6ff)","linear-gradient(135deg,#f2994a,#f6c177)",
     "linear-gradient(135deg,#2e9e6b,#7fd3a8)","linear-gradient(135deg,#8b5cf6,#c4b5fd)",
     "linear-gradient(135deg,#e2574c,#f29b95)"];
-  const id="g"+(++GID);
+  const id=crypto.randomUUID();
+  GID++;
   const g={ id, name:"新しい旅", joined:true, cover:covers[GID%covers.length], img:null,
     pinned:false, archived:false, tripDate:"", createdAt:Date.now(), pollDeadlineTs:null,
     room:blankRoom(), chat:[], albums:[] };
   GROUPS.unshift(g);
   activeGid=id;
   Object.assign(S, g.room);
-  S.me=null; S.view="room";
+  S.me = isSignedIn() ? authUser().id : null;
+  S.view="room";
   renderApp();
 }
 
@@ -9186,8 +9354,8 @@ function screenGroupInfo(){
   const mem=g.room.members||[];
   // メンバー行(自分=「あなた」、それ以外はPEOPLEに居ればプロフィールへ)
   const memRows=mem.map(m=>{
-    const isMe = (m.name===ME.name);
-    const person = PEOPLE.find(x=>x.name===m.name);
+    const isMe = isSignedIn() ? (m.id===authUser().id) : (m.name===ME.name);
+    const person = findPerson(m.id) || PEOPLE.find(x=>x.name===m.name);
     const av = person? `style="${avatarStyle(person)}"` : "";
     const inner = person? avatarInner(person) : (m.name||"?").slice(0,1);
     const click = person? `onclick="profileBackView='groupinfo';openProfile('${person.id}')" style="cursor:pointer"` : "";
@@ -9468,7 +9636,7 @@ function addShiori(type){ const g=GROUPS.find(x=>x.id===shioriGid); if(g&&g.itin
 function inviteToGroup(gid){
   const g=GROUPS.find(x=>x.id===gid); if(!g)return;
   // 招待候補=相互フォローの友達のうち、まだメンバーでない人
-  const cands=friendsList().filter(f=>!(g.room.members||[]).some(m=>m.name===f.name));
+  const cands=friendsList().filter(f=>!(g.room.members||[]).some(m=>m.id===f.id));
   if(!cands.length){ toast(t("x.toast.noFriendsToInvite")); return; }
   inviteCandidates=cands; inviteTargetGid=gid; S.view="invite"; renderApp();
 }
@@ -9489,14 +9657,23 @@ function screenInvite(){
     ${rows||`<p class="muted">${t('x.invite.none')}</p>`}
   </div>`;
 }
-function doInvite(gid,fid){
+async function doInvite(gid,fid){
   const g=GROUPS.find(x=>x.id===gid); const f=findPerson(fid);
   if(!g||!f)return;
-  g.room.members.push({id:uid(),name:f.name});
+  g.room.members.push({id:f.id,name:f.name,photo:f.photo||null,photoFull:f.photoFull||null});
+  if(activeGid===gid) S.members=g.room.members;
   g.chat.push({id:newMsgId(), ts:Date.now(), who:"システム", sys:true, t:`${f.name}さんがグループに参加しました`, mine:false, ago:nowTime()});
   inviteCandidates=inviteCandidates.filter(x=>x.id!==fid);
   toast(`${f.name}を招待しました`);
   renderApp();
+  if(window.SB && isSignedIn()){
+    try{
+      const { error } = await window.SB.from("trip_group_members")
+        .upsert({ group_id:gid, user_id:fid, role:"member" }, { onConflict:"group_id,user_id" });
+      if(error) console.log("[trip_group_members] invite upsert error:", error.message);
+      else createNotification(fid, "group_invite", { groupId: gid });
+    }catch(e){ console.log("[trip_group_members] invite exception:", e); }
+  }
 }
 function autoGrow(t){ t.style.height="42px"; t.style.height=Math.min(120,t.scrollHeight)+"px"; }
 function chatKey(e,kind){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); kind==="dm"?sendDM():sendGroupChat(); } }
@@ -9641,6 +9818,10 @@ function leaveGroup(gid){
   toast(t("toast.left",{name:g.name}));
   checkBadgeAwards();
   goView("home");
+  if(window.SB && isSignedIn()){
+    window.SB.from("trip_group_members").delete().eq("group_id",gid).eq("user_id",authUser().id)
+      .then(({error})=>{ if(error) console.log("[trip_group_members] leave error:", error.message); });
+  }
 }
 function togglePin(gid){
   const g=GROUPS.find(x=>x.id===gid); if(!g)return;
@@ -9691,6 +9872,7 @@ async function createNotification(recipientId, type, extra){
     if(extra && extra.postId) row.post_id = extra.postId;
     if(extra && extra.commentId) row.comment_id = extra.commentId;
     if(extra && extra.snapshot) row.content_snapshot = extra.snapshot;
+    if(extra && extra.groupId) row.group_id = extra.groupId;
     const { error } = await window.SB.from("notifications").insert(row);
     if(error){
       // メッセージ通知は「同じ相手からの未読メッセージ通知は常に1件まで」という仕様のため、
@@ -9701,13 +9883,13 @@ async function createNotification(recipientId, type, extra){
   }catch(e){ console.log("[notifications] insert exception:", e); }
 }
 const NOTIF_ICON = { like:"❤️", comment:"💬", mention:"📣", follow:"🤝", follow_request:"🔒", follow_accept:"✅", message:"✉️", tag:"🏷️",
-  collab_invite:"📎", collab_accept:"🤝", collab_left:"👋", post_deleted:"🗑️", collab_removed:"👋" };
+  collab_invite:"📎", collab_accept:"🤝", collab_left:"👋", post_deleted:"🗑️", collab_removed:"👋", group_invite:"🧳" };
 /* ログイン完了時に自分宛ての通知を取得し、NOTIFSを作り直す。actorのprofilesも合わせてPEOPLEへ反映する */
 async function loadNotifications(){
   if(!window.SB || !isSignedIn()) return;
   try{
     const { data, error } = await window.SB.from("notifications")
-      .select("id, actor_id, type, post_id, comment_id, read, created_at, content_snapshot, snapshot_used")
+      .select("id, actor_id, type, post_id, comment_id, group_id, read, created_at, content_snapshot, snapshot_used")
       .eq("recipient_id", authUser().id)
       .order("created_at", { ascending:false }).limit(100);
     if(error){ console.log("[notifications] load error:", error.message); return; }
@@ -9737,12 +9919,16 @@ async function loadNotifications(){
       else if(r.type==="collab_left") aText = t("x.notif.msg.collabLeft",{name});
       else if(r.type==="post_deleted") aText = t("x.notif.msg.postDeleted",{name});
       else if(r.type==="collab_removed") aText = t("x.notif.msg.collabRemoved",{name});
+      else if(r.type==="group_invite") aText = t("x.notif.msg.groupInvite",{name});
       const isProfileType = (r.type==="follow"||r.type==="follow_request"||r.type==="follow_accept");
       return {
         id: r.id, ic: NOTIF_ICON[r.type]||"🔔", a: aText, b: "",
         when: computeAgo(new Date(r.created_at).getTime()), ts: new Date(r.created_at).getTime(),
         unread: !r.read,
-        target: isProfileType ? {type:"profile", pid:r.actor_id} : r.type==="message" ? {type:"dm", fid:r.actor_id} : {type:"post"},
+        target: isProfileType ? {type:"profile", pid:r.actor_id}
+              : r.type==="message" ? {type:"dm", fid:r.actor_id}
+              : r.type==="group_invite" ? {type:"room", gid:r.group_id}
+              : {type:"post"},
         snapshot: r.content_snapshot || null,
         snapshotUsed: !!r.snapshot_used
       };
