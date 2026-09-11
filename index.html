@@ -8833,6 +8833,9 @@ function startNewTrip(){
   S.me = isSignedIn() ? authUser().id : null;
   S.view="room";
   renderApp();
+  // 作成直後にSupabaseへも登録しておく。名前確定(doCreate)前にトークン更新などで
+  // loadTripGroups()が再実行されても、このドラフトがGROUPSから消えないようにするため
+  persistTripGroup(id, g.name, S.destKind, null);
 }
 
 /* =====================================================================
