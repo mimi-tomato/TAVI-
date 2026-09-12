@@ -1,4 +1,4 @@
-# TAVI。引継ぎ資料(2026年9月12日時点・v127)
+# TAVI。引継ぎ資料(2026年9月12日時点・v128)
 
 新しいチャット(またはClaude Code)で作業を再開するための引継ぎ資料。旧資料(2026年7月2日時点・v100)を土台とし、フォロー・通知・ブロック・アカウント管理・DMチャットまでの実装(v101〜v122)、旅行計画(GROUPS)のSupabase化・ルーム調整内容の永続化(v123)、および旅の招待・参加が成立しなかったRLSデッドロックの解消となりすまし投票の除去(v124)、個人入力の1人1行化と進行操作の作成者限定(v125)を反映して全面更新している。作業を始める前に、まず本資料を読み、次に作業ファイル(`C:\Dev\TAVI\index.html`)を確認すること。
 
@@ -14,7 +14,7 @@
 
 ## ファイル運用
 
-　Claude Codeでの作業は`C:\Dev\TAVI\index.html`を直接編集し、`git add`/`commit`/`push`でGitHub Pagesへ反映する運用に統一済み(ChatGPT/Claude.ai上での`/mnt/user-data/outputs/`経由のアップロード運用は過去の名残であり、Claude Codeでは使わない)。**現在の最新バージョンはv127**。設計メモは `TAVI_設計方針メモ.md`(最古)、旧引継ぎ資料(v100時点)、本資料(v127時点・最新、`CLAUDE.md`)の3本立てになっているため、次回以降は本資料をベースに更新していく。
+　Claude Codeでの作業は`C:\Dev\TAVI\index.html`を直接編集し、`git add`/`commit`/`push`でGitHub Pagesへ反映する運用に統一済み(ChatGPT/Claude.ai上での`/mnt/user-data/outputs/`経由のアップロード運用は過去の名残であり、Claude Codeでは使わない)。**現在の最新バージョンはv128**。設計メモは `TAVI_設計方針メモ.md`(最古)、旧引継ぎ資料(v100時点)、本資料(v128時点・最新、`CLAUDE.md`)の3本立てになっているため、次回以降は本資料をベースに更新していく。
 
 　Service Worker(`/mnt/user-data/outputs/sw.js`)は、v92で全面的に書き換えた別ファイルであり、index.htmlと一緒にGitHubへ上げる必要がある。sw.js自体を変更しない限り、次回以降は index.html だけ差し替えれば反映される設計(後述「PWA更新設計」参照)。ただし後述の通り、直近でGitHub Pages側のデプロイ不良が発生しており、index.htmlの更新だけでは反映されないケースがあったため、「反映されない」報告があった場合はまずデプロイ状況を疑うこと。
 
@@ -212,6 +212,25 @@
 　残置しているもの: `BADGE_DEFS`(定義)、`earnedBadges`/`displayBadges`/`countryBadges`(判定)、`badgeIconInner`/`BADGE_BG`(見た目)、`showBadgeInfo`(説明)、`screenBadges`(表示するバッジの選択画面。`goFwd('badges')`で到達できたが、現在は導線を外している)、`BADGE_SEEN`、`LEFT_DONE_TRIPS`。CSS(`.badge-grid`/`.badge-item`/`.badge-mini`/`.badge-row-prof`等)もそのまま。
 
 　**2と3を両方消し忘れないこと。** 片方だけだと「自分には見えないバッジが他人のプロフィールには出ている」「見る場所が無いのに獲得通知だけ届く」という食い違いになる。
+
+## セキュリティ点検とXSSの修正(v128)
+
+　**【最重要】インラインハンドラへのコード注入(実証済み・修正済み)**: `esc()`はシングルクォートをエスケープしないため、`onclick="toggleSpot('${esc(s)}',event)"`のような書き方で**任意のJavaScriptが実行できる**状態だった。実際にPlaywrightで、スポット候補名を`x');任意のコード;('`にすると実行されることを確認している。スポット候補は`trip_spot_candidates`経由で全メンバーへ共有されるため、**1人が仕込めば同じ旅の全員のブラウザで実行される**(Supabaseのセッションはブラウザに保持されるので、アカウント乗っ取りまで到達しうる)経路だった。
+
+　**`escAttr()`では防げない理由(重要)**: HTMLの属性値は「実体参照が戻されてからJS(やCSS)として字句解析される」。`&#39;`は`'`に戻ってから解釈されるので、インラインハンドラの中では文字列が閉じてしまう。これも実証済み。**属性値として安全なこと(`escAttr`)と、その属性の中のJS文字列として安全なことは別物**。
+
+　対処として`escJs()`を新設した(バックスラッシュで`\`・`'`・改行を無害化してから`esc()`を通す)。**インラインハンドラのJS文字列と、style属性の`url('…')`へユーザー由来の値を埋める箇所では、必ず`esc()`ではなく`escJs()`を使うこと。** 適用済みの箇所は、スポット名(`toggleSpot`/`addToPlan`)、ハンドル(`pickMention`/`pickPostMention`/`openProfileByName`)、画像URL(`openFullImage`/`handleSlideTap`)、アバター・カバー画像の`url()`など計30箇所あまり。
+
+　**メンション候補が内部uuidを出していた不具合(v128で修正)**: `mentionCandidates()`が候補の`id`にprofilesのuuidを入れていたため、サジェストに`@8f3c…`と表示され、本文にもそれが挿入されていた。さらにメンション抽出の正規表現が`[A-Za-z0-9._]+`でハイフンを含まないため、**uuidを入れても通知は一切飛ばなかった**。表示用ハンドル(`user_id`)を使うよう修正し、あわせて自分の除外を`name!=="Tomato"`というモック時代の名前判定から、ログイン中のidでの判定へ変えた(以前は自分自身をメンションできた)。ハンドルは`loadTripGroups()`で`profiles.user_id`も取得してメンバー情報に持たせているため、フォローしていない相手でも引ける。
+
+　**ブロック判定をコメントにも適用(v128)**: コメント取得(`loadPostComments`)にブロック判定が無く、ブロック相手のコメントが投稿に表示されていた。`isBlockedRelation`でフィルタするようにした。**ブロックは全画面共通のルールなので、新しい読み込み処理を足す時は必ず通すこと。**
+
+　**点検して問題が無かったもの**: 埋め込まれているSupabaseキーは`anon`ロールのみで、`service_role`キー・APIキー・メールアドレスの混入は無し(anonキーはRLS前提で公開してよい設計)。`localStorage`へアプリが書いているのは地図の表示設定と共同投稿の同意フラグだけ。`href`へのユーザー値埋め込みは無し。`window.open`は`isFinite()`で緯度経度を検証し`noopener`付き。投稿本文・コメント・チャット本文は`esc()`を通っている。
+
+　**未対応として残した指摘(次回以降の判断待ち)**:
+- **生のDBエラーをそのままトースト表示している箇所が8つある**(`toast(error.message)`。投稿・コメント・共同投稿・ID変更)。「new row violates row-level security policy for table "posts"」のような英文がそのままユーザーに出るうえ、テーブル名やポリシー名が漏れる。認証まわりは`translateAuthError()`で日本語化済みなので、同じように一般的な文言へ寄せるべき。
+- **`screenSearch()`/`renderSearchList()`が壊れたまま残っている**。`g.dest`/`g.status`/`g.when`/`g.members`という現在のGROUPSに存在しないプロパティを参照しており、呼ぶと`Cannot read properties of undefined`で落ちる。`onclick="openRoom()"`も引数が無い。ただし`S.view="search"`へ遷移する導線がどこにも無いため到達不能。旅の検索を作る予定が無いなら削除してよい。
+- `ME.name`の最終フォールバックが残っている(profiles取得に失敗すると空表示になる)。
 
 ## 【重要・現在進行中】GitHub Pagesへのデプロイ不良
 

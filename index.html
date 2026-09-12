@@ -1297,13 +1297,13 @@
     // 起動時の現在セッション
     const { data: { session } } = await supabase.auth.getSession();
     window.__authUser = session ? session.user : null;
-    console.log("[Supabase] auth:", window.__authUser ? ("signed in: " + window.__authUser.email) : "signed out");
+    console.log("[Supabase] auth:", window.__authUser ? "signed in" : "signed out");
     if (typeof window.onAuthChanged === "function") window.onAuthChanged(window.__authUser);
 
     // 以降の変化を購読
     supabase.auth.onAuthStateChange((_event, session) => {
       window.__authUser = session ? session.user : null;
-      console.log("[Supabase] auth state:", window.__authUser ? ("signed in: " + window.__authUser.email) : "signed out");
+      console.log("[Supabase] auth state:", window.__authUser ? "signed in" : "signed out");
       if (typeof window.onAuthChanged === "function") window.onAuthChanged(window.__authUser);
     });
   }
@@ -2786,7 +2786,8 @@ async function loadCommentsFor(postIds){
       .from("comments").select("id, post_id, author_id, text, created_at")
       .in("post_id", postIds).order("created_at", { ascending:true });
     if(error){ console.log("[comments] load error:", error.message); return; }
-    const rows = data || [];
+    // ブロック関係にある相手のコメントは表示しない(投稿一覧・検索・DMと同じ共通ルール)
+    const rows = (data || []).filter(r=>!isBlockedRelation(r.author_id));
     const authorIds = [...new Set(rows.map(r=>r.author_id))];
     let profMap = {};
     if(authorIds.length){
@@ -3149,6 +3150,14 @@ const appEl = () => $("#app");
 const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 /* onclick属性の中に単一引用符で埋め込む値専用。escに加えて ' も退避し、属性・スクリプトの構文破壊を防ぐ */
 const escAttr = s => esc(s).replace(/'/g,"&#39;");
+/* onclick等のインラインハンドラの中で、JSの文字列リテラルに値を埋める時に使う。
+   HTMLの属性値は「実体参照が戻されてからJSとして字句解析される」ため、esc()やescAttr()では
+   シングルクォートの脱出を防げない(&#39;が'に戻ってから解釈されるので、そこで文字列が閉じて
+   任意のコードが動く)。バックスラッシュで無害化してからHTMLのエスケープをかけること。
+   ユーザーが入力しうる値(表示名・ハンドル・スポット名・URLなど)をインラインハンドラへ
+   埋める箇所では、必ずesc()ではなくこれを使う。 */
+const escJs = s => esc(String(s==null?"":s)
+  .replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\r/g,"\\r").replace(/\n/g,"\\n"));
 const uid = () => Math.random().toString(36).slice(2,8);
 function toast(m,ms){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),ms||1600);}
 /* ①②未入手バッジ用のトースト。先頭に鍵画像を出し、モノクロ×ダーク時は文字を黒にして同化を防ぐ */
@@ -3225,23 +3234,25 @@ function notifyMentions(g, txt){
   (g.room.members||[]).forEach(m=>{
     if(m.id===me) return;
     if(all){ createNotification(m.id, "mention", {groupId:g.id}); return; }
-    const person=findPerson(m.id);
-    if(person && person.userId && tokens.includes(person.userId)){
-      createNotification(m.id, "mention", {groupId:g.id});
-    }
+    const p=findPerson(m.id);
+    const handle=m.userId||(p&&p.userId);
+    if(handle && tokens.includes(handle)) createNotification(m.id, "mention", {groupId:g.id});
   });
 }
 
 /* ===== ①メンション候補(サジェスト) ===== */
-/* 現在開いているグループのメンバー候補を返す。Tomato(自分)は除く */
+/* 現在開いているグループのメンバー候補を返す(自分は除く)。
+   idには必ず表示用ハンドル(userId)を入れること。ここに内部のuuidを入れると、
+   本文へ @uuid が挿入されて相手には誰のことか分からず、通知も飛ばない。
+   ハンドルが分からない相手は @ で指しようが無いので候補に出さない */
 function mentionCandidates(){
   const g=GROUPS.find(x=>x.id===activeGid); if(!g)return [];
-  const names=(g.room.members||[]).map(m=>m.name).filter(n=>n!=="Tomato");
-  return names.map(nm=>{
-    const p=PEOPLE.find(x=>x.name===nm);
-    return p ? {id:p.id, name:p.name, photo:p.photo||"", avatar:p.avatar||"🙂"}
-             : {id:nm, name:nm, photo:"", avatar:"🙂"};
-  });
+  const me=isSignedIn()?authUser().id:null;
+  return (g.room.members||[]).filter(m=>m.id!==me).map(m=>{
+    const p=findPerson(m.id);
+    return { id:m.userId||(p&&p.userId)||"", name:m.name||(p&&p.name)||t("post.noName"),
+      photo:m.photo||(p&&p.photo)||"", avatar:(p&&p.avatar)||"🙂" };
+  }).filter(c=>c.id);
 }
 /* textareaの入力を監視し、カーソル直前が @語 ならサジェストを出す */
 let _mentionStart=-1;
@@ -3267,10 +3278,10 @@ function showMentionPop(list){
   const pop=document.getElementById("mentionPop"); if(!pop)return;
   pop.innerHTML=list.slice(0,6).map(c=>{
     const av = c.photo
-      ? `<div class="mc-av" style="background-image:url('${c.photo}')"></div>`
+      ? `<div class="mc-av" style="background-image:url('${escJs(c.photo)}')"></div>`
       : `<div class="mc-av emoji">${esc(c.avatar||"🙂")}</div>`;
     const sub = c.isAll ? "グループ全員へ" : `@${esc(c.id)}`;
-    return `<button class="mc-item" onmousedown="event.preventDefault()" onclick="pickMention('${esc(c.id)}')">
+    return `<button class="mc-item" onmousedown="event.preventDefault()" onclick="pickMention('${escJs(c.id)}')">
       ${av}<div class="mc-body"><div class="mc-name">${esc(c.name)}</div><div class="mc-id">${sub}</div></div></button>`;
   }).join("");
   pop.style.display="block";
@@ -3449,7 +3460,7 @@ function viewCreate(){
 }
 function coverStyle(){
   const g=activeGid?GROUPS.find(x=>x.id===activeGid):null;
-  if(g&&g.img) return `background:url('${g.img}') center/cover`;
+  if(g&&g.img) return `background:url('${escJs(g.img)}') center/cover`;
   if(g&&g.cover) return `background:${g.cover}`;
   return `background:linear-gradient(135deg,#3b6ef5,#9bb6ff)`;
 }
@@ -3549,7 +3560,7 @@ function toggleFriendMember(pid){
         });
     }
   }else{
-    const m={id:p.id,name:p.name,photo:p.photo||null,photoFull:p.photoFull||null,refId:pid};
+    const m={id:p.id,userId:p.userId||"",name:p.name,photo:p.photo||null,photoFull:p.photoFull||null,refId:pid};
     S.members.push(m); if(!S.me)S.me=m.id;
     toast(t("toast.memberAdded",{name:p.name}));
     if(activeGid && window.SB && isSignedIn()){
@@ -3604,7 +3615,7 @@ function viewWishes(){
       <p class="hint">${t("s3.country.hint")}</p>
       <div class="country-grid">
         ${COUNTRIES.map((c,i)=>`
-          <div class="ccard ${myCountry.includes(c.n)?'sel':''}" onclick="toggleCountry('${esc(c.n)}')">
+          <div class="ccard ${myCountry.includes(c.n)?'sel':''}" onclick="toggleCountry('${escJs(c.n)}')">
             <div class="scene" style="${c.img?`background:url('${KOREA_IMG}') center/cover`:(COUNTRY_IMG[c.n]?`background:url('${COUNTRY_IMG[c.n]}') center/cover`:`background:linear-gradient(160deg,${c.c1},${c.c2})`)}"></div>
             <div class="veil2"></div>
             <span class="cname"><span class="cn-ja">${esc(c.n)}</span><span class="cn-en">${esc(c.en||"")}</span></span>
@@ -3642,12 +3653,12 @@ function renderGenres(){
   const genreBlock=(g)=>{
     const open=S.openGenres.includes(g.name);
     return `<div class="genre ${open?'open':''}">
-      <button class="gh" onclick="toggleGenre('${esc(g.name)}')">
+      <button class="gh" onclick="toggleGenre('${escJs(g.name)}')">
         <span>${esc(itemLabel(g.name))}</span>
         <span class="gh-right"><span class="count">${t("list.count",{n:g.items.length})}</span><span class="gh-caret">${open?'▾':'▸'}</span></span>
       </button>
       ${open?`<div class="opts">
-        ${g.items.map(it=>`<div class="opt ${myAct.includes(it)?'sel':''}" data-act="${esc(it)}" onclick="toggleAct('${esc(it)}',event)">${esc(itemLabel(it))}</div>`).join("")}
+        ${g.items.map(it=>`<div class="opt ${myAct.includes(it)?'sel':''}" data-act="${esc(it)}" onclick="toggleAct('${escJs(it)}',event)">${esc(itemLabel(it))}</div>`).join("")}
       </div>`:``}
     </div>`;
   };
@@ -4413,7 +4424,7 @@ function viewSpots(){
     <div class="divider"></div>
     <h3 class="sub" style="margin-top:0">${t("s6.candidates")}</h3>
     ${pool.length?`<div class="spot-grid">
-      ${pool.map(s=>`<div class="spot ${mine.includes(s)?'sel':''}" data-spot="${esc(s)}" onclick="toggleSpot('${esc(s)}',event)">${esc(itemLabel(s))}${voteCountFor(s)?` <span style="font-size:11px;color:var(--ink-soft)">(${voteCountFor(s)})</span>`:""}</div>`).join("")}
+      ${pool.map(s=>`<div class="spot ${mine.includes(s)?'sel':''}" data-spot="${esc(s)}" onclick="toggleSpot('${escJs(s)}',event)">${esc(itemLabel(s))}${voteCountFor(s)?` <span style="font-size:11px;color:var(--ink-soft)">(${voteCountFor(s)})</span>`:""}</div>`).join("")}
     </div>`:`<p class="muted">${t("s6.noCand")}</p>`}
     <div class="answer-actions">
       <button class="btn primary" onclick="toast(t('toast.savedAns',{name:meName()}))">${t("s6.saveMine")}</button>
@@ -4483,7 +4494,7 @@ function viewSpotPlan(){
     ${candidates.length?`
       <label class="fld">${t("st.fromCand")}</label>
       <div class="spot-grid">
-        ${candidates.map(c=>`<div class="spot" onclick="addToPlan('${esc(c.name)}')">＋ ${esc(itemLabel(c.name))}${c.votes>0?` <span style="color:var(--ink-soft);font-size:12px">(${c.votes})</span>`:""}</div>`).join("")}
+        ${candidates.map(c=>`<div class="spot" onclick="addToPlan('${escJs(c.name)}')">＋ ${esc(itemLabel(c.name))}${c.votes>0?` <span style="color:var(--ink-soft);font-size:12px">(${c.votes})</span>`:""}</div>`).join("")}
       </div>`:``}
     <label class="fld">${t("st.freeAdd")}</label>
     <div class="row">
@@ -4752,8 +4763,11 @@ function TAIWAN_IMG_OK(){ try{ return (typeof COUNTRY_IMG!=="undefined"&&COUNTRY
 /* 自分のプロフィール */
 /* photo=アイコン表示用(200px角)、photoFull=長押し拡大表示用(800px角)。
    どちらもSupabase Storage(avatarsバケット)のURLで、ログイン時にensureProfile()がprofilesテーブルから読み込む */
-let ME = { id:"tomato", name:"Tomato", avatar:"🍅", photo:null, photoFull:null,
-  bio:"旅と写真とラーメンが好き。", birthday:"5/12", affiliation:"〇〇大学 経営学部",
+/* ログイン中の自分。中身は ensureProfile() が profiles 行から毎回入れ直すので、ここの値は
+   読み込み前の一瞬だけ使われる初期値。以前はモック時代の名前・自己紹介・誕生日・所属が
+   そのまま入っていたため、profiles の取得に失敗すると他人の設定のように見える状態だった */
+let ME = { name:"", avatar:"🍅", photo:null, photoFull:null,
+  bio:"", birthday:"",
   private:false, showReadReceipts:true };
 
 /* 全ユーザー(自分以外)。Supabaseのprofiles/followsから取得した実データのローカルキャッシュとして運用する。
@@ -5122,7 +5136,7 @@ async function loadTripGroups(){
     let profMap={};
     if(memberIds.length){
       const { data: profs, error: e4 } = await window.SB.from("profiles")
-        .select("id, display_name, avatar_url, avatar_url_full").in("id", memberIds);
+        .select("id, user_id, display_name, avatar_url, avatar_url_full").in("id", memberIds);
       if(e4) console.log("[profiles] load members error:", e4.message);
       (profs||[]).forEach(p=>{ profMap[p.id]=p; });
     }
@@ -5132,7 +5146,9 @@ async function loadTripGroups(){
     GROUPS=(groups||[]).map((g,i)=>{
       const mems=(allMembers||[]).filter(r=>r.group_id===g.id).map(r=>{
         const p=profMap[r.user_id]||{};
-        return { id:r.user_id, name:p.display_name||t("post.noName"), photo:p.avatar_url||null, photoFull:p.avatar_url_full||null };
+        // userId(表示用ハンドル)はメンション候補で使う。uuidを@で指しても誰にも届かない
+        return { id:r.user_id, userId:p.user_id||"", name:p.display_name||t("post.noName"),
+          photo:p.avatar_url||null, photoFull:p.avatar_url_full||null };
       });
       const prev=oldById[g.id];
       // room_state列に保存済みの調整内容(ステップ進行・確定日程・予算・最終合意・巡回順・詳細プランなど)を
@@ -5459,7 +5475,7 @@ function tabbarHTML(){
   // プロフィールタブ(ユーザー画像を丸く表示。サイズ統一)
   const onP = S.view==="profile" || S.view==="addfriend"; // 友達検索はプロフィールから開く画面なので同じ扱いにする
   const pAv = ME.photo
-    ? `<span class="tab-ava img ${onP?'on':''}" style="background-image:url('${ME.photo}')"></span>`
+    ? `<span class="tab-ava img ${onP?'on':''}" style="background-image:url('${escJs(ME.photo)}')"></span>`
     : `<span class="tab-ava ${onP?'on':''}">${esc(ME.avatar||"🙂")}</span>`;
   const profileTabBtn = `<button class="tab ${onP?'on':''}" onclick="goTab('profile')">
       <span class="tab-ic-wrap">${pAv}</span></button>`;
@@ -5567,14 +5583,14 @@ function postCardHTML(p){
         const midUrl = isObj?img.mid:img;
         const fullUrl = isObj?img.full:img;
         const cropAttr = isObj && img.crop ? ` data-post-crop='${JSON.stringify(img.crop).replace(/'/g,"&#39;")}'` : "";
-        return `<div class="pc-slide" onclick="event.stopPropagation();handleSlideTap('${fullUrl}','${escAttr(p.userId||'')}','${escAttr(p.avatar||'')}')"><img class="pc-crop-img" src="${midUrl}" alt="" crossorigin="anonymous" draggable="false" oncontextmenu="return false" style="width:100%;height:100%;object-fit:cover"${cropAttr}></div>`;
+        return `<div class="pc-slide" onclick="event.stopPropagation();handleSlideTap('${escJs(fullUrl)}','${escJs(p.userId||'')}','${escJs(p.avatar||'')}')"><img class="pc-crop-img" src="${midUrl}" alt="" crossorigin="anonymous" draggable="false" oncontextmenu="return false" style="width:100%;height:100%;object-fit:cover"${cropAttr}></div>`;
       }).join("")}</div>
       ${p.images.length>1?`<button class="pc-nav prev" onclick="event.stopPropagation();carouselMove('${p.id}',-1,${p.images.length})" ondblclick="event.stopPropagation()">‹</button>
         <button class="pc-nav next" onclick="event.stopPropagation();carouselMove('${p.id}',1,${p.images.length})" ondblclick="event.stopPropagation()">›</button>
         <div class="pc-dots" id="pcd_${p.id}">${p.images.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join("")}</div>`:''}
       <div class="pc-top">
-        <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
-        <span class="post-who" style="cursor:pointer" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
+        <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${escJs(p.userId||p.who)}')`}">${pav.inner}</span>
+        <span class="post-who" style="cursor:pointer" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${escJs(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
         <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
         ${postMenuBtn(p)}
       </div>
@@ -5590,8 +5606,8 @@ function postCardHTML(p){
   }
   return `<div class="post-card text-post" data-pid="${p.id}">
     <div class="post-head">
-      <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">${pav.inner}</span>
-      <span class="post-who" style="cursor:pointer" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${esc(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
+      <span class="post-ava${pav.clsSuffix}" style="${pav.style}" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${escJs(p.userId||p.who)}')`}">${pav.inner}</span>
+      <span class="post-who" style="cursor:pointer" onclick="event.stopPropagation();${p.mine?`goTab('profile')`:`profileBackView='post';openProfileByName('${escJs(p.userId||p.who)}')`}">@${esc(p.userId||"")}</span>
       <span class="post-ago">${esc(p.ago||"")}</span>${visIcon}
       ${postMenuBtn(p)}
     </div>
@@ -5669,7 +5685,7 @@ function openTaggedListPopup(id, ev){
     const canInvite = p.mine && !alreadyCollab;
     const nameOnclick = isSelf
       ? "event.stopPropagation();closeAllPostMenus();goTab('profile')"
-      : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(tg.userId||tg.name)}')`;
+      : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${escJs(tg.userId||tg.name)}')`;
     return `<div class="tag-list-row">
       <span class="tag-list-name" onclick="${nameOnclick}">@${esc(tg.userId||tg.name)}</span>
       <span class="tag-list-actions">
@@ -5714,7 +5730,7 @@ function openCollabListPopup(id, ev){
     const isMe = me && cb.id===me.id;
     const nameOnclick = isMe
       ? "event.stopPropagation();closeAllPostMenus();goTab('profile')"
-      : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${esc(cb.userId||cb.name)}')`;
+      : `event.stopPropagation();closeAllPostMenus();profileBackView='post';openProfileByName('${escJs(cb.userId||cb.name)}')`;
     return `<div class="tag-list-row">
       <span class="tag-list-name" onclick="${nameOnclick}">@${esc(cb.userId||cb.name)}</span>
       ${p.mine?`<button class="tag-list-remove" onclick="event.stopPropagation();confirmRemoveCollaborator('${id}','${cb.id}')" aria-label="${t('post.collabEnd')}">✕</button>`
@@ -5934,7 +5950,7 @@ async function submitReport(){
 function commentHTML(p,c){
   const canDel=c.mine||p.mine;
   const idText = c.userId ? ("@"+esc(c.userId)) : esc(c.who||"");
-  const avStyle = (c.photo && /^https?:\/\//.test(c.photo)) ? `background-image:url('${c.photo}')` : "";
+  const avStyle = (c.photo && /^https?:\/\//.test(c.photo)) ? `background-image:url('${escJs(c.photo)}')` : "";
   const avInner = avStyle ? "" : (c.avatar || "🙂");
   // 投稿者(元の投稿主)からのいいねバッジ: 投稿者の顔アイコン+ハートを重ねて表示
   const ownerBadge = c.likedByOwner ? `
@@ -6128,7 +6144,7 @@ function openFullImage(url, authorId, authorAvatar){
   // 画像自体には焼き込まないので、拡大縮小(transform)の影響を受けず常に同じ大きさで表示される
   const isPhoto = authorAvatar && /^https?:\/\//.test(authorAvatar);
   const avatarHTML = isPhoto
-    ? `<span class="fimg-badge-av" style="background-image:url('${esc(authorAvatar)}')"></span>`
+    ? `<span class="fimg-badge-av" style="background-image:url('${escJs(authorAvatar)}')"></span>`
     : `<span class="fimg-badge-av">${esc(authorAvatar||"🙂")}</span>`;
   const badgeHTML = authorId
     ? `<div class="fimg-badge" id="fimgBadge" style="visibility:hidden">${avatarHTML}<span class="fimg-badge-name">@${esc(authorId)}</span></div>` : '';
@@ -6454,9 +6470,9 @@ function showPostMentionPop(list){
   const pop=document.getElementById("postMentionPop"); if(!pop)return;
   pop.innerHTML=list.slice(0,6).map(p=>{
     const av = p.photo
-      ? `<div class="mc-av" style="background-image:url('${p.photo}')"></div>`
+      ? `<div class="mc-av" style="background-image:url('${escJs(p.photo)}')"></div>`
       : `<div class="mc-av emoji">${esc(p.avatar||"🙂")}</div>`;
-    return `<button class="mc-item" onmousedown="event.preventDefault()" onclick="pickPostMention('${esc(p.userId)}')">
+    return `<button class="mc-item" onmousedown="event.preventDefault()" onclick="pickPostMention('${escJs(p.userId)}')">
       ${av}<div class="mc-body"><div class="mc-name">${esc(p.name)}</div><div class="mc-id">@${esc(p.userId)}</div></div></button>`;
   }).join("");
   // .mention-popは元々チャット入力欄の直上に浮かせるための相対配置なので、
@@ -6968,7 +6984,7 @@ function screenHome(){
     const stB = pr.status==="live"?`<span class="st-badge live">${t("card.live")}</span>`
       : pr.status==="done"?`<span class="st-badge done">${t("card.done")}</span>`
       : `<span class="st-badge">${t("card.prep")}</span>`;
-    const cover = g.img ? `background-image:url('${g.img}')` : `background-image:${g.cover}`;
+    const cover = g.img ? `background-image:url('${escJs(g.img)}')` : `background-image:${g.cover}`;
     const mem=g.room.members||[];
     const ava = mem.slice(0,5).map(m=>`<span>${esc((m.name||"?").slice(0,1))}</span>`).join("")
       + (mem.length>5?`<span>+${mem.length-5}</span>`:"");
@@ -7024,7 +7040,7 @@ function screenHome(){
   const confirmedCards = confirmed.map(makeCard).join("");
   const archCards = archived.map(g=>{
     const pr=groupProgress(g);
-    const cover = g.img ? `background-image:url('${g.img}')` : `background-image:${g.cover}`;
+    const cover = g.img ? `background-image:url('${escJs(g.img)}')` : `background-image:${g.cover}`;
     return `<div class="gcard" style="opacity:.85" onclick="openRoom('${g.id}')">
       <div class="cover" style="${cover};height:96px">
         <div class="badge-row"><span class="st-badge">${t('x.home.archive')}</span></div>
@@ -7255,7 +7271,7 @@ async function declineCollabInvite(postId){
 }
 
 /* ---- プロフィール ---- */
-function avatarStyle(p){ return p.photo?`background-image:url('${p.photo}')`:""; }
+function avatarStyle(p){ return p.photo?`background-image:url('${escJs(p.photo)}')`:""; }
 function avatarInner(p){ return p.photo?"":(p.avatar||"🙂"); }
 /* 投稿一覧(POSTS)用。ME/PEOPLEはphoto(画像URL)とavatar(絵文字)を別プロパティに持つが、
    POSTSはprofiles.avatar_urlをそのままavatarへ入れる設計のため、値が画像URLか絵文字かをここで判定する。
@@ -7265,7 +7281,7 @@ function personAvatarValue(avatarValue){
   const isPhoto = avatarValue && /^https?:\/\//.test(avatarValue);
   return {
     clsSuffix: isPhoto ? " img" : "",
-    style: isPhoto ? `background-image:url('${esc(avatarValue)}')` : "",
+    style: isPhoto ? `background-image:url('${escJs(avatarValue)}')` : "",
     inner: isPhoto ? "" : esc(avatarValue || "🙂")
   };
 }
@@ -7950,7 +7966,7 @@ function screenProfile(){
   const dark=document.documentElement.getAttribute("data-theme")==="dark";
   const joined=GROUPS.filter(g=>g.joined);
   const doneCnt=joined.filter(g=>groupProgress(g).status==="done").length;
-  const factors=TRAVEL_FACTORS.map(f=>`<div class="spot ${MYPREFS.includes(f)?'sel':''}" onclick="toggleFactor('${esc(f)}',this)">${esc(itemLabel(f))}</div>`).join("");
+  const factors=TRAVEL_FACTORS.map(f=>`<div class="spot ${MYPREFS.includes(f)?'sel':''}" onclick="toggleFactor('${escJs(f)}',this)">${esc(itemLabel(f))}</div>`).join("");
   const meta=[];
   if(ME.birthday) meta.push(`<span class="mi">🎂 ${esc(ME.birthday)}</span>`);
   const followerCnt=PEOPLE.filter(p=>p.followsMe).length;
@@ -7965,7 +7981,7 @@ function screenProfile(){
       </button>
     </div>
     <div class="prof-top" style="margin-top:-6px">
-      <div class="pava ${ME.photo?'img':''}" style="${avatarStyle(ME)}${ME.photo?';cursor:pointer':''};margin:0 auto 10px" ${ME.photo?`onclick="openFullImage('${esc(ME.photoFull||ME.photo)}')"`:''}>${avatarInner(ME)}</div>
+      <div class="pava ${ME.photo?'img':''}" style="${avatarStyle(ME)}${ME.photo?';cursor:pointer':''};margin:0 auto 10px" ${ME.photo?`onclick="openFullImage('${escJs(ME.photoFull||ME.photo)}')"`:''}>${avatarInner(ME)}</div>
       <div class="pn">${esc(ME.name)} ${ME.private?lockIc():''}</div>
       <div class="pm">@${esc(myUserId)}</div>
       ${ME.bio?`<div class="prof-bio">${esc(ME.bio)}</div>`:`<div class="prof-bio" style="color:var(--ink-soft)">${t('x.prof.addBio')}</div>`}
@@ -8467,7 +8483,7 @@ async function reactivateAccount(){
    (ブロックした側が取得できる情報を最小限にとどめる設計上の制約) */
 function screenBlockedUsers(){
   const body = BLOCKED_LIST.length ? BLOCKED_LIST.map(p=>`<div class="listcard">
-      <div class="lic" style="${p.photo?`background-image:url('${esc(p.photo)}');background-size:cover;background-position:center;font-size:0`:''}">${p.photo?'':'🙂'}</div>
+      <div class="lic" style="${p.photo?`background-image:url('${escJs(p.photo)}');background-size:cover;background-position:center;font-size:0`:''}">${p.photo?'':'🙂'}</div>
       <div class="lt"><div class="a">${esc(p.name)}</div><div class="b">@${esc(p.userId)}</div></div>
       <button class="mini-btn danger" onclick="unblockUser('${p.id}')">${t('settings.unblock')}</button>
     </div>`).join("") : `<p class="muted" style="text-align:center;margin-top:24px">${t('settings.blockedUsersEmpty')}</p>`;
@@ -8860,7 +8876,7 @@ function screenUserProfile(){
       <button class="room-back" onclick="goBackFromProfile()"><span class="back-arrow">←</span></button>
     </div>
     <div class="other-cover"></div>
-    <div class="other-ava" style="${avatarStyle(p)}${p.photo?';cursor:pointer':''}" ${p.photo?`onclick="openFullImage('${esc(p.photoFull||p.photo)}')"`:''}>${avatarInner(p)}</div>
+    <div class="other-ava" style="${avatarStyle(p)}${p.photo?';cursor:pointer':''}" ${p.photo?`onclick="openFullImage('${escJs(p.photoFull||p.photo)}')"`:''}>${avatarInner(p)}</div>
     <div style="text-align:center;margin-top:8px">
       <div class="pn">${esc(p.name)} ${p.private?`<img src="${dark?UI_IMG.lock_white:UI_IMG.lock_black}" class="lock-ic" alt="${t('x.alt.private')}">`:''} ${p.online?`<span style="font-size:11px;color:var(--ok)">${t('x.oprof.online')}</span>`:''}</div>
       <div class="pm">@${esc(p.userId)}</div>
@@ -9394,7 +9410,7 @@ function toggleMsgExpand(id){
 function msgHTML(m){
   ensureMsgId(m);
   const body = m.img
-    ? `<div class="bub ${m.mine?'me':'them'} img-bub" onclick="openFullImage('${esc(m.imgFull||m.img)}')"><img src="${esc(m.img)}" alt="${t('x.alt.photo')}"></div>`
+    ? `<div class="bub ${m.mine?'me':'them'} img-bub" onclick="openFullImage('${escJs(m.imgFull||m.img)}')"><img src="${esc(m.img)}" alt="${t('x.alt.photo')}"></div>`
     : `<div class="bub ${m.mine?'me':'them'}">${msgText(m)}</div>`;
   // 自分の送信メッセージのみ既読マークの対象。相手が既読表示をONにしていて、かつ相手のlast_read_atが
   // このメッセージの送信時刻以降であれば「既読」を表示する
@@ -9427,7 +9443,7 @@ function renderDMBody(scroll){
 function groupMsgHTML(m){
   ensureMsgId(m);
   const body = m.img
-    ? `<div class="bub ${m.mine?'me':'them'} img-bub" onclick="openFullImage('${esc(m.imgFull||m.img)}')"><img src="${esc(m.img)}" alt="${t('x.alt.photo')}"></div>`
+    ? `<div class="bub ${m.mine?'me':'them'} img-bub" onclick="openFullImage('${escJs(m.imgFull||m.img)}')"><img src="${esc(m.img)}" alt="${t('x.alt.photo')}"></div>`
     : `<div class="bub ${m.mine?'me':'them'}">${msgText(m)}</div>`;
   // .bub-lineは絵文字リアクションのボタンをバブルの横に並べるための入れ物だった。
   // 幅を内容に合わせて縮める行の中で .bub の max-width:78% を効かせると、バブルが極端に
@@ -9450,7 +9466,7 @@ function groupAvHTML(g, extraClass, onclick){
   const cls = "av grp"+(extraClass?(" "+extraClass):"");
   const oc = onclick?` onclick="${onclick}"`:"";
   if(g.img){
-    return `<div class="${cls} img" style="background-image:url('${g.img}');cursor:pointer"${oc}></div>`;
+    return `<div class="${cls} img" style="background-image:url('${escJs(g.img)}');cursor:pointer"${oc}></div>`;
   }
   return `<div class="${cls}" style="background:${g.cover};color:#fff;cursor:pointer"${oc}>${esc(g.name.slice(0,1))}</div>`;
 }
@@ -9572,7 +9588,7 @@ function screenGroupInfo(){
       <button class="room-back" onclick="goBack('groupchat')" style="background:rgba(255,255,255,.85);border-radius:999px;padding:6px 12px 6px 8px">
         <span class="back-arrow">←</span></button>
     </div>
-    <div class="gi-cover ${g.img?'has-img':''}" style="${g.img?`background-image:url('${g.img}')`:`background:${g.cover}`}">
+    <div class="gi-cover ${g.img?'has-img':''}" style="${g.img?`background-image:url('${escJs(g.img)}')`:`background:${g.cover}`}">
       <div class="gi-title"><div class="nm">${esc(g.name)}</div><div class="dest">📍 ${esc(destLabel(g))}・${mem.length}人</div></div>
       <button class="gi-cover-cam" onclick="document.getElementById('giImgInput').click()" aria-label="${t('x.aria.changeGroupImg')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></button>
       <input type="file" id="giImgInput" accept="image/*" style="display:none" onchange="onGroupImgPick(event,'${g.id}')">
@@ -9598,7 +9614,7 @@ function screenGroupInfo(){
     </div>
     ${(g.albums||[]).length?`<div class="album-grid">
       ${g.albums.map(al=>`<div class="album-card" onclick="openAlbum('${g.id}','${al.id}')">
-        <div class="cov" style="${al.items&&al.items[0]?`background-image:url('${al.items[0].src}')`:''}">${al.items&&al.items.length?'':'🖼️'}</div>
+        <div class="cov" style="${al.items&&al.items[0]?`background-image:url('${escJs(al.items[0].src)}')`:''}">${al.items&&al.items.length?'':'🖼️'}</div>
         <div class="info"><div class="t">${esc(al.title)}</div><div class="c">${(al.items||[]).length}枚・${esc(al.by)}</div></div>
       </div>`).join("")}
     </div>`:`<p class="muted" style="padding:4px 4px 0">${t('x.room.noAlbum')}</p>`}
@@ -9875,7 +9891,7 @@ async function doInvite(gid,fid){
       }
     }catch(e){ console.log("[trip_group_members] invite exception:", e); toast(`${f.name}を招待できませんでした`); return; }
   }
-  g.room.members.push({id:f.id,name:f.name,photo:f.photo||null,photoFull:f.photoFull||null});
+  g.room.members.push({id:f.id,userId:f.userId||"",name:f.name,photo:f.photo||null,photoFull:f.photoFull||null});
   if(activeGid===gid) S.members=g.room.members;
   inviteCandidates=inviteCandidates.filter(x=>x.id!==fid);
   toast(`${f.name}を招待しました`);
