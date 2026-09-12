@@ -3518,7 +3518,7 @@ function viewJoin(){
     <div class="hint" style="margin-top:10px">${t("s2.hint")}</div>
     <div class="roster" id="roster"></div>
     <div class="btn-row">
-      <button class="btn primary" id="toAct" onclick="startNext()" ${S.members.length<1?'disabled':''}>
+      <button class="btn primary" id="toAct" onclick="startNext()" ${invitedCount()<1?'disabled':''}>
         ${S.mode==='decided'?t("s2.next.date"):t("s2.next.wish")}</button>
     </div>
   </div>`;
@@ -3583,10 +3583,12 @@ function toggleFriendMember(pid){
   }
   drawFriendPick(); drawRoster(); renderSteps();
 }
+/* 自分を除いたメンバー数。招待できたかどうかの判定に使う */
+function invitedCount(){ return (S.members||[]).filter(m=>m.id!==S.me).length; }
 function drawRoster(){const r=$("#roster");if(!r)return;
   r.innerHTML=S.members.map(m=>`<span class="chip"><span class="dot"></span>${esc(m.name)}</span>`).join("")||`<span class="muted">${t("s2.rosterEmpty")}</span>`;
-  const b=$("#toAct");if(b)b.disabled=S.members.length<1;}
-function startNext(){if(S.members.length<1){toast(t("toast.need3"));return;} goStep(S.mode==='decided'?4:3);}
+  const b=$("#toAct");if(b)b.disabled=invitedCount()<1;}
+function startNext(){if(invitedCount()<1){toast(t("toast.need3"));return;} goStep(S.mode==='decided'?4:3);}
 </script>
 <script>
 /* ===== 画面3 希望集約 ===== */
@@ -3806,7 +3808,11 @@ function viewWishTally(){
   if(prefVoted) drawMap("mapHeat", null, null, true);
 }
 function confirmDest(){const v=$("#destChoose").value.trim();if(!v){toast(t("toast.needDestInput"));return;}
-  S.destination=v;goStep(4);}
+  S.destination=v;
+  // 行き先・国内海外は trip_groups の列が正なので、ここで書いておかないとリロードで消える
+  const g=activeGid?GROUPS.find(x=>x.id===activeGid):null;
+  if(g){ g.room.destination=v; g.room.destKind=S.destKind; persistTripGroup(g.id, g.name, S.destKind, v); }
+  goStep(4);}
 
 /* ===== 画面4 日程(単日 / 範囲) ===== */
 function viewDates(){
@@ -3849,7 +3855,8 @@ function viewDates(){
       <button class="btn ghost close-early" onclick="goStep(4.5)">${t("room.closeEarly")}</button>
     </div>
   </div>`;
-  if(!S.calMonth)S.calMonth=6; drawCalendar();
+  if(!S.calMonth) resetRoomCalToThisMonth();
+  drawCalendar();
 }
 /* ⑥日程調整のヘルプ:操作方法とカレンダー連携を複数行で表示 */
 function showDateHelp(){
@@ -8958,10 +8965,18 @@ function startNewTrip(){
     "linear-gradient(135deg,#e2574c,#f29b95)"];
   const id=crypto.randomUUID();
   GID++;
+  // 作成者自身を最初からメンバーに含める。ここが空だと、集計(日程・予算・合意・スポット)が
+  // すべて S.members を回して S.avail[メンバーid] のように引くため、作成者本人の回答だけが
+  // どの集計にも出てこない(リロードすると trip_group_members 由来の一覧に自分が入るので直る、
+  // という分かりにくい不具合になっていた)
+  const meMember = isSignedIn()
+    ? [{ id:authUser().id, userId:myUserId||"", name:ME.name||t("post.noName"),
+         photo:ME.photo||null, photoFull:ME.photoFull||null }]
+    : [];
   const g={ id, name:"新しい旅", joined:true, createdBy:isSignedIn()?authUser().id:null,
     cover:covers[GID%covers.length], img:null,
     pinned:false, archived:false, tripDate:"", createdAt:Date.now(), pollDeadlineTs:null,
-    room:blankRoom(), chat:[], albums:[] };
+    room:blankRoom({ members:meMember }), chat:[], albums:[] };
   GROUPS.unshift(g);
   activeGid=id;
   Object.assign(S, g.room);

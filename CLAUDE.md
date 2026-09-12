@@ -1,4 +1,4 @@
-# TAVI。引継ぎ資料(2026年9月12日時点・v128)
+# TAVI。引継ぎ資料(2026年9月12日時点・v129)
 
 新しいチャット(またはClaude Code)で作業を再開するための引継ぎ資料。旧資料(2026年7月2日時点・v100)を土台とし、フォロー・通知・ブロック・アカウント管理・DMチャットまでの実装(v101〜v122)、旅行計画(GROUPS)のSupabase化・ルーム調整内容の永続化(v123)、および旅の招待・参加が成立しなかったRLSデッドロックの解消となりすまし投票の除去(v124)、個人入力の1人1行化と進行操作の作成者限定(v125)を反映して全面更新している。作業を始める前に、まず本資料を読み、次に作業ファイル(`C:\Dev\TAVI\index.html`)を確認すること。
 
@@ -14,7 +14,7 @@
 
 ## ファイル運用
 
-　Claude Codeでの作業は`C:\Dev\TAVI\index.html`を直接編集し、`git add`/`commit`/`push`でGitHub Pagesへ反映する運用に統一済み(ChatGPT/Claude.ai上での`/mnt/user-data/outputs/`経由のアップロード運用は過去の名残であり、Claude Codeでは使わない)。**現在の最新バージョンはv128**。設計メモは `TAVI_設計方針メモ.md`(最古)、旧引継ぎ資料(v100時点)、本資料(v128時点・最新、`CLAUDE.md`)の3本立てになっているため、次回以降は本資料をベースに更新していく。
+　Claude Codeでの作業は`C:\Dev\TAVI\index.html`を直接編集し、`git add`/`commit`/`push`でGitHub Pagesへ反映する運用に統一済み(ChatGPT/Claude.ai上での`/mnt/user-data/outputs/`経由のアップロード運用は過去の名残であり、Claude Codeでは使わない)。**現在の最新バージョンはv129**。設計メモは `TAVI_設計方針メモ.md`(最古)、旧引継ぎ資料(v100時点)、本資料(v129時点・最新、`CLAUDE.md`)の3本立てになっているため、次回以降は本資料をベースに更新していく。
 
 　Service Worker(`/mnt/user-data/outputs/sw.js`)は、v92で全面的に書き換えた別ファイルであり、index.htmlと一緒にGitHubへ上げる必要がある。sw.js自体を変更しない限り、次回以降は index.html だけ差し替えれば反映される設計(後述「PWA更新設計」参照)。ただし後述の通り、直近でGitHub Pages側のデプロイ不良が発生しており、index.htmlの更新だけでは反映されないケースがあったため、「反映されない」報告があった場合はまずデプロイ状況を疑うこと。
 
@@ -231,6 +231,18 @@
 - **生のDBエラーをそのままトースト表示している箇所が8つある**(`toast(error.message)`。投稿・コメント・共同投稿・ID変更)。「new row violates row-level security policy for table "posts"」のような英文がそのままユーザーに出るうえ、テーブル名やポリシー名が漏れる。認証まわりは`translateAuthError()`で日本語化済みなので、同じように一般的な文言へ寄せるべき。
 - **`screenSearch()`/`renderSearchList()`が壊れたまま残っている**。`g.dest`/`g.status`/`g.when`/`g.members`という現在のGROUPSに存在しないプロパティを参照しており、呼ぶと`Cannot read properties of undefined`で落ちる。`onclick="openRoom()"`も引数が無い。ただし`S.view="search"`へ遷移する導線がどこにも無いため到達不能。旅の検索を作る予定が無いなら削除してよい。
 - `ME.name`の最終フォールバックが残っている(profiles取得に失敗すると空表示になる)。
+
+## 作成者が自分のメンバー一覧に入っていなかった不具合と、行き先の保存漏れ(v129)
+
+　**症状**: 日程調整へ進んでも投票が反映されず日程を選べない。リロードすると自分の投票だけ反映されるが、今度は最終合意画面で行き先が消えている。一見別々の2つだが、原因も別々だった。
+
+　**原因1: `S.members`に作成者自身が入っていなかった**。`startNewTrip()`は`blankRoom()`(members:[])で始まり、`toggleFriendMember()`で招待した相手だけが積まれる作りだったため、**セッション中は作成者本人がメンバー一覧に存在しなかった**。日程・予算・合意・スポットの集計はすべて`S.members`を回して`S.avail[メンバーid]`のように引くので、**作成者本人の回答だけがどの集計にも出てこない**(日程確定画面の候補が0件になり「選べない」状態になる)。リロードすると`loadTripGroups()`が`trip_group_members`から一覧を作り直し、そこには作成者のowner行が入っているため「リロードすると自分の投票だけ出てくる」という分かりにくい挙動になっていた。`startNewTrip()`で自分をメンバーに含めるよう修正。
+
+　これに伴い、「1人以上招待したか」の判定が`S.members.length<1`のままだと自分がいる分だけ常に成立してしまうため、自分を除いて数える`invitedCount()`を導入して3箇所(`startNext`/`drawRoster`/`viewJoin`のボタン)を差し替えた。**今後`S.members`を人数の判定に使う時は、「集計の分母(自分を含む)」なのか「招待できたかの判定(自分を除く)」なのかを区別すること。**
+
+　**原因2: STEP3.5で決めた行き先が保存されていなかった**。`confirmDest()`は`S.destination`に入れて次へ進むだけで、`trip_groups.destination`列へ書いていなかった。v125で`destination`を`room_state`の保存対象から外した(列を正とする設計にした)ため、**どこにも保存されず、リロードで消える**状態になっていた。`confirmDest()`から`persistTripGroup()`を呼ぶよう修正。**`ROOM_SHARED_KEYS`から外した値は、代わりに必ずどこかの列へ書くこと。**
+
+　あわせて、`viewDates()`に残っていた`if(!S.calMonth)S.calMonth=6;`(モック時代の6月固定)を`resetRoomCalToThisMonth()`へ差し替えた。
 
 ## 【重要・現在進行中】GitHub Pagesへのデプロイ不良
 
