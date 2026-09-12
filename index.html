@@ -349,6 +349,9 @@
     padding:9px 13px;font-size:0.8125rem;flex-wrap:wrap}
   .person-switch select{width:auto;background:#2b3547;color:#fff;border:1px solid #3c485e;padding:5px 8px;font-size:0.8125rem}
   .person-switch .lbl{opacity:.7}
+  .catchup-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 12px;margin-bottom:12px;
+    font-size:0.8125rem;color:var(--ink-soft)}
   .divider{height:1px;background:var(--line);margin:18px 0} .center{text-align:center}
   .muted{color:var(--ink-soft);font-size:0.8125rem}
   .pill-stat{display:inline-block;background:#eef2fb;color:var(--accent-deep);border-radius:999px;
@@ -1437,6 +1440,10 @@ const I18N = {
     "toast.memberAdded":"{name}を追加しました", "toast.memberRemoved":"{name}を外しました",
     "toast.memberAddFailed":"{name}を追加できませんでした", "toast.memberRemoveFailed":"{name}を外せませんでした",
     "toast.tripSaveFailed":"この旅を保存できませんでした",
+    "toast.ownerOnlyStep":"進めるのは旅をつくった人だけです",
+    "room.ownerOnlyNote":"旅をつくった人が、みんなの入力を待って進めます",
+    "room.viewingPast":"前のステップを見ています（みんなの進行は動きません）",
+    "room.catchUp":"最新へ戻る",
     "toast.seeded":"5人追加しました", "toast.need3":"1人以上招待すると進めます",
     // STEP3 希望
     "s3.eyebrow":"STEP 3 / 希望（匿名）", "s3.h":"行きたい場所と、やりたいこと",
@@ -1918,6 +1925,10 @@ const I18N = {
     "toast.memberAdded":"Added {name}", "toast.memberRemoved":"Removed {name}",
     "toast.memberAddFailed":"Couldn't add {name}", "toast.memberRemoveFailed":"Couldn't remove {name}",
     "toast.tripSaveFailed":"Couldn't save this trip",
+    "toast.ownerOnlyStep":"Only the trip's creator can move things forward",
+    "room.ownerOnlyNote":"The creator moves this along once everyone has answered",
+    "room.viewingPast":"Viewing an earlier step (this doesn't move the group)",
+    "room.catchUp":"Back to current",
     "toast.seeded":"Added 5 members", "toast.need3":"Invite 1 or more people",
     "s3.eyebrow":"STEP 3 / Preferences (anonymous)", "s3.h":"Where to go, what to do",
     "s3.lead":"No one can see who picked what. Be honest.",
@@ -3430,7 +3441,7 @@ const PREF_BY_ID = {}; (typeof JP_PREF!=="undefined"?JP_PREF:[]).forEach(p=>PREF
 const STEP_LABELS=["作成","参加","希望","行き先","日程","予算","スポット","合意"];
 // 各画面のstep番号 -> 進捗バー上の段(1始まり)
 function stepStage(){
-  const s=S.step;
+  const s=roomViewStep();   // 参加者が過去のステップを見返している間は、その画面に合わせて進捗バーも戻す
   if(s<=2)return s;          // 0,2
   if(s<4)return 3;           // 3,3.5 希望/行き先
   if(s<5)return 5;           // 4,4.5 日程
@@ -3484,7 +3495,7 @@ function render(opts){
   ensureRoomShell();
   window.app = appEl();
   renderSteps();
-  switch(S.step){
+  switch(roomViewStep()){
     case 0:viewCreate();break; case 2:viewJoin();break;
     case 3:viewWishes();break; case 3.5:viewWishTally();break;
     case 4:viewDates();break; case 4.5:viewDateConfirm();break;
@@ -3498,6 +3509,7 @@ function render(opts){
   // noscroll指定(カレンダーのタップ・予算札の増減など、その場での細かい更新)は連打されるため
   // デバウンス保存に留め、それ以外(次へ/戻る等のステップ遷移)は区切りの良いタイミングなので即保存する
   if(activeGid) commitRoom(!(opts&&opts.noscroll));
+  applyStepOwnerGate();
   // 脱退ボタン(参加済みグループで、作成直後以外)
   const g = activeGid?GROUPS.find(x=>x.id===activeGid):null;
   if(g && g.joined && S.step>=2){
@@ -3509,6 +3521,31 @@ function render(opts){
       a.appendChild(div);
     }
   }
+}
+
+/* 参加者(作成者以外)の画面で、進行を進めるボタンを押せない状態にし、理由を添える。
+   各画面のテンプレートへ個別に条件分岐を書くと入れ忘れが出るため、描画後にまとめて当てる。
+   あわせて、参加者が自分の画面だけ過去のステップへ遡っている間は最新へ戻る導線を出す */
+function applyStepOwnerGate(){
+  const a=$("#app"); if(!a || !activeGid) return;
+  if(S.viewStep!=null){
+    const bar=document.createElement("div");
+    bar.className="catchup-bar";
+    bar.innerHTML=`<span>${t("room.viewingPast")}</span>
+      <button class="mini-btn solid" onclick="catchUpToCurrentStep()">${t("room.catchUp")}</button>`;
+    a.insertBefore(bar, a.firstChild);
+  }
+  if(isRoomOwner()) return;
+  const sel=STEP_ADVANCE_CALLS.map(c=>`#app button[onclick*="${c}"]`).join(",");
+  const btns=[...document.querySelectorAll(sel)];
+  if(!btns.length) return;
+  btns.forEach(b=>{ b.disabled=true; });
+  const note=document.createElement("p");
+  note.className="hint center"; note.style.marginTop="8px";
+  note.textContent=t("room.ownerOnlyNote");
+  const last=btns[btns.length-1];
+  const row=last.closest(".btn-row")||last;
+  if(row.parentNode) row.parentNode.insertBefore(note, row.nextSibling);
 }
 
 /* ===== 画面1 作成 ===== */
@@ -3573,7 +3610,7 @@ async function doCreate(){
     const g=GROUPS.find(x=>x.id===activeGid);
     if(g){ g.name=rn; await persistTripGroup(g.id, rn, S.destKind, S.destination||null); }
   }
-  S.step=2; render();
+  goStep(2);
 }
 /* グループ本体+自分の参加をSupabaseへ書き込む。同じグループへの複数回呼び出しに対応するため
    冪等にしたいが、このプロジェクトではupsert(ON CONFLICT DO UPDATE)がRLS下で
@@ -3684,7 +3721,7 @@ function drawRoster(){const r=$("#roster");if(!r)return;
 function seedMembers(){["たろう","さくら","けんた","みう","ゆうき"].forEach(n=>{
   if(!S.members.find(x=>x.name===n))S.members.push({id:uid(),name:n});});
   if(!S.me)S.me=S.members[0].id;drawFriendPick();drawRoster();renderSteps();toast(t("toast.seeded"));}
-function startNext(){if(S.members.length<1){toast(t("toast.need3"));return;} S.step=S.mode==='decided'?4:3; render();}
+function startNext(){if(S.members.length<1){toast(t("toast.need3"));return;} goStep(S.mode==='decided'?4:3);}
 </script>
 <script>
 /* ===== 画面3 希望集約 ===== */
@@ -3737,7 +3774,7 @@ function viewWishes(){
 
     <div class="btn-row">
       <button class="btn ghost" onclick="saveWishes();toast(t('toast.savedAns',{name:meName()}))">${t("s3.saveMine")}</button>
-      <button class="btn primary" onclick="saveWishes();S.step=3.5;render()">${t("s3.tally")}</button>
+      <button class="btn primary" onclick="saveWishes();goStep(3.5)">${t("s3.tally")}</button>
     </div>
     <p class="hint center" id="wishCount">${t("answered",{c:countWishAnswered(),total:S.members.length})}</p>
   </div>`;
@@ -3800,28 +3837,31 @@ function toggleAct(it,ev){
   const i=a.indexOf(it);if(i>=0)a.splice(i,1);else a.push(it);
   if(ev&&ev.currentTarget)ev.currentTarget.classList.toggle("sel");
   const wc=$("#wishCount");if(wc)wc.textContent=t("answered",{c:countWishAnswered(),total:S.members.length});
+  scheduleMemberStateSave();
 }
 function switchRegion(r){
   if(S.region===r){render({noscroll:true});return;}
   // 排他: 切替時にもう片方(現メンバー分)の選択をクリア
   if(r==='domestic'){ S.countryVotes[S.me]=[]; S.countryFree[S.me]=[]; }
   else { S.prefVotes[S.me]=[]; }
-  S.region=r; render({noscroll:true});
+  S.region=r; scheduleMemberStateSave(); render({noscroll:true});
 }
 function toggleCountry(c){
   const a=S.countryVotes[S.me]||(S.countryVotes[S.me]=[]);
   const i=a.indexOf(c);if(i>=0)a.splice(i,1);else a.push(c);
   // 海外カードだけ更新(スクロール維持)
-  render({noscroll:true});
+  scheduleMemberStateSave(); render({noscroll:true});
 }
 function togglePref(id){
   const a=S.prefVotes[S.me]||(S.prefVotes[S.me]=[]);
   const i=a.indexOf(id);if(i>=0)a.splice(i,1);else a.push(id);
   drawMap("mapwrap", S.prefVotes[S.me], "togglePref", false); // 地図のみ再描画
+  scheduleMemberStateSave();
 }
 function updateFree(){
   const inputs=[...document.querySelectorAll('#freeList input')];
   S.countryFree[S.me]=inputs.map(i=>i.value.trim()).filter(Boolean);
+  scheduleMemberStateSave();
   const last=inputs[inputs.length-1];
   if(last&&last.value.trim()!==""){
     const wrap=document.createElement("div");wrap.className="row";
@@ -3831,7 +3871,8 @@ function updateFree(){
 }
 function saveWishes(){const t=$("#actFree");if(t)S.activityFree[S.me]=t.value.trim();
   const inputs=[...document.querySelectorAll('#freeList input')];
-  if(inputs.length)S.countryFree[S.me]=inputs.map(i=>i.value.trim()).filter(Boolean);}
+  if(inputs.length)S.countryFree[S.me]=inputs.map(i=>i.value.trim()).filter(Boolean);
+  persistMemberStateNow(activeGid);}
 
 /* 地図描画(沖縄枠つき) */
 function drawMap(containerId, selectedIds, onclickFn, heat){
@@ -3894,14 +3935,14 @@ function viewWishTally(){
     <input type="text" id="destChoose" placeholder="${t("wt.dest.ph")}" value="${esc(S.destination)}" style="margin-top:8px">
     <p class="hint">${t("wt.dest.hint")}</p>
     <div class="btn-row">
-      <button class="btn ghost" onclick="S.step=3;render()">${t("wt.backWish")}</button>
+      <button class="btn ghost" onclick="goStepBack(3)">${t("wt.backWish")}</button>
       <button class="btn primary" onclick="confirmDest()">${t("wt.confirmDest")}</button>
     </div>
   </div>`;
   if(prefVoted) drawMap("mapHeat", null, null, true);
 }
 function confirmDest(){const v=$("#destChoose").value.trim();if(!v){toast(t("toast.needDestInput"));return;}
-  S.destination=v;S.step=4;render();}
+  S.destination=v;goStep(4);}
 
 /* ===== 画面4 日程(単日 / 範囲) ===== */
 function viewDates(){
@@ -3947,7 +3988,7 @@ function viewDates(){
     <div id="dateSummary"></div>
     <div class="btn-row">
       <button class="btn ghost" onclick="toast(t('toast.savedAns',{name:meName()}))">${t("s4.saveMine")}</button>
-      <button class="btn primary" onclick="S.step=4.5;render()">${t("s4.tally")}</button>
+      <button class="btn primary" onclick="goStep(4.5)">${t("s4.tally")}</button>
     </div>
   </div>`;
   if(!S.calMonth)S.calMonth=6; drawCalendar();
@@ -4167,6 +4208,75 @@ async function saveTripSpotVoteToggle(gid, name, adding){
     }
   }catch(e){ console.log("[trip_spot_votes] toggle exception:", e); }
 }
+/* ===== メンバー個人の入力のSupabase連携(trip_member_state) =====
+   希望集約(STEP3)・予算(STEP5)・最終合意(STEP6)の入力は「1人1行」で保存する。
+   以前はこれらを trip_groups.room_state という共有列へまとめて書いていたため、後から保存した
+   端末が他メンバーの入力ごと丸ごと上書きしていた(ルームを開いただけでも保存が走るため、
+   何も操作していない閲覧者が巻き戻すこともあった)。1人1行にしてRLS側で user_id = auth.uid()
+   を要求すれば、他人の入力は構造的に書き換えられない。
+   画面側は従来どおり S.budgetVotes[メンバーid] のようなマップを読む作りのままなので、
+   読み込み時に全メンバー分の行からそのマップを組み立て直している。 */
+async function loadTripMemberStates(gid){
+  if(!window.SB || !isSignedIn() || !gid) return;
+  try{
+    const { data, error } = await window.SB.from("trip_member_state")
+      .select("user_id, wishes, budget, consent").eq("group_id", gid);
+    if(error){ console.log("[trip_member_state] load error:", error.code, error.message); return; }
+    const prefVotes={}, countryVotes={}, countryFree={}, activityVotes={}, activityFree={};
+    const budgetVotes={}, consent={}, comments={}, objections={};
+    (data||[]).forEach(r=>{
+      const uid=r.user_id, w=r.wishes||{}, c=r.consent||{};
+      if(Array.isArray(w.prefVotes)) prefVotes[uid]=w.prefVotes;
+      if(Array.isArray(w.countryVotes)) countryVotes[uid]=w.countryVotes;
+      if(Array.isArray(w.countryFree)) countryFree[uid]=w.countryFree;
+      if(Array.isArray(w.activityVotes)) activityVotes[uid]=w.activityVotes;
+      if(w.activityFree) activityFree[uid]=w.activityFree;
+      if(r.budget) budgetVotes[uid]=r.budget;
+      if(c.answer) consent[uid]=c.answer;
+      if(c.comment) comments[uid]=c.comment;
+      if(c.objection) objections[uid]=c.objection;
+    });
+    const loaded={prefVotes,countryVotes,countryFree,activityVotes,activityFree,budgetVotes,consent,comments,objections};
+    Object.assign(S, loaded);
+    const g=GROUPS.find(x=>x.id===gid); if(g) Object.assign(g.room, loaded);
+  }catch(e){ console.log("[trip_member_state] load exception:", e); }
+}
+/* 自分の行として保存する内容を S から組み立てる */
+function myMemberStatePayload(){
+  const me=authUser().id;
+  return {
+    wishes:{
+      prefVotes:S.prefVotes[me]||[], countryVotes:S.countryVotes[me]||[], countryFree:S.countryFree[me]||[],
+      activityVotes:S.activityVotes[me]||[], activityFree:S.activityFree[me]||""
+    },
+    budget:S.budgetVotes[me]||null,
+    consent:{ answer:S.consent[me]||null, comment:S.comments[me]||"", objection:S.objections[me]||null }
+  };
+}
+let memberStateSaveTimer=null, memberStateSaveGid=null;
+/* 地図のタップや予算札の増減は連打されるため、900msデバウンスしてから保存する */
+function scheduleMemberStateSave(gid){
+  gid=gid||activeGid; if(!gid) return;
+  if(memberStateSaveTimer) clearTimeout(memberStateSaveTimer);
+  memberStateSaveGid=gid;
+  memberStateSaveTimer=setTimeout(()=>{ memberStateSaveTimer=null; persistMemberStateNow(gid); }, 900);
+}
+async function persistMemberStateNow(gid){
+  if(memberStateSaveTimer && memberStateSaveGid===gid){ clearTimeout(memberStateSaveTimer); memberStateSaveTimer=null; memberStateSaveGid=null; }
+  if(!window.SB || !isSignedIn() || !gid) return;
+  const uid=authUser().id;
+  const payload=myMemberStatePayload();
+  try{
+    // upsertはRLS下で新規行でも失敗するため使わず、insertを試して重複ならupdateする方式にしている
+    const { error } = await window.SB.from("trip_member_state")
+      .insert(Object.assign({ group_id:gid, user_id:uid }, payload));
+    if(error && error.code==="23505"){
+      const { error: ue } = await window.SB.from("trip_member_state")
+        .update(payload).eq("group_id",gid).eq("user_id",uid);
+      if(ue) console.log("[trip_member_state] update error:", ue.code, ue.message);
+    }else if(error){ console.log("[trip_member_state] insert error:", error.code, error.message); }
+  }catch(e){ console.log("[trip_member_state] save exception:", e); }
+}
 function toggleWeek(w){
   const y=S.calYear,m=S.calMonth;
   const first=new Date(y,m-1,1).getDay(),days=new Date(y,m,0).getDate();
@@ -4223,7 +4333,7 @@ function viewDateConfirm(){
       <p class="hint">${t("dt.stay.hint")}</p>
     `}
     <div class="btn-row">
-      <button class="btn ghost" onclick="S.step=4;render()">${t("dt.backDate")}</button>
+      <button class="btn ghost" onclick="goStepBack(4)">${t("dt.backDate")}</button>
       <button class="btn primary" onclick="confirmDate()">${t("dt.confirm")}</button>
     </div>
   </div>`;
@@ -4282,11 +4392,11 @@ function setTripDays(dateKeys){
 function needBudget(){ return S.destKind==='overseas'; }
 function needSpot(){ return S.confirmKind==='stay' || (S.tripDays && S.tripDays>1); }
 /* 日程確定後に進む先: 海外→予算, 国内かつ宿泊→スポット, 国内かつ日帰り→最終合意 */
-function nextAfterDate(){ if(needBudget()){S.step=5;} else if(needSpot()){S.step=5.6;} else {S.step=6;} render(); }
+function nextAfterDate(){ goStep(needBudget()?5:(needSpot()?5.6:6)); }
 /* 予算集計の後に進む先: 宿泊→スポット, 日帰り→最終合意 */
-function nextAfterBudget(){ if(needSpot()){S.step=5.6;} else {S.step=6;} render(); }
+function nextAfterBudget(){ goStep(needSpot()?5.6:6); }
 /* スポット集計の後は最終合意へ */
-function nextAfterSpot(){ S.step=6; render(); }
+function nextAfterSpot(){ goStep(6); }
 
 /* ===== 画面5 予算(札束画像で重ねる + 選択肢) ===== */
 function billUnit(){return 10000;}
@@ -4321,7 +4431,7 @@ function viewBudget(){
     </div>
     <div class="btn-row">
       <button class="btn ghost" onclick="toast(t('toast.saved'))">${t("s5.save")}</button>
-      <button class="btn primary" onclick="S.step=5.5;render()">${t("s5.tally")}</button>
+      <button class="btn primary" onclick="goStep(5.5)">${t("s5.tally")}</button>
     </div>
     <p class="hint center">${t("answered",{c:Object.keys(S.budgetVotes).filter(k=>{const v=S.budgetVotes[k];return v&&((v.bills||0)>0||v.opt!=null||v.noWish);}).length,total:S.members.length})}</p>
   </div>`;
@@ -4392,10 +4502,10 @@ function drawBills(){
   $("#moneyTotal").textContent="¥"+((n*billUnit())).toLocaleString();
 }
 function setNoWish(){const v=S.budgetVotes[S.me]||(S.budgetVotes[S.me]={bills:0,opt:null});
-  v.noWish=!v.noWish; if(v.noWish){v.bills=0;v.opt=null;} render({noscroll:true});}
+  v.noWish=!v.noWish; if(v.noWish){v.bills=0;v.opt=null;} scheduleMemberStateSave(); render({noscroll:true});}
 function addBill(d){const v=S.budgetVotes[S.me]||(S.budgetVotes[S.me]={bills:0,opt:null});
-  v.noWish=false; v.bills=Math.max(0,(v.bills||0)+d);v.opt=null;drawBills();}
-function setBudgetOpt(i){const v=S.budgetVotes[S.me]||(S.budgetVotes[S.me]={bills:0,opt:null});v.opt=i;v.bills=0;v.noWish=false;render({noscroll:true});}
+  v.noWish=false; v.bills=Math.max(0,(v.bills||0)+d);v.opt=null;drawBills();scheduleMemberStateSave();}
+function setBudgetOpt(i){const v=S.budgetVotes[S.me]||(S.budgetVotes[S.me]={bills:0,opt:null});v.opt=i;v.bills=0;v.noWish=false;scheduleMemberStateSave();render({noscroll:true});}
 function parseCap(label){const m=label.match(/(\d+)万/);if(m)return parseInt(m[1])*10000;const k=label.match(/(\d+)千/);if(k)return parseInt(k[1])*1000;return null;}
 function viewBudgetTally(){
   const isOvs=S.destKind==='overseas';const opts=isOvs?BUDGET_OVS:BUDGET_DOM;const unit=billUnit();
@@ -4420,7 +4530,7 @@ function viewBudgetTally(){
       <p class="hint" style="margin:6px 0 0">${t("bt.safe.hint")}</p></div>
     <p class="hint center" style="margin-top:8px">${t("bt.noWishCount",{n:S.members.filter(m=>{const v=S.budgetVotes[m.id];return v&&v.noWish;}).length})}</p>
     <div class="btn-row">
-      <button class="btn ghost" onclick="S.step=5;render()">${t("bt.backBudget")}</button>
+      <button class="btn ghost" onclick="goStepBack(5)">${t("bt.backBudget")}</button>
       <button class="btn primary" onclick="nextAfterBudget()">${needSpot()?t("bt.toSpot"):t("bt.toFinal")}</button>
     </div>
   </div>`;
@@ -4455,7 +4565,7 @@ function viewSpots(){
     </div>`:`<p class="muted">${t("s6.noCand")}</p>`}
     <div class="btn-row">
       <button class="btn ghost" onclick="toast(t('toast.savedAns',{name:meName()}))">${t("s6.saveMine")}</button>
-      <button class="btn primary" onclick="S.step=5.7;render()">${t("s6.tally")}</button>
+      <button class="btn primary" onclick="goStep(5.7)">${t("s6.tally")}</button>
     </div>
     <p class="hint center">${t("answered",{c:Object.keys(S.spotVotes).filter(k=>(S.spotVotes[k]||[]).length).length,total:S.members.length})}</p>
   </div>`;
@@ -4529,7 +4639,7 @@ function viewSpotPlan(){
       <button class="btn ghost" onclick="addFreeToPlan()" style="flex:1;min-width:80px">${t("btn.add")}</button>
     </div>
     <div class="btn-row">
-      <button class="btn ghost" onclick="S.step=5.6;render()">${t("st.backVote")}</button>
+      <button class="btn ghost" onclick="goStepBack(5.6)">${t("st.backVote")}</button>
       <button class="btn primary" onclick="nextAfterSpot()">${t("st.toFinal")}</button>
     </div>
   </div>`;
@@ -4605,9 +4715,9 @@ function viewConsent(){
     <p class="hint center">${t("s7.confirm.hint")}</p>
   </div>`;
 }
-function setConsent(v){S.consent[S.me]=v;render({noscroll:true});}
-function saveComment(){S.comments[S.me]=$("#cmtYes").value.trim();render({noscroll:true});toast(t("toast.cmtSaved"));}
-function saveObj(){S.objections[S.me]={why:$("#objWhy").value.trim(),cond:$("#objCond").value.trim()};render({noscroll:true});toast(t("toast.objSaved"));}
+function setConsent(v){S.consent[S.me]=v;persistMemberStateNow(activeGid);render({noscroll:true});}
+function saveComment(){S.comments[S.me]=$("#cmtYes").value.trim();persistMemberStateNow(activeGid);render({noscroll:true});toast(t("toast.cmtSaved"));}
+function saveObj(){S.objections[S.me]={why:$("#objWhy").value.trim(),cond:$("#objCond").value.trim()};persistMemberStateNow(activeGid);render({noscroll:true});toast(t("toast.objSaved"));}
 function renderVoices(){
   const groups=[
     {key:'yes', label:t("s7.join"), color:'var(--ok)'},
@@ -4666,15 +4776,21 @@ function viewDone(){
     </div>
     ${objectionCount()?`<p class="hint">${t("done.condNote")}</p>`:""}
     <div class="btn-row">
-      <button class="btn primary block" onclick="initDayPlan();S.step=8;render()">${t("done.toDayPlan")}</button>
+      <button class="btn primary block" onclick="openDayPlan()">${t("done.toDayPlan")}</button>
     </div>
     <div class="btn-row">
-      <button class="btn ghost" onclick="S.step=4;render()">${t("done.readjust")}</button>
+      <button class="btn ghost" onclick="goStepBack(4)">${t("done.readjust")}</button>
       <button class="btn ghost" onclick="resetAll()">${t("done.restart")}</button>
     </div>
   </div>`;
 }
 /* 詳細プランの初期化: 巡回スポットを1日目に種別「観光」で仮置き */
+/* 詳細プラン(STEP8)を開く。initDayPlanは共有のdayPlan/dayLabelsを書き換えるので、
+   進行を動かす権限が無い参加者の端末では走らせない */
+function openDayPlan(){
+  if(!isRoomOwner()){ toast(t("toast.ownerOnlyStep")); return; }
+  initDayPlan(); goStep(8);
+}
 function initDayPlan(){
   if(!S.tripDays||S.tripDays<1){S.tripDays=1;S.dayLabels=[S.chosenDate||t("plan.day",{n:1})];}
   if(!S.dayPlan||!S.dayPlan.length||S.dayPlan.length!==S.tripDays){
@@ -4723,8 +4839,8 @@ function viewDayPlan(){
             <span>${esc(r.content||t("plan.noContent"))}</span></div>`).join("")}
       </div>`:``}
     <div class="btn-row">
-      <button class="btn ghost" onclick="S.step=7;render()">${t("plan.backDone")}</button>
-      <button class="btn primary" onclick="toast(t('toast.planSaved'));S.step=7;render()">${t("plan.saveBack")}</button>
+      <button class="btn ghost" onclick="goStepBack(7)">${t("plan.backDone")}</button>
+      <button class="btn primary" onclick="toast(t('toast.planSaved'));goStep(7)">${t("plan.saveBack")}</button>
     </div>
   </div>`;
 }
@@ -4766,7 +4882,10 @@ function topActivities(){const c={};Object.values(S.activityVotes).forEach(a=>(a
 function topSpots(){const r=S.spotOrder.slice(0,3).map(itemLabel);return r.length?r.join("・"):(S.destination||"—");}
 function objectionCount(){return S.members.filter(m=>(S.consent[m.id]==='no'||S.consent[m.id]==='hold')&&
   S.objections[m.id]&&(S.objections[m.id].why||S.objections[m.id].cond)).length;}
-function resetAll(){Object.assign(S,{step:0,mode:"undecided",roomName:"",limitDays:2,members:[],me:null,
+function resetAll(){
+  // ルーム全体を作成直後の状態へ戻す操作なので、進行を動かせる作成者だけに許す
+  if(!isRoomOwner()){ toast(t("toast.ownerOnlyStep")); return; }
+  Object.assign(S,{step:0,viewStep:null,mode:"undecided",roomName:"",limitDays:2,members:[],me:null,
   region:"domestic",prefVotes:{},countryVotes:{},countryFree:{},activityVotes:{},activityFree:{},
   destination:"",destKind:"domestic",dateMode:"single",rangeStart:null,avail:{},chosenDate:"",
   budgetVotes:{},budgetMode:"bills",spotVotes:{},spotFree:{},spotPool:[],spotOrder:[],consent:{},comments:{},objections:{},
@@ -5167,12 +5286,16 @@ async function loadTripGroups(){
       // room_state列に保存済みの調整内容(ステップ進行・確定日程・予算・最終合意・巡回順・詳細プランなど)を
       // 復元する。roomName/destination/destKind/membersはDBの正規テーブル側を常に優先させ、
       // room_stateに古い値が残っていても上書きされないようにする
-      const saved=g.room_state||{};
+      const saved=pickSharedRoomState(g.room_state||{});
       const room=blankRoom(Object.assign({}, saved,
         { roomName:g.name, destination:g.destination||"", destKind:g.dest_kind||"domestic", members:mems }));
+      // 読み込んだ内容を「保存済み」の基準にしておく。これが無いと、開いた直後の
+      // render()→commitRoom()で同じ内容をそのまま書き戻してしまう
+      roomStateLastSaved[g.id]=JSON.stringify(sharedRoomPayload(room));
       const iso0=normalizeDateKey(room.tripStartKey), iso1=normalizeDateKey(room.tripEndKey);
       return {
-        id:g.id, name:g.name, joined:true, cover:(prev&&prev.cover)||covers[i%covers.length], img:(prev&&prev.img)||null,
+        id:g.id, name:g.name, joined:true, createdBy:g.created_by,
+        cover:(prev&&prev.cover)||covers[i%covers.length], img:(prev&&prev.img)||null,
         pinned:(prev&&prev.pinned)||false, archived:(prev&&prev.archived)||false,
         tripDate: iso0 || ((prev&&prev.tripDate)||""),
         tripDateEnd: iso0 ? ((iso1&&iso1!==iso0)?iso1:"") : ((prev&&prev.tripDateEnd)||""),
@@ -5292,11 +5415,59 @@ async function openRoom(gid){
   activeGid=gid;
   Object.assign(S, g.room);
   S.me = isSignedIn() ? authUser().id : (S.members.length?S.members[0].id:null);
+  S.viewStep=null;   // 前に開いたルームで遡ったままの状態を持ち越さない
   S.view="room"; renderApp();
-  await Promise.all([loadTripDateVotes(gid), loadTripSpots(gid)]);
+  await Promise.all([loadTripDateVotes(gid), loadTripSpots(gid), loadTripMemberStates(gid)]);
   // 読み込み中に別の画面/別のルームへ移動していたら、その結果を今のSへ反映しない
   if(activeGid===gid && S.view==="room") renderApp();
 }
+/* 旅の作成者だけが進行(ステップ)を動かせる。createdByを持たないグループ(ローカル作成直後や
+   room_state導入前の古いデータ)は、締め出して操作不能になるのを避けるため作成者扱いにする */
+function isTripGroupOwner(g){
+  if(!g || !g.createdBy) return true;
+  return isSignedIn() && g.createdBy===authUser().id;
+}
+function isRoomOwner(){
+  return isTripGroupOwner(activeGid?GROUPS.find(x=>x.id===activeGid):null);
+}
+/* 進行(S.step)はルーム全員で共有される1つの値で、動かせるのは作成者だけ。
+   参加者が過去のステップを見返したい場合のために、共有の進行とは別に「自分が今見ている
+   ステップ」(S.viewStep)を持たせる。viewStepはこの端末だけの値で、room_stateへは保存しない
+   (blankRoom()のキーに含めていないため、commitRoom()でも書き出されない) */
+function roomViewStep(){ return S.viewStep==null ? S.step : S.viewStep; }
+function goStep(n){
+  if(!isRoomOwner()){ toast(t("toast.ownerOnlyStep")); return; }
+  S.viewStep=null; S.step=n; render();
+}
+/* 前のステップへ戻る。作成者は全員の進行ごと戻し、参加者は自分の画面でだけ遡る */
+function goStepBack(n){
+  if(isRoomOwner()){ goStep(n); return; }
+  S.viewStep=n; render();
+}
+function catchUpToCurrentStep(){ S.viewStep=null; render(); }
+/* 進行を前に進めるボタンの判別に使う。render()側で作成者以外には押せない状態にするため、
+   ステップを進める操作はすべてこのリストのいずれかを経由させること */
+const STEP_ADVANCE_CALLS=["goStep(","nextAfterDate(","nextAfterBudget(","nextAfterSpot(",
+  "confirmTripPlan(","confirmDest(","startNext(","doCreate(","openDayPlan("];
+/* room_state(共有列)へ保存してよいキー。ここに挙げた「ルーム全体で1つに決まる進行」だけを保存する。
+   除外しているものと、その理由:
+   - 閲覧者ローカルのUI状態(me/region/budgetMode/rangeStart/activeDay/calYear/calMonth)…
+     共有すると他人のタブ操作や表示中の月が全員の画面に書き込まれてしまう
+   - メンバー個人の入力(prefVotes/countryVotes/countryFree/activityVotes/activityFree/spotFree/
+     budgetVotes/consent/comments/objections)…trip_member_stateへ1人1行で保存する(後述)
+   - 正規化テーブルが真の値を持つもの(avail=trip_date_votes / spotPool・spotVotes=trip_spot_*)
+   - trip_groupsの列が真の値を持つもの(roomName/destination/destKind)とmembers(trip_group_members) */
+const ROOM_SHARED_KEYS=["step","mode","limitDays","dateMode","chosenDate","tripStartKey","tripEndKey",
+  "spotOrder","tripDays","dayLabels","dayPlan"];
+function sharedRoomPayload(room){ const o={}; ROOM_SHARED_KEYS.forEach(k=>{ o[k]=room[k]; }); return o; }
+/* 読み込み用。room_stateに無いキーはblankRoom()の既定値を活かしたいので、undefinedで潰さない */
+function pickSharedRoomState(saved){
+  const o={}; ROOM_SHARED_KEYS.forEach(k=>{ if(saved[k]!==undefined) o[k]=saved[k]; }); return o;
+}
+/* 直近でDBへ書いた(あるいはDBから読んだ)共有部分のJSON。内容が変わっていない保存を弾くために持つ。
+   render()の末尾から毎回commitRoom()が呼ばれる設計上、これが無いと「ルームを開いただけ」「タブを
+   切り替えただけ」でも共有列へ書き込みが飛び、他メンバーの進行を古い内容で上書きしうる */
+let roomStateLastSaved={};
 /* S の進行内容を現在のグループへ書き戻す。immediate=trueならSupabaseへ即保存、
    falseなら短時間デバウンスして保存する(既定はtrue。render()の細かいUI更新のみfalseを渡す) */
 function commitRoom(immediate=true){
@@ -5321,9 +5492,16 @@ async function persistRoomStateNow(gid){
   if(roomStateSaveTimer && roomStateSaveTimerGid===gid){ clearTimeout(roomStateSaveTimer); roomStateSaveTimer=null; roomStateSaveTimerGid=null; }
   if(!window.SB || !isSignedIn() || !gid) return;
   const g=GROUPS.find(x=>x.id===gid); if(!g) return;
+  // 進行を動かせるのは作成者だけなので、参加者の端末からは共有列を書かない。
+  // (参加者自身の入力は trip_member_state 側へ保存される)
+  if(!isTripGroupOwner(g)) return;
+  const shared=sharedRoomPayload(g.room);
+  const json=JSON.stringify(shared);
+  if(roomStateLastSaved[gid]===json) return;   // 進行が実際に変わった時だけ書く
   try{
-    const { error } = await window.SB.from("trip_groups").update({ room_state:g.room }).eq("id", gid);
-    if(error) console.log("[trip_groups] room_state save error:", error.message);
+    const { error } = await window.SB.from("trip_groups").update({ room_state:shared }).eq("id", gid);
+    if(error){ console.log("[trip_groups] room_state save error:", error.code, error.message); return; }
+    roomStateLastSaved[gid]=json;
   }catch(e){ console.log("[trip_groups] room_state save exception:", e); }
 }
 function scheduleRoomStatePersist(gid){
@@ -5334,10 +5512,13 @@ function scheduleRoomStatePersist(gid){
 /* タブが隠れる/閉じられる瞬間、デバウンス待ちの保存が残っていれば即座に送る
    (「編集直後にリロードすると消える」という今回の不具合の再発防止策) */
 document.addEventListener("visibilitychange", ()=>{
-  if(document.visibilityState==="hidden" && roomStateSaveTimer) persistRoomStateNow(roomStateSaveTimerGid);
+  if(document.visibilityState!=="hidden") return;
+  if(roomStateSaveTimer) persistRoomStateNow(roomStateSaveTimerGid);
+  if(memberStateSaveTimer) persistMemberStateNow(memberStateSaveGid);
 });
 window.addEventListener("pagehide", ()=>{
   if(roomStateSaveTimer) persistRoomStateNow(roomStateSaveTimerGid);
+  if(memberStateSaveTimer) persistMemberStateNow(memberStateSaveGid);
 });
 function toggleTheme(){
   S.theme = S.theme==="dark" ? "light" : "dark";
@@ -8914,7 +9095,8 @@ function startNewTrip(){
     "linear-gradient(135deg,#e2574c,#f29b95)"];
   const id=crypto.randomUUID();
   GID++;
-  const g={ id, name:"新しい旅", joined:true, cover:covers[GID%covers.length], img:null,
+  const g={ id, name:"新しい旅", joined:true, createdBy:isSignedIn()?authUser().id:null,
+    cover:covers[GID%covers.length], img:null,
     pinned:false, archived:false, tripDate:"", createdAt:Date.now(), pollDeadlineTs:null,
     room:blankRoom(), chat:[], albums:[] };
   GROUPS.unshift(g);
@@ -10112,7 +10294,7 @@ let MYPREFS = ["グルメ🍽️","温泉・癒し♨️"];   // 初期で2つ�
 
 /* 実績バッジ(仕様表に準拠。同じ tier 番号内は達成した最上位のみ表示=前段は更新で消える) */
 function doneTrips(){ return GROUPS.filter(g=>g.joined && groupProgress(g).status==="done"); }
-function confirmTripPlan(){ S.step=7; commitRoom(); checkBadgeAwards(); render(); }
+function confirmTripPlan(){ if(!isRoomOwner()){ toast(t("toast.ownerOnlyStep")); return; } S.viewStep=null; S.step=7; commitRoom(); checkBadgeAwards(); render(); }
 /* 確定した旅の行き先リスト(退会済みの実績 LEFT_DONE_TRIPS も含める=退会してもバッジは消えない) */
 function doneTripDests(){
   const list=doneTrips().map(g=>({destination:g.room.destination, destKind:g.room.destKind, nights:nightsOf(g.room.chosenDate)}));
