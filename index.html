@@ -1435,6 +1435,8 @@ const I18N = {
     "s2.noFriends":"追加できる友達がいません。フォローすると、ここから旅に誘えます。",
     "s2.added":"追加済み", "s2.addToTrip":"追加", "s2.rosterEmpty":"まだ誰もいません",
     "toast.memberAdded":"{name}を追加しました", "toast.memberRemoved":"{name}を外しました",
+    "toast.memberAddFailed":"{name}を追加できませんでした", "toast.memberRemoveFailed":"{name}を外せませんでした",
+    "toast.tripSaveFailed":"この旅を保存できませんでした",
     "toast.seeded":"5人追加しました", "toast.need3":"1人以上招待すると進めます",
     // STEP3 希望
     "s3.eyebrow":"STEP 3 / 希望（匿名）", "s3.h":"行きたい場所と、やりたいこと",
@@ -1914,6 +1916,8 @@ const I18N = {
     "s2.noFriends":"No friends to add yet. Follow people and you can invite them here.",
     "s2.added":"Added", "s2.addToTrip":"Add", "s2.rosterEmpty":"No one yet",
     "toast.memberAdded":"Added {name}", "toast.memberRemoved":"Removed {name}",
+    "toast.memberAddFailed":"Couldn't add {name}", "toast.memberRemoveFailed":"Couldn't remove {name}",
+    "toast.tripSaveFailed":"Couldn't save this trip",
     "toast.seeded":"Added 5 members", "toast.need3":"Invite 1 or more people",
     "s3.eyebrow":"STEP 3 / Preferences (anonymous)", "s3.h":"Where to go, what to do",
     "s3.lead":"No one can see who picked what. Be honest.",
@@ -3444,6 +3448,10 @@ function renderSteps(){
   const rp=$("#roomPill"); if(rp) rp.textContent = S.roomName?t("room.pill",{name:S.roomName,n:S.members.length}):t("room.notCreated");
 }
 function personSwitch(){
+  // ログイン必須の本番運用では、この「試作モード」の人物切り替えは絶対に見せない・使わせない。
+  // これを出したままだと、自分の画面から他メンバーになりすまして投票・入力ができてしまう。
+  // (ログイン前提が無かった旧・単独ブラウザでのモック検証時代の名残)
+  if(isSignedIn())return "";
   if(!S.members.length)return "";
   return `<div class="person-switch"><span>${t("person.testMode")}</span><span class="lbl">${t("person.acting")}</span>
     <select onchange="S.me=this.value;render()">
@@ -3579,15 +3587,17 @@ async function persistTripGroup(gid, name, destKind, destination){
   try{
     const { error } = await window.SB.from("trip_groups")
       .insert({ id:gid, name, dest_kind:destKindVal, destination, created_by:uid });
-    if(error && error.code!=="23505"){ console.log("[trip_groups] insert error:", error.message); return; }
+    if(error && error.code!=="23505"){ console.log("[trip_groups] insert error:", error.code, error.message); toast(t("toast.tripSaveFailed")); return; }
     if(error && error.code==="23505"){
       const { error: ue } = await window.SB.from("trip_groups")
         .update({ name, dest_kind:destKindVal, destination }).eq("id", gid);
-      if(ue){ console.log("[trip_groups] update error:", ue.message); return; }
+      if(ue){ console.log("[trip_groups] update error:", ue.code, ue.message); toast(t("toast.tripSaveFailed")); return; }
     }
+    // 自分の参加行が入らないと、trip_groupsに行があっても loadTripGroups() は自分のメンバー行から
+    // gidを引くため、リロード後に旅が一覧から丸ごと消える。黙って落とさず必ず表に出す
     const { error: me1 } = await window.SB.from("trip_group_members")
       .insert({ group_id:gid, user_id:uid, role:"owner" });
-    if(me1 && me1.code!=="23505") console.log("[trip_group_members] self insert error:", me1.message);
+    if(me1 && me1.code!=="23505"){ console.log("[trip_group_members] self insert error:", me1.code, me1.message); toast(t("toast.tripSaveFailed")); }
   }catch(e){ console.log("[trip_groups] persist exception:", e); }
 }
 
@@ -3635,7 +3645,14 @@ function toggleFriendMember(pid){
     toast(t("toast.memberRemoved",{name:p.name}));
     if(activeGid && window.SB && isSignedIn()){
       window.SB.from("trip_group_members").delete().eq("group_id",activeGid).eq("user_id",pid)
-        .then(({error})=>{ if(error) console.log("[trip_group_members] remove error:", error.message); });
+        .then(({error})=>{
+          if(!error) return;
+          // DB側で消せていないのに画面上だけ消えると、実際の参加者と表示がずれたままになる
+          console.log("[trip_group_members] remove error:", error.message);
+          if(!S.members.some(x=>x.refId===pid)) S.members.push(removed);
+          toast(t("toast.memberRemoveFailed",{name:p.name}));
+          drawFriendPick(); drawRoster(); renderSteps();
+        });
     }
   }else{
     const m={id:p.id,name:p.name,photo:p.photo||null,photoFull:p.photoFull||null,refId:pid};
@@ -3644,8 +3661,19 @@ function toggleFriendMember(pid){
     if(activeGid && window.SB && isSignedIn()){
       // upsertはRLS下で新規行でも失敗するため使わず、insert+重複エラー無視の方式にしている
       window.SB.from("trip_group_members").insert({ group_id:activeGid, user_id:pid, role:"member" })
-        .then(({error})=>{ if(error && error.code!=="23505") console.log("[trip_group_members] add error:", error.message);
-          else createNotification(pid, "group_invite", { groupId: activeGid }); });
+        .then(({error})=>{
+          if(error && error.code!=="23505"){
+            // 追加がDBへ通っていないのに画面上だけ参加者が増えると、招待した側にだけ
+            // 成立したように見え、相手には通知も参加も届かない状態になる。失敗は必ず表に出す
+            console.log("[trip_group_members] add error:", error.code, error.message);
+            const i=S.members.findIndex(x=>x.refId===pid);
+            if(i>=0){ S.members.splice(i,1); if(S.me===pid) S.me=S.members.length?S.members[0].id:null; }
+            toast(t("toast.memberAddFailed",{name:p.name}));
+            drawFriendPick(); drawRoster(); renderSteps();
+            return;
+          }
+          createNotification(pid, "group_invite", { groupId: activeGid });
+        });
     }
   }
   drawFriendPick(); drawRoster(); renderSteps();
@@ -9725,21 +9753,28 @@ function screenInvite(){
 async function doInvite(gid,fid){
   const g=GROUPS.find(x=>x.id===gid); const f=findPerson(fid);
   if(!g||!f)return;
+  // 先にDBへの参加登録を済ませ、成功した場合だけ画面へ反映する。先に画面だけ更新すると、
+  // 実際には登録できていないのに招待した側にだけ「参加した」ように見え、相手には通知も
+  // 一覧への追加も届かない、という食い違いが起きる
+  if(window.SB && isSignedIn()){
+    try{
+      // upsertはRLS下で新規行でも失敗するため使わず、insert+重複エラー無視の方式にしている
+      const { error } = await window.SB.from("trip_group_members")
+        .insert({ group_id:gid, user_id:fid, role:"member" });
+      if(error && error.code!=="23505"){
+        console.log("[trip_group_members] invite insert error:", error.code, error.message);
+        toast(`${f.name}を招待できませんでした`);
+        return;
+      }
+    }catch(e){ console.log("[trip_group_members] invite exception:", e); toast(`${f.name}を招待できませんでした`); return; }
+  }
   g.room.members.push({id:f.id,name:f.name,photo:f.photo||null,photoFull:f.photoFull||null});
   if(activeGid===gid) S.members=g.room.members;
   g.chat.push({id:newMsgId(), ts:Date.now(), who:"システム", sys:true, t:`${f.name}さんがグループに参加しました`, mine:false, ago:nowTime()});
   inviteCandidates=inviteCandidates.filter(x=>x.id!==fid);
   toast(`${f.name}を招待しました`);
   renderApp();
-  if(window.SB && isSignedIn()){
-    try{
-      // upsertはRLS下で新規行でも失敗するため使わず、insert+重複エラー無視の方式にしている
-      const { error } = await window.SB.from("trip_group_members")
-        .insert({ group_id:gid, user_id:fid, role:"member" });
-      if(error && error.code!=="23505") console.log("[trip_group_members] invite insert error:", error.message);
-      else createNotification(fid, "group_invite", { groupId: gid });
-    }catch(e){ console.log("[trip_group_members] invite exception:", e); }
-  }
+  createNotification(fid, "group_invite", { groupId: gid });
 }
 function autoGrow(t){ t.style.height="42px"; t.style.height=Math.min(120,t.scrollHeight)+"px"; }
 function chatKey(e,kind){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); kind==="dm"?sendDM():sendGroupChat(); } }
