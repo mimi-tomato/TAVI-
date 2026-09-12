@@ -69,6 +69,10 @@
   .btn.danger{background:#e0245e;color:#fff} .btn.danger:hover{background:#c01e4f}
   .btn:disabled{opacity:.45;cursor:not-allowed} .btn.block{width:100%}
   .btn-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap} .btn-row .btn{flex:1}
+  /* 「回答を保存」を主役として中央に置き、締め切り(進行を進める操作)は下へ小さく添える */
+  .answer-actions{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:18px}
+  .answer-actions .btn{min-width:min(260px,100%)}
+  .answer-actions .btn.close-early{min-width:0;font-size:0.8125rem;font-weight:600;padding:8px 14px}
   .seg-toggle{display:flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff}
   .seg-toggle button{flex:1;border:0;background:#fff;padding:12px;font-weight:700;cursor:pointer;
     font-family:inherit;font-size:0.875rem;color:var(--ink-soft)}
@@ -1447,27 +1451,25 @@ const I18N = {
     "toast.seeded":"5人追加しました", "toast.need3":"1人以上招待すると進めます",
     // STEP3 希望
     "s3.eyebrow":"STEP 3 / 希望（匿名）", "s3.h":"行きたい場所と、やりたいこと",
-    "s3.lead":"誰が選んだかは誰にも見えません。本音でどうぞ。",
-    "s3.aPlace":"行きたい場所を選ぶ",
+    "s3.aPlace":"行きたい場所から選ぶ",
     "s3.region.hint":"国内か海外のどちらか一方を選びます（切り替えるともう片方の選択は消えます）。",
-    "s3.pref.hint":"行きたい都道府県をタップ（複数可）。左上は沖縄（点線で区切り）。",
+    "s3.pref.hint":"行きたい都道府県を全て選択",
     "s3.country.hint":"定番の国から選ぶ（複数可）。",
     "s3.otherCountry":"その他の国・地域（自由入力・複数可）", "s3.country.ph":"例：モロッコ",
     "s3.free.hint":"入力するごとに欄が増えます。",
-    "s3.bThing":"気になるものを選ぶ", "s3.act.hint":"やりたいこと・過ごし方をタップ（複数可）。", "s3.more":"＋ もっと見る", "s3.less":"閉じる",
+    "s3.bThing":"やりたいことから選ぶ", "s3.act.hint":"やりたいこと・過ごし方を全て選択", "s3.more":"＋ もっと見る", "s3.less":"閉じる",
     "s3.actFree":"その他・自由記述（任意・匿名）", "s3.actFree.ph":"例：のんびりしたい／夜景が見たい",
-    "s3.saveMine":"回答を保存", "s3.tally":"締め切って集計を見る",
+    "s3.saveMine":"回答を保存", "room.closeEarly":"期限を待たずに締め切る",
     "toast.savedAns":"{name}の回答を保存", "list.count":"{n}件",
     // 集計 希望
     "wt.eyebrow":"集計 / 希望", "wt.h":"みんなの希望の重なり",
-    "wt.lead":"匿名のまま、何人が選んだかだけを表示しています。",
     "wt.aPlace":"行きたい場所", "wt.dom":"国内：色が濃い都道府県ほど希望者が多い。",
     "wt.ovs":"海外（定番国）", "wt.ovsOther":"海外（その他の希望）",
     "wt.noPlace":"場所の希望はまだありません。", "wt.bThing":"気になるもの",
     "wt.noAns":"まだ回答がありません。",
     "wt.veil":"🔒 回答者が少ないため、自由記述は匿名性保護のため伏せています（3人以上で表示）。",
     "wt.decideDest":"この結果をふまえ、行き先を決める", "wt.dest.ph":"例：箱根（温泉＋ドライブ）/ 台湾",
-    "wt.dest.hint":"上位の希望を満たす行き先を幹事が入力します。全員一致は不要・このまま日程調整へ。",
+    "wt.dest.hint":"上位の希望を満たす行き先を作成者が入力します。全員一致は不要・このまま日程調整へ。",
     "wt.backWish":"希望入力に戻る", "wt.confirmDest":"行き先を確定して日程へ",
     "toast.needDestInput":"行き先を入力してください",
     // STEP4 日程
@@ -1482,7 +1484,7 @@ const I18N = {
     "s4.single":"単日で選ぶ", "s4.range":"範囲で選ぶ（終日）",
     "s4.range.hint":"開始日をタップ → 最終日をタップで、その間をまとめて終日で選択。もう一度始点を押すと取り消し。",
     "s4.wk":"週", "s4.full":"終日", "s4.dayOnly":"昼のみ", "s4.nightOnly":"夜のみ", "s4.weekBatch":"その週を一括", "slot.full":"終日", "slot.day":"昼", "slot.night":"夜",
-    "s4.saveMine":"この人の回答を保存", "s4.tally":"締め切って候補日を見る",
+    "s4.saveMine":"回答を保存",
     "toast.rangeSel":"範囲を選択しました（終日）", "toast.calOverwrite":"マイカレンダーで上書きしました",
     // 集計 日程
     "dt.noInput":"まだ空き日の入力がありません。", "dt.mostOpen":"いま最も多くの人が空いている日",
@@ -1501,7 +1503,7 @@ const I18N = {
     "s5.bills":"札束で積む", "s5.option":"上限から選ぶ",
     "s5.bills.hint":"1万円札を、出せる枚数だけ積む", "s5.noWish":"希望なし",
     "s5.minus":"− 1枚", "s5.plus":"＋ 1枚", "s5.noWishBtn":"特に希望なし",
-    "s5.save":"保存", "s5.tally":"締め切って集計を見る", "toast.saved":"保存しました",
+    "s5.save":"回答を保存", "toast.saved":"保存しました",
     "s5.noWishSel":"「特に希望なし」を選択中", "s5.zeroBills":"まだ0枚。上のボタンで積む",
     // 集計 予算
     "bt.eyebrow":"集計 / 予算", "bt.h":"予算感の分布",
@@ -1516,7 +1518,7 @@ const I18N = {
     "s6.addPlace":"行きたい場所を追加（匿名・全員に共有されます）", "s6.spot.ph":"例：清水寺／地元の人気カフェ",
     "s6.add.hint":"追加した場所は下の候補に並び、自分の投票にも入ります。",
     "s6.candidates":"みんなの候補（タップで投票）", "s6.noCand":"まだ候補がありません。上の欄から最初の場所を追加してみましょう。",
-    "s6.saveMine":"回答を保存", "s6.tally":"締め切って集計・順番へ",
+    "s6.saveMine":"回答を保存",
     "toast.needPlace":"場所を入力してください", "toast.placeAdded":"「{v}」を候補に追加しました",
     // 集計 スポット
     "st.eyebrow":"集計 / スポット", "st.h":"みんなが行きたい場所",
@@ -1931,19 +1933,17 @@ const I18N = {
     "room.catchUp":"Back to current",
     "toast.seeded":"Added 5 members", "toast.need3":"Invite 1 or more people",
     "s3.eyebrow":"STEP 3 / Preferences (anonymous)", "s3.h":"Where to go, what to do",
-    "s3.lead":"No one can see who picked what. Be honest.",
-    "s3.aPlace":"Pick places you want to go",
+    "s3.aPlace":"Choose from places",
     "s3.region.hint":"Choose either Japan or overseas (switching clears the other side).",
-    "s3.pref.hint":"Tap the prefectures you'd like (multiple OK). Top-left is Okinawa (split by a dotted line).",
+    "s3.pref.hint":"Select every prefecture you want to visit",
     "s3.country.hint":"Pick from popular countries (multiple OK).",
     "s3.otherCountry":"Other countries / regions (free text, multiple OK)", "s3.country.ph":"e.g. Morocco",
     "s3.free.hint":"A new field appears as you type.",
-    "s3.bThing":"Pick what interests you", "s3.act.hint":"Tap things to do or ways to spend time (multiple OK).", "s3.more":"＋ Show more", "s3.less":"Show less",
+    "s3.bThing":"Choose from things to do", "s3.act.hint":"Select every activity you want", "s3.more":"＋ Show more", "s3.less":"Show less",
     "s3.actFree":"Other / free text (optional, anonymous)", "s3.actFree.ph":"e.g. want to relax / see a night view",
-    "s3.saveMine":"Save answer", "s3.tally":"Close & see results",
+    "s3.saveMine":"Save answer", "room.closeEarly":"Close early, before the deadline",
     "toast.savedAns":"Saved {name}'s answer", "list.count":"{n}",
     "wt.eyebrow":"Results / Preferences", "wt.h":"Where preferences overlap",
-    "wt.lead":"Anonymous — only how many people picked each is shown.",
     "wt.aPlace":"Places to go", "wt.dom":"Japan: darker prefectures have more interest.",
     "wt.ovs":"Overseas (popular)", "wt.ovsOther":"Overseas (other picks)",
     "wt.noPlace":"No place preferences yet.", "wt.bThing":"What interests you",
@@ -1964,7 +1964,7 @@ const I18N = {
     "s4.single":"Single days", "s4.range":"A range (all day)",
     "s4.range.hint":"Tap a start day → tap an end day to select the whole span as all-day. Tap the start again to undo.",
     "s4.wk":"Wk", "s4.full":"All day", "s4.dayOnly":"Day only", "s4.nightOnly":"Night only", "s4.weekBatch":"Whole week", "slot.full":"All day", "slot.day":"Day", "slot.night":"Night",
-    "s4.saveMine":"Save this answer", "s4.tally":"Close & see top days",
+    "s4.saveMine":"Save answer",
     "toast.rangeSel":"Range selected (all day)", "toast.calOverwrite":"Overwritten from My Calendar",
     "dt.noInput":"No availability entered yet.", "dt.mostOpen":"Days most people are free",
     "dt.eyebrow":"Results / Schedule", "dt.h":"Where free days overlap",
@@ -1981,7 +1981,7 @@ const I18N = {
     "s5.bills":"Stack bills", "s5.option":"Pick a cap",
     "s5.bills.hint":"Stack as many ¥10,000 bills as you can spend", "s5.noWish":"No preference",
     "s5.minus":"− 1 bill", "s5.plus":"＋ 1 bill", "s5.noWishBtn":"No preference",
-    "s5.save":"Save", "s5.tally":"Close & see results", "toast.saved":"Saved",
+    "s5.save":"Save answer", "toast.saved":"Saved",
     "s5.noWishSel":"\"No preference\" selected", "s5.zeroBills":"No bills yet. Stack with the buttons above.",
     "bt.eyebrow":"Results / Budget", "bt.h":"Budget distribution",
     "bt.byBills":"People who stacked bills", "bt.byOption":"People who picked a cap",
@@ -1994,7 +1994,7 @@ const I18N = {
     "s6.addPlace":"Add a place (anonymous, shared with everyone)", "s6.spot.ph":"e.g. Kiyomizu-dera / a popular local cafe",
     "s6.add.hint":"Added places join the list below and count as your vote.",
     "s6.candidates":"Everyone's candidates (tap to vote)", "s6.noCand":"No candidates yet. Add the first place from the field above.",
-    "s6.saveMine":"Save answer", "s6.tally":"Close & go to order",
+    "s6.saveMine":"Save answer",
     "toast.needPlace":"Enter a place", "toast.placeAdded":"Added \"{v}\" to candidates",
     "st.eyebrow":"Results / Spots", "st.h":"Where everyone wants to go",
     "st.lead":"The top anonymous picks, arranged in visiting order. Drag to reorder, add, or remove.",
@@ -3544,7 +3544,7 @@ function applyStepOwnerGate(){
   note.className="hint center"; note.style.marginTop="8px";
   note.textContent=t("room.ownerOnlyNote");
   const last=btns[btns.length-1];
-  const row=last.closest(".btn-row")||last;
+  const row=last.closest(".btn-row,.answer-actions")||last;
   if(row.parentNode) row.parentNode.insertBefore(note, row.nextSibling);
 }
 
@@ -3733,7 +3733,7 @@ function viewWishes(){
   <div class="card">
     <div class="eyebrow">${t("s3.eyebrow")}</div>
     <h2>${t("s3.h")}</h2>
-    <p class="lead">${t("s3.lead")}${timerChip()}</p>
+    <p class="lead">${timerChip()}</p>
 
     <h3 class="sub"><span class="badge">A</span>${t("s3.aPlace")}</h3>
     <div class="place-tabs">
@@ -3772,9 +3772,9 @@ function viewWishes(){
     <label class="fld">${t("s3.actFree")}</label>
     <textarea id="actFree" placeholder="${t("s3.actFree.ph")}">${esc(S.activityFree[S.me]||"")}</textarea>
 
-    <div class="btn-row">
-      <button class="btn ghost" onclick="saveWishes();toast(t('toast.savedAns',{name:meName()}))">${t("s3.saveMine")}</button>
-      <button class="btn primary" onclick="saveWishes();goStep(3.5)">${t("s3.tally")}</button>
+    <div class="answer-actions">
+      <button class="btn primary" onclick="saveWishes();toast(t('toast.savedAns',{name:meName()}))">${t("s3.saveMine")}</button>
+      <button class="btn ghost close-early" onclick="saveWishes();goStep(3.5)">${t("room.closeEarly")}</button>
     </div>
     <p class="hint center" id="wishCount">${t("answered",{c:countWishAnswered(),total:S.members.length})}</p>
   </div>`;
@@ -3910,7 +3910,6 @@ function viewWishTally(){
   const flagOf=n=>{const c=COUNTRIES.find(x=>x.n===n);return c?c.f:"🌍";};
   app.innerHTML=`<div class="card">
     <div class="eyebrow">${t("wt.eyebrow")}</div><h2>${t("wt.h")}</h2>
-    <p class="lead">${t("wt.lead")}</p>
     <h3 class="sub"><span class="badge">A</span>${t("wt.aPlace")}</h3>
     ${prefVoted?`<p class="hint">${t("wt.dom")}</p><div class="mapwrap" id="mapHeat"></div>`:``}
     ${cRank.length?`<p class="hint" style="margin-top:12px">${t("wt.ovs")}</p>
@@ -3986,9 +3985,9 @@ function viewDates(){
       <span class="lg"><span class="sw night"></span>${t("s4.nightOnly")}</span>
     </div>
     <div id="dateSummary"></div>
-    <div class="btn-row">
-      <button class="btn ghost" onclick="toast(t('toast.savedAns',{name:meName()}))">${t("s4.saveMine")}</button>
-      <button class="btn primary" onclick="goStep(4.5)">${t("s4.tally")}</button>
+    <div class="answer-actions">
+      <button class="btn primary" onclick="toast(t('toast.savedAns',{name:meName()}))">${t("s4.saveMine")}</button>
+      <button class="btn ghost close-early" onclick="goStep(4.5)">${t("room.closeEarly")}</button>
     </div>
   </div>`;
   if(!S.calMonth)S.calMonth=6; drawCalendar();
@@ -4429,9 +4428,9 @@ function viewBudget(){
         ${(isOvs?BUDGET_OVS:BUDGET_DOM).map((b,i)=>`<div class="opt ${cur.opt===i?'sel':''}" onclick="setBudgetOpt(${i})">${esc(budgetOptLabel(b))}</div>`).join("")}
       </div>
     </div>
-    <div class="btn-row">
-      <button class="btn ghost" onclick="toast(t('toast.saved'))">${t("s5.save")}</button>
-      <button class="btn primary" onclick="goStep(5.5)">${t("s5.tally")}</button>
+    <div class="answer-actions">
+      <button class="btn primary" onclick="toast(t('toast.saved'))">${t("s5.save")}</button>
+      <button class="btn ghost close-early" onclick="goStep(5.5)">${t("room.closeEarly")}</button>
     </div>
     <p class="hint center">${t("answered",{c:Object.keys(S.budgetVotes).filter(k=>{const v=S.budgetVotes[k];return v&&((v.bills||0)>0||v.opt!=null||v.noWish);}).length,total:S.members.length})}</p>
   </div>`;
@@ -4563,9 +4562,9 @@ function viewSpots(){
     ${pool.length?`<div class="spot-grid">
       ${pool.map(s=>`<div class="spot ${mine.includes(s)?'sel':''}" data-spot="${esc(s)}" onclick="toggleSpot('${esc(s)}',event)">${esc(itemLabel(s))}${voteCountFor(s)?` <span style="font-size:11px;color:var(--ink-soft)">(${voteCountFor(s)})</span>`:""}</div>`).join("")}
     </div>`:`<p class="muted">${t("s6.noCand")}</p>`}
-    <div class="btn-row">
-      <button class="btn ghost" onclick="toast(t('toast.savedAns',{name:meName()}))">${t("s6.saveMine")}</button>
-      <button class="btn primary" onclick="goStep(5.7)">${t("s6.tally")}</button>
+    <div class="answer-actions">
+      <button class="btn primary" onclick="toast(t('toast.savedAns',{name:meName()}))">${t("s6.saveMine")}</button>
+      <button class="btn ghost close-early" onclick="goStep(5.7)">${t("room.closeEarly")}</button>
     </div>
     <p class="hint center">${t("answered",{c:Object.keys(S.spotVotes).filter(k=>(S.spotVotes[k]||[]).length).length,total:S.members.length})}</p>
   </div>`;
@@ -9920,7 +9919,7 @@ function screenInvite(){
   const g=GROUPS.find(x=>x.id===inviteTargetGid); if(!g) return screenGroupInfo();
   const rows=inviteCandidates.map(f=>`<div class="friend-li">
       <div class="av" style="${avatarStyle(f)}">${avatarInner(f)}</div>
-      <div class="fi"><div class="nm">${esc(f.name)}</div><div class="id">@${esc(f.id)}</div></div>
+      <div class="fi"><div class="nm">${esc(f.name)}</div><div class="id">@${esc(f.userId||"")}</div></div>
       <button class="mini-btn solid" onclick="doInvite('${g.id}','${f.id}')">${t('x.invite.btn')}</button>
     </div>`).join("");
   return `<div class="page">
