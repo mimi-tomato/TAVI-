@@ -1,4 +1,4 @@
-# TAVI。引継ぎ資料(2026年9月12日時点・v126)
+# TAVI。引継ぎ資料(2026年9月12日時点・v127)
 
 新しいチャット(またはClaude Code)で作業を再開するための引継ぎ資料。旧資料(2026年7月2日時点・v100)を土台とし、フォロー・通知・ブロック・アカウント管理・DMチャットまでの実装(v101〜v122)、旅行計画(GROUPS)のSupabase化・ルーム調整内容の永続化(v123)、および旅の招待・参加が成立しなかったRLSデッドロックの解消となりすまし投票の除去(v124)、個人入力の1人1行化と進行操作の作成者限定(v125)を反映して全面更新している。作業を始める前に、まず本資料を読み、次に作業ファイル(`C:\Dev\TAVI\index.html`)を確認すること。
 
@@ -14,7 +14,7 @@
 
 ## ファイル運用
 
-　Claude Codeでの作業は`C:\Dev\TAVI\index.html`を直接編集し、`git add`/`commit`/`push`でGitHub Pagesへ反映する運用に統一済み(ChatGPT/Claude.ai上での`/mnt/user-data/outputs/`経由のアップロード運用は過去の名残であり、Claude Codeでは使わない)。**現在の最新バージョンはv126**。設計メモは `TAVI_設計方針メモ.md`(最古)、旧引継ぎ資料(v100時点)、本資料(v126時点・最新、`CLAUDE.md`)の3本立てになっているため、次回以降は本資料をベースに更新していく。
+　Claude Codeでの作業は`C:\Dev\TAVI\index.html`を直接編集し、`git add`/`commit`/`push`でGitHub Pagesへ反映する運用に統一済み(ChatGPT/Claude.ai上での`/mnt/user-data/outputs/`経由のアップロード運用は過去の名残であり、Claude Codeでは使わない)。**現在の最新バージョンはv127**。設計メモは `TAVI_設計方針メモ.md`(最古)、旧引継ぎ資料(v100時点)、本資料(v127時点・最新、`CLAUDE.md`)の3本立てになっているため、次回以降は本資料をベースに更新していく。
 
 　Service Worker(`/mnt/user-data/outputs/sw.js`)は、v92で全面的に書き換えた別ファイルであり、index.htmlと一緒にGitHubへ上げる必要がある。sw.js自体を変更しない限り、次回以降は index.html だけ差し替えれば反映される設計(後述「PWA更新設計」参照)。ただし後述の通り、直近でGitHub Pages側のデプロイ不良が発生しており、index.htmlの更新だけでは反映されないケースがあったため、「反映されない」報告があった場合はまずデプロイ状況を疑うこと。
 
@@ -22,7 +22,7 @@
 
 　全`<script>`ブロックを抽出し`node --check`で構文チェックする。`court`という文字列の混入チェックを毎回行う。辞書(i18n)はja/enのキー数が一致し、片方にしかないキーが無いことを確認する(現在802キー)。計算ロジック(クロップ・座標変換など)を変更した場合は、Node.jsで該当関数だけを抽出し、複数パターンの入力に対する期待値をテストしてから反映する。Playwright(390×844想定)で`page.evaluate()`を使い、`window.__authUser`をモックし、`window.SB`(Supabaseクライアント)もモック関数に差し替えて、実際のDB接続なしにロジックを検証する手法がこのセッションで定着した。モックSupabaseのfrom()チェーンは、実際に使うメソッド(`.select().eq().maybeSingle()`等)をその都度模して作る。
 
-## Supabaseの全体構成(v125時点)
+## Supabaseの全体構成(v127時点)
 
 　プロジェクトURL・anonキーはHTML内に埋め込み済み。以下のテーブルが存在する。
 
@@ -37,7 +37,7 @@
 - `conversation_members`(conversation_id, user_id, joined_at, last_read_at)
 - `messages`(id, conversation_id, sender_id, text, image_url, image_url_full, created_at)
 - `user_id_history`(ID変更履歴、v100時点で実装済み)
-- `trip_groups`(id, name, dest_kind['domestic'|'overseas'], destination, created_by, created_at, **room_state jsonb**(v123追加、後述))
+- `trip_groups`(id, name, dest_kind['domestic'|'overseas'], destination, created_by, created_at, **room_state jsonb**(v123追加、後述), **chat_conversation_id**(v127追加。グループチャットの会話と1対1で紐づく、後述))
 - `trip_group_members`(group_id, user_id, role、複合PK)
 - `trip_date_votes`(group_id, user_id, date_key, slot)
 - `trip_spot_candidates`(group_id, name等、候補スポットのマスタ)
@@ -183,7 +183,35 @@
 
 　**撤去したモック機能**: ①STEP2の「サンプルで5人入れる」(`seedMembers`) ②希望集計で回答者3人未満のとき自由記述を伏せる処理(`wt.veil`。人数に関わらず表示する) ③**グループチャットの自動返信**(`AUTO_REPLIES`/`autoReply`)・偽の「入力中」表示(`pendingTyping`)・偽の既読。いずれも実データが無い時代の見せかけで、実際に複数人で使い始めると誤解を招くため。
 
-　**グループチャットの現状(重要)**: 自動返信を外した結果、グループチャットは**送信しても自分の画面に出るだけで、リロードすると消える**(元々`g.chat`というメモリ上の配列だけで、DB保存は一切していない)。DMは`conversations`/`conversation_members`/`messages`で実装済みなので、**同じ土台を`kind='group'`で使う形での本実装が次の作業**。設計は「`trip_groups`に`chat_conversation_id`列を追加して旅グループと会話を1対1で紐づけ、各自がチャットを開いた時に自分の`conversation_members`行だけをinsertする」方針で合意済み(`conversations`のSELECTポリシーが「自分がメンバーであること」を要求するため、会話idを`trip_groups`側に持たせないと最初の1人が会話を見つけられない=v124と同型のデッドロックになる)。既存ポリシーは`conversations`/`conversation_members`のINSERTがいずれも`auth.uid() IS NOT NULL`と緩いため、**ポリシーの追加は不要で列追加だけで足りる**ことを確認済み。あわせて、リアクション・引用返信・長押しメニュー・「既読 N」はローカル限定の見せかけのままなので、本実装時に撤去または永続化の判断が必要。
+## グループチャットのSupabase化(v127)
+
+　グループチャットを、DMと同じ`conversations`/`conversation_members`/`messages`(`kind='group'`)へ載せた。それまでは`g.chat`というメモリ上の配列だけで、リロードすると消える状態だった。
+
+　**旅グループと会話の紐づけ**: `trip_groups.chat_conversation_id`(v127で追加)で1対1に対応させる。**会話側に旅グループidを持たせる形にしてはいけない**。`conversations`のSELECTポリシーが`is_conversation_member(id, auth.uid())`を要求するため、まだ参加行が無い最初の1人が会話を見つけられず、v124と同型のデッドロックになる。旅グループ側に持たせれば、メンバーなら誰でも読める`trip_groups`から引けるので問題が起きない。会話が無ければ`getOrCreateGroupConversation()`が作成し、`update ... where chat_conversation_id is null`+`.select()`で「まだ空の時だけ書き込む」ことで、複数人が同時に開いた際の二重作成を防いでいる(負けた側は相手の会話に合流する)。
+
+　**参加行は各自が自分の分だけ入れる**: チャットを開いた時点で`conversation_members`へ自分の行をinsertする(重複は23505として無視)。他人の行を作らないので、v124で問題になった「他人の行を入れる権限」の話にならない。既存ポリシーは`conversations`/`conversation_members`のINSERTがいずれも`auth.uid() IS NOT NULL`と緩いため、**ポリシーの追加は不要で、列追加だけで足りた**。
+
+　**未読はグループ単位の件数(`g.unreadCount`)で持つ**: メッセージ1件ずつに`unread`を持たせる方式をやめた。チャット一覧では全履歴を読みたくないため、`loadGroupChatSummaries()`が会話ごとに「最新1件(プレビュー用)」と「自分のlast_read_atより新しい自分以外の発言の件数」だけを取る。チャットを開くと`loadGroupMessages()`が全件を読み、`last_read_at`を進めて`unreadCount`を0にする。タブのバッジ・一覧の未読数はすべて`g.unreadCount`を見る。
+
+　**撤去したローカル限定の見せかけ**: リアクション、引用返信、長押しメニュー(コピー/送信取り消し/自分の画面から削除)、「既読 N」、参加時のシステムメッセージ、日付区切りの「今日」。いずれも自分の端末の中だけで完結していて相手には何も届かないため、メッセージを実データにする以上は残せない。**関連するCSS(`.rx-*`/`.reply-*`/`.rb-*`/`.msg-menu`/`.sys-msg`/`.daydiv`/`.bub-line`)も削除済み。**
+
+　**`.bub-line`を消した理由(再発防止)**: リアクションボタンをバブルの横に並べるための`display:flex`の行だった。これを残したままバブルだけを入れると、内容に合わせて縮む行の中で`.bub{max-width:78%}`が効いてしまい、**バブルが極端に細くなって1文字ずつ折り返す**。DM側と同じく`.bub-wrap`直下にバブルを置く形にすること。
+
+　**未対応**: 画像の送信は実装済みだが、グループの既読表示(誰が読んだか)は入れていない。リアクションや返信を再び入れる場合は、`messages`に列を足すか別テーブルを設けて永続化すること(ローカルだけで動かすと今回と同じ問題になる)。
+
+## 旅の実績バッジを非表示化(v127。仕組みは残置)
+
+　プロフィールの「🏅 旅の実績バッジ」は、**見出しだけ残して中身を出していない**。タップしてもアコーディオンは開かず、「旅の実績バッジは近日公開予定です」(`x.prof.badgesComingSoon`)のトーストが出るだけ。ⓘボタン・「表示するバッジを編集」ボタン・開閉の矢印も外してある(展開しないのに矢印があると誤解を招くため)。
+
+　**後で復活させられるよう、判定・定義・画面のコードはすべて残してある。** 復活手順は次の3点だけ。
+
+1. `screenProfile`内のバッジ欄(HTMLコメントで経緯を書いてある箇所)を、アコーディオン版の記述に戻す
+2. `checkBadgeAwards()`冒頭の`return;`を消す(バッジ獲得のお知らせが復活する)
+3. `peopleBadgesHtml()`冒頭の`return "";`を消す(他人のプロフィールでの表示が復活する)
+
+　残置しているもの: `BADGE_DEFS`(定義)、`earnedBadges`/`displayBadges`/`countryBadges`(判定)、`badgeIconInner`/`BADGE_BG`(見た目)、`showBadgeInfo`(説明)、`screenBadges`(表示するバッジの選択画面。`goFwd('badges')`で到達できたが、現在は導線を外している)、`BADGE_SEEN`、`LEFT_DONE_TRIPS`。CSS(`.badge-grid`/`.badge-item`/`.badge-mini`/`.badge-row-prof`等)もそのまま。
+
+　**2と3を両方消し忘れないこと。** 片方だけだと「自分には見えないバッジが他人のプロフィールには出ている」「見る場所が無いのに獲得通知だけ届く」という食い違いになる。
 
 ## 【重要・現在進行中】GitHub Pagesへのデプロイ不良
 

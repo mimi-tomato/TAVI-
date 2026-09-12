@@ -997,8 +997,6 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
   .chat-head .ic svg{width:19px;height:19px}
   .chat-body{flex:1;overflow-y:auto;padding:16px 14px 12px;display:flex;flex-direction:column;gap:8px}
-  .daydiv{align-self:center;font-size:0.6875rem;color:var(--ink-soft);background:var(--chip);
-    padding:4px 12px;border-radius:999px;margin:4px 0}
   .bub{max-width:78%;padding:9px 13px;border-radius:16px;font-size:0.9062rem;line-height:1.5;word-break:break-word}
   .bub.them{align-self:flex-start;background:var(--card);border:1px solid var(--line);
     border-bottom-left-radius:5px;color:var(--ink)}
@@ -1182,25 +1180,9 @@
   .gi-mem .mi2 .b{font-size:0.75rem;color:var(--ink-soft);margin-top:1px}
   .gi-mem .badge2{font-size:0.6875rem;font-weight:700;color:var(--accent);background:var(--chip);padding:3px 9px;border-radius:999px}
 
-  /* ===== チャットのリアクション・既読 ===== */
-  .bub-line{display:flex;align-items:center;gap:6px}
-  .bub-line.me{flex-direction:row;justify-content:flex-end}
-  .rx-add{border:0;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:0.9375rem;opacity:.45;
-    width:24px;height:24px;border-radius:50%;flex:0 0 24px;padding:0}
-  .rx-add:hover{opacity:1;background:var(--chip)}
-  .rx-row{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}
-  .rx-row.me{justify-content:flex-end}
-  .rx-chip{font-size:0.75rem;background:var(--card);border:1px solid var(--line);border-radius:999px;
-    padding:2px 8px;cursor:pointer;font-weight:700;color:var(--ink)}
-  .rx-chip.mine{background:rgba(59,110,245,.14);border-color:var(--accent);color:var(--accent)}
+  /* ===== チャットの既読・時刻 ===== */
   .read-mark{font-size:0.625rem;color:var(--ink-soft);margin-right:6px;padding-right:6px;border-right:1px solid var(--line)}
   .msg-clock{font-size:0.625rem;color:var(--ink-soft)}
-  .rx-picker{position:sticky;bottom:6px;display:none;flex-wrap:wrap;gap:4px;justify-content:center;
-    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px;margin:8px auto 0;
-    max-width:300px;box-shadow:var(--shadow);z-index:5}
-  .rx-picker.show{display:flex}
-  .rx-picker button{border:0;background:transparent;font-size:1.5rem;cursor:pointer;width:38px;height:38px;border-radius:10px}
-  .rx-picker button:active{background:var(--chip)}
 
   /* ===== アルバム ===== */
   .album-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
@@ -1251,41 +1233,11 @@
   /* ピン/アーカイブ */
   .pin-tag{font-size:0.625rem;font-weight:800;color:var(--accent);background:rgba(59,110,245,.12);padding:2px 7px;border-radius:6px;margin-left:6px}
   .swipe-actions{display:flex;gap:6px}
-  .chat-sect-h{font-size:0.75rem;font-weight:800;color:var(--ink-soft);letter-spacing:.04em;margin:10px 16px 2px}  /* ===== システムメッセージ(LINE風・中央寄せ・半透明枠・白字) ===== */
-  .sys-msg{display:flex;justify-content:center;margin:10px 0}
-  .sys-msg span{display:inline-block;max-width:80%;text-align:center;font-size:0.7188rem;color:#fff;
-    background:rgba(60,68,86,.55);border-radius:999px;padding:5px 14px;line-height:1.5;backdrop-filter:blur(2px)}
-  .sys-msg.unsent span{background:rgba(120,128,146,.4);font-style:italic}
-
+  .chat-sect-h{font-size:0.75rem;font-weight:800;color:var(--ink-soft);letter-spacing:.04em;margin:10px 16px 2px}
   /* ===== ⑤メンション(青色) ===== */
   .bub .mention{color:var(--accent);font-weight:700}
   .bub.me .mention{color:#dbe6ff}
 
-  /* ===== ③返信(引用リプライ)の表示 ===== */
-  .reply-quote{max-width:74%;margin:2px 0 0;padding:5px 10px;border-left:3px solid var(--accent);
-    background:var(--card-soft,rgba(120,140,200,.1));border-radius:8px;font-size:0.75rem;line-height:1.4}
-  .reply-quote.me{align-self:flex-end;margin-left:auto}
-  .reply-quote .rq-name{display:block;font-weight:700;color:var(--accent);font-size:0.6875rem}
-  .reply-quote .rq-text{color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-
-  /* ===== ③返信プレビューバー(入力欄の上) ===== */
-  .reply-bar{display:flex;align-items:center;gap:8px;max-width:520px;margin:0 auto;
-    padding:8px 12px;background:var(--card,#fff);border-top:1px solid var(--line,#e6e9f0)}
-  .reply-bar .rb-line{width:3px;align-self:stretch;background:var(--accent);border-radius:2px}
-  .reply-bar .rb-body{flex:1;min-width:0}
-  .reply-bar .rb-name{font-size:0.6875rem;font-weight:700;color:var(--accent)}
-  .reply-bar .rb-text{font-size:0.75rem;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .reply-bar .rb-x{border:none;background:transparent;color:var(--ink-soft);font-size:0.9375rem;cursor:pointer;padding:4px 6px}
-
-  /* ===== ②③操作メニュー(長押し/右クリック) ===== */
-  .msg-menu{position:fixed;z-index:9999;min-width:170px;background:var(--card,#fff);
-    border:1px solid var(--line,#e6e9f0);border-radius:12px;box-shadow:0 8px 28px rgba(20,28,50,.22);
-    padding:6px;display:flex;flex-direction:column;overflow:hidden}
-  .msg-menu button{border:none;background:transparent;text-align:left;font-size:0.875rem;color:var(--ink);
-    padding:10px 12px;border-radius:8px;cursor:pointer;width:100%}
-  .msg-menu button:hover{background:var(--card-soft,rgba(120,140,200,.12))}
-  .msg-menu button.danger{color:var(--sun,#e2574c)}
-  .bub{user-select:none;-webkit-user-select:none}
 
   /* ===== ⑧ダークモードでも白背景の要素は文字を黒にする ===== */
   [data-theme="dark"] .badge-item .badge-ic[style*="#f4f6fb"],
@@ -1647,7 +1599,7 @@ const I18N = {
     "x.notif.title":"お知らせ",
     "x.prof.addBio":"自己紹介を追加しましょう",
     "x.prof.editProfile":"プロフィールを編集",
-    "x.prof.tripBadges":"🏅 旅の実績バッジ",
+    "x.prof.tripBadges":"🏅 旅の実績バッジ", "x.prof.badgesComingSoon":"旅の実績バッジは近日公開予定です",
     "x.prof.editDisplay":"表示を編集",
     "x.prof.badgeNote":"旅・写真・友達・訪問地に応じてバッジが進化します。タップで説明。（デザインは仮）",
     "x.prof.factorsTitle":"🧭 旅行で重視する要素",
@@ -2117,7 +2069,7 @@ const I18N = {
     "x.notif.title":"Notifications",
     "x.prof.addBio":"Add a bio",
     "x.prof.editProfile":"Edit profile",
-    "x.prof.tripBadges":"🏅 Trip badges",
+    "x.prof.tripBadges":"🏅 Trip badges", "x.prof.badgesComingSoon":"Trip badges are coming soon",
     "x.prof.editDisplay":"Edit display",
     "x.prof.badgeNote":"Badges evolve with your trips, photos, friends, and places visited. Tap for details. (Design is provisional.)",
     "x.prof.factorsTitle":"🧭 What you value when traveling",
@@ -3220,8 +3172,6 @@ let _msgSeq=0;
 function newMsgId(){ return "m"+(Date.now().toString(36))+(_msgSeq++).toString(36); }
 /* 既存メッセージにidとtsが無ければ補完する(リロード初期データ向け) */
 function ensureMsgId(m){ if(m&&!m.id) m.id=newMsgId(); if(m&&m.ts==null) m.ts=Date.now(); return m; }
-/* 送信から24時間(1日)以内なら取り消し可能 */
-function canUnsend(m){ return m && m.mine && !m.unsent && (m.ts!=null) && (Date.now()-m.ts < 86400000); }
 /* 本文から @ID と @All を青色装飾するHTMLを返す(escはこの中で行う) */
 /* ①投稿本文用: メンションをクリック可能にし、対応する人のプロフィールへ飛ばす。
    投稿では @All メンションは無効(装飾せず通常テキストとして表示) */
@@ -3265,122 +3215,21 @@ function notifyMentionsIn(text, postId){
   });
 }
 
-/* ===== 返信(引用リプライ)・送信取り消し・削除・コピー・メンション ===== */
-/* 返信ドラフト:いま返信しようとしている元メッセージの要約。送信時にmsgへ取り込む */
-let replyDraft=null;
-function clearReplyDraft(){ replyDraft=null; const bar=document.getElementById("replyBar"); if(bar)bar.remove(); }
-/* 返信プレビューを入力欄の上に出す */
-function renderReplyBar(){
-  const old=document.getElementById("replyBar"); if(old)old.remove();
-  if(!replyDraft)return;
-  const inp=document.querySelector(".chat-input"); if(!inp)return;
-  const preview = replyDraft.img ? "写真" : (replyDraft.t||"");
-  const bar=document.createElement("div");
-  bar.id="replyBar"; bar.className="reply-bar";
-  bar.innerHTML=`<div class="rb-line"></div>
-    <div class="rb-body"><div class="rb-name">${esc(replyDraft.who||"")} に返信</div>
-    <div class="rb-text">${esc(preview).slice(0,60)}</div></div>
-    <button class="rb-x" onclick="clearReplyDraft()" aria-label="${t('x.aria.stopReply')}">✕</button>`;
-  inp.parentNode.insertBefore(bar, inp);
-}
-/* スコープ(dm/group)から該当メッセージ配列を返す */
-function curMsgLog(scope){
-  if(scope==="dm") return DM[activeChatId]||[];
-  const g=GROUPS.find(x=>x.id===activeGid); return g?g.chat:[];
-}
-function findMsgById(scope,id){ return curMsgLog(scope).find(m=>m.id===id); }
-/* メッセージ操作メニュー(長押し/右クリックで開く) */
-let msgMenu={scope:null,id:null};
-function openMsgMenu(scope,id,clientX,clientY){
-  const m=findMsgById(scope,id); if(!m||m.sys)return;
-  closeMsgMenu();
-  msgMenu={scope,id};
-  const items=[];
-  // 返信:全メッセージ可
-  items.push(`<button onclick="startReply('${scope}','${id}')">${t('x.msg.reply')}</button>`);
-  // コピー:テキストがあるとき
-  if(m.t && !m.img) items.push(`<button onclick="copyMsg('${scope}','${id}')">${t('x.msg.copy')}</button>`);
-  // 自分の送信:24時間以内なら「送信取り消し」、いつでも「自分の画面から削除」
-  if(m.mine){
-    if(canUnsend(m)) items.push(`<button onclick="unsendMsg('${scope}','${id}')">${t('x.msg.unsend')}</button>`);
-    items.push(`<button class="danger" onclick="deleteMsgLocal('${scope}','${id}')">${t('x.msg.delMine')}</button>`);
-  } else {
-    // 相手の送信:自分の画面からのみ削除
-    items.push(`<button class="danger" onclick="deleteMsgLocal('${scope}','${id}')">${t('x.msg.delMine')}</button>`);
-  }
-  const menu=document.createElement("div");
-  menu.id="msgMenu"; menu.className="msg-menu"; menu.innerHTML=items.join("");
-  document.body.appendChild(menu);
-  // 位置調整:画面内に収める
-  const mw=190, mh=menu.offsetHeight||44*items.length;
-  let x=Math.min(clientX, window.innerWidth-mw-8);
-  let y=Math.min(clientY, window.innerHeight-mh-8);
-  menu.style.left=Math.max(8,x)+"px"; menu.style.top=Math.max(8,y)+"px";
-  setTimeout(()=>document.addEventListener("click",closeMsgMenuOnce,{once:true}),0);
-}
-function closeMsgMenuOnce(){ closeMsgMenu(); }
-function closeMsgMenu(){ const el=document.getElementById("msgMenu"); if(el)el.remove(); msgMenu={scope:null,id:null}; }
-/* 返信を開始 */
-function startReply(scope,id){
-  const m=findMsgById(scope,id); if(!m)return;
-  replyDraft={id:m.id, who:m.who, t:m.img?"":(m.t||""), img:!!m.img};
-  closeMsgMenu(); renderReplyBar();
-  const ta=document.getElementById("chatInput"); if(ta)ta.focus();
-}
-/* コピー */
-function copyMsg(scope,id){
-  const m=findMsgById(scope,id); if(!m)return; closeMsgMenu();
-  const text=m.t||"";
-  if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=>toast(t("x.toast.copied"))).catch(()=>fallbackCopy(text));
-  } else fallbackCopy(text);
-}
-function fallbackCopy(text){
-  const ta=document.createElement("textarea"); ta.value=text;
-  ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta);
-  ta.select(); try{document.execCommand("copy");toast(t("x.toast.copied"));}catch(e){toast(t("x.toast.copyFail"));}
-  document.body.removeChild(ta);
-}
-/* 送信取り消し:自分・相手の両方の画面で「取り消しました」表示に置き換える */
-function unsendMsg(scope,id){
-  const m=findMsgById(scope,id); if(!m)return; closeMsgMenu();
-  if(!canUnsend(m)){ toast(t("x.toast.unsendExpired")); return; }
-  m.unsent=true; m.t=""; m.img=null; m.reactions={}; m.replyTo=null;
-  if(scope==="dm") renderDMBody(false); else renderGroupChatBody(false);
-  toast(t("x.toast.unsent"));
-}
-/* 削除:自分の画面からのみ消す(相手側には残る想定なので、配列から除去) */
-function deleteMsgLocal(scope,id){
-  closeMsgMenu();
-  if(scope==="dm"){
-    const log=DM[activeChatId]; if(!log)return;
-    const i=log.findIndex(m=>m.id===id); if(i>=0)log.splice(i,1);
-    renderDMBody(false);
-  } else {
-    const g=GROUPS.find(x=>x.id===activeGid); if(!g)return;
-    const i=g.chat.findIndex(m=>m.id===id); if(i>=0)g.chat.splice(i,1);
-    renderGroupChatBody(false);
-  }
-  toast(t("x.toast.removedFromMine"));
-}
-/* メンション通知:@ID該当者・@Allのとき全員へお知らせを送る(自動返信の相手向けの擬似挙動) */
+/* メンション通知。@All なら自分以外の全メンバー、@ID なら一致したメンバーへ実際に通知を送る
+   (以前は自分の画面にだけお知らせを積む見せかけだった) */
 function notifyMentions(g, txt){
-  const ids=extractMentions(txt); if(!ids.length)return;
-  const all=ids.includes("*");
-  const names=(g.room.members||[]).map(m=>m.name).filter(n=>n!=="Tomato");
-  let hit=false;
-  if(all){ hit=names.length>0; }
-  else {
-    // @IDがメンバーのいずれかに一致するか(PEOPLEのidか名前で判定)
-    hit=ids.some(idv=>{
-      const p=PEOPLE.find(x=>x.id===idv||x.name===idv);
-      return p && names.includes(p.name);
-    });
-  }
-  if(hit){
-    pushNotif({ic:"📣", a:`「${g.name}」であなたがメンションされました`, b:txt.slice(0,40),
-      when:"たった今", unread:true, target:{type:"groupchat", gid:g.id}});
-  }
+  const tokens=extractMentions(txt); if(!tokens.length)return;
+  if(!isSignedIn()) return;
+  const me=authUser().id;
+  const all=tokens.includes("*");
+  (g.room.members||[]).forEach(m=>{
+    if(m.id===me) return;
+    if(all){ createNotification(m.id, "mention", {groupId:g.id}); return; }
+    const person=findPerson(m.id);
+    if(person && person.userId && tokens.includes(person.userId)){
+      createNotification(m.id, "mention", {groupId:g.id});
+    }
+  });
 }
 
 /* ===== ①メンション候補(サジェスト) ===== */
@@ -5263,7 +5112,7 @@ async function loadTripGroups(){
     const gids=[...new Set((myRows||[]).map(r=>r.group_id))];
     if(!gids.length){ GROUPS=[]; return; }
     const { data: groups, error: e2 } = await window.SB.from("trip_groups")
-      .select("id, name, dest_kind, destination, created_by, created_at, room_state").in("id", gids)
+      .select("id, name, dest_kind, destination, created_by, created_at, room_state, chat_conversation_id").in("id", gids)
       .order("created_at", { ascending:false });
     if(e2){ console.log("[trip_groups] load error:", e2.message); return; }
     const { data: allMembers, error: e3 } = await window.SB.from("trip_group_members")
@@ -5289,6 +5138,7 @@ async function loadTripGroups(){
       // room_state列に保存済みの調整内容(ステップ進行・確定日程・予算・最終合意・巡回順・詳細プランなど)を
       // 復元する。roomName/destination/destKind/membersはDBの正規テーブル側を常に優先させ、
       // room_stateに古い値が残っていても上書きされないようにする
+      if(g.chat_conversation_id) GCHAT_CONV_ID[g.id]=g.chat_conversation_id;
       const saved=pickSharedRoomState(g.room_state||{});
       const room=blankRoom(Object.assign({}, saved,
         { roomName:g.name, destination:g.destination||"", destKind:g.dest_kind||"domestic", members:mems }));
@@ -5600,7 +5450,7 @@ function tabbarHTML(){
     const src = on ? TAB_ICONS[base+"_orange"] : TAB_ICONS[base+"_"+tone];
     let dot="";
     if(v==="chat"){
-      const unread = friendsList().some(f=>(DM[f.id]||[]).some(m=>m.unread)) || GROUPS.some(g=>g.joined&&(g.chat||[]).some(c=>c.unread));
+      const unread = friendsList().some(f=>(DM[f.id]||[]).some(m=>m.unread)) || GROUPS.some(g=>g.joined&&(g.unreadCount||0)>0);
       if(unread) dot='<span class="tab-dot"></span>';
     }
     return `<button class="tab ${on?'on':''}" onclick="goTab('${v}')">
@@ -5630,7 +5480,7 @@ function tabbarHTML(){
 }
 
 /* ⑤旅の並び順を決めるヘルパー群 */
-function tripHasUnread(g){ return (g.chat||[]).some(c=>c.unread); }
+function tripHasUnread(g){ return (g.unreadCount||0)>0; }
 // 回答期限(タイムスタンプ)。pollDeadlineが無い/合意済みは期限なし扱い
 function tripDeadlineTs(g){
   if(g.pollDeadlineTs!=null) return g.pollDeadlineTs;
@@ -7122,7 +6972,7 @@ function screenHome(){
     const mem=g.room.members||[];
     const ava = mem.slice(0,5).map(m=>`<span>${esc((m.name||"?").slice(0,1))}</span>`).join("")
       + (mem.length>5?`<span>+${mem.length-5}</span>`:"");
-    const unread=(g.chat||[]).some(c=>c.unread);
+    const unread=(g.unreadCount||0)>0;
     const pinBtn=`<button class="card-pin ${g.pinned?'on':''}" onclick="event.stopPropagation();togglePin('${g.id}')" aria-label="${g.pinned?t('pin.remove'):t('pin.add')}" title="${g.pinned?t('pin.remove'):t('pin.add')}"><img src="${UI_IMG.pin_white}" class="pin-ic" alt=""></button>`;
     // ⑤最小カード用: 薄背景なので非選択時は黒ピン、選択時(アクセント背景)は白ピン
     // ⑥最小カードのピン画像: テーマ(ライト/ダーク/monoアクセント)とon状態で見える色に
@@ -8124,27 +7974,15 @@ function screenProfile(){
       <button class="edit-prof-btn" onclick="openEditProfile()"><img src="${dark?TAB_ICONS.pen_white:TAB_ICONS.pen_black}" class="pen-ic" alt=""> ${t('x.prof.editProfile')}</button>
     </div>
 
+    <!-- 旅の実績バッジは表示を止めている(見出しのみ。タップしても展開せず近日公開の案内を出す)。
+         バッジの定義・判定・表示編集画面のコードは、後で復活させられるようそのまま残してある
+         (BADGE_DEFS / displayBadges / countryBadges / showBadgeInfo / screenBadges / checkBadgeAwards) -->
     <div class="acc-sec">
-      <div class="acc-head" onclick="toggleProfileAcc('badges')">
+      <div class="acc-head" onclick="toast(t('x.prof.badgesComingSoon'))">
         <div class="acc-head-left">
           <h3 class="sub">${t('x.prof.tripBadges')}</h3>
-          <span class="acc-info-ic" onclick="event.stopPropagation();toggleProfileInfoTip('badges')">ⓘ</span>
-        </div>
-        <div class="acc-right">
-          <button class="mini-btn" onclick="event.stopPropagation();goFwd('badges')">${t('x.prof.editDisplay')}</button>
-          <span class="acc-chevron ${profileAccOpen.badges?'open':''}">›</span>
         </div>
       </div>
-      ${profileInfoTip==='badges' ? `<p class="acc-info-text">${t('x.prof.badgeNote')}</p>` : ''}
-      ${profileAccOpen.badges ? `<div class="acc-body"><div class="badge-grid">
-        ${displayBadges().map(d=>{const b=d.badge;
-          return `<div class="badge-item ${d.got?'':'locked'}" onclick="showBadgeInfo('${b.id}')">
-            <div class="badge-ic" style="${d.got?`background:${BADGE_BG[b.bg]||BADGE_BG.blue}`:''}">${badgeIconInner(b)}</div>
-            <div class="bn">${esc(b.name)}</div></div>`;}).join("")}
-        ${countryBadges().map(cb=>`<div class="badge-item" onclick="toast('🌐 ${esc(cb.name)}：${esc(cb.country)}を${cb.visits}回訪問',3200)">
-            <div class="badge-ic" style="background:${BADGE_BG[cb.bg]}">🌐</div>
-            <div class="bn">${esc(cb.name)}</div></div>`).join("")}
-      </div></div>` : ''}
     </div>
 
     <div class="acc-sec">
@@ -9280,7 +9118,7 @@ async function loadDMSummaries(){
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState==="visible" && isSignedIn() && S.view==="chat"){
     chatSummariesLoaded = false;
-    loadDMSummaries().then(()=>{ if(S.view==="chat"){ const sc2=document.getElementById("screen"); if(sc2) sc2.innerHTML=screenChat(); } });
+    Promise.all([loadDMSummaries(), loadGroupChatSummaries()]).then(()=>{ if(S.view==="chat"){ const sc2=document.getElementById("screen"); if(sc2) sc2.innerHTML=screenChat(); } });
   }
 });
 
@@ -9298,7 +9136,14 @@ async function openDM(fid){
   const convId = existingConv || DM_CONV_ID[fid] || await getOrCreateDMConversation(fid);
   if(convId) subscribeDMRealtime(convId, fid);
 }
-function openGroupChat(gid){ commitRoom(); activeGid=gid; const g=GROUPS.find(x=>x.id===gid); if(g)(g.chat||[]).forEach(c=>c.unread=false); S.view="groupchat"; renderApp(); }
+async function openGroupChat(gid){
+  commitRoom(); activeGid=gid; S.view="groupchat"; renderApp();
+  await loadGroupMessages(gid);
+  if(S.view!=="groupchat" || activeGid!==gid) return;   // 読み込み中に別画面へ移っていたら反映しない
+  const g=GROUPS.find(x=>x.id===gid); if(g) g.unreadCount=0;
+  renderGroupChatBody(true);
+  const convId=GCHAT_CONV_ID[gid]; if(convId) subscribeGroupRealtime(convId, gid);
+}
 
 function chatScrollBottom(){
   const b=document.getElementById("chatBody"); if(!b) return;
@@ -9360,16 +9205,170 @@ async function sendDMPhoto(dataUrl){
     createNotification(fid, "message", {});
   }catch(e){ console.log("[chat] send photo exception:", e); toast(t("x.chat.sendFailed")); }
 }
-function sendGroupChat(){
+/* ===== グループチャット(旅グループ) =====
+   DMと同じ conversations / conversation_members / messages を kind='group' で使う。
+   会話idは trip_groups.chat_conversation_id に持たせている。conversationsのSELECTポリシーが
+   「自分がその会話のメンバーであること」を要求するため、会話側から旅グループを引く形にすると、
+   まだメンバー行が無い最初の1人が会話を見つけられない(v124と同型のデッドロック)。
+   メンバー行は「各自がチャットを開いた時に自分の分だけ入れる」方式にしており、
+   他人の行を作らないので権限の問題も起きない。 */
+let GCHAT_CONV_ID={};          // { [旅グループid]: 会話uuid }
+let groupRealtimeChannel=null;
+async function getOrCreateGroupConversation(gid){
+  if(GCHAT_CONV_ID[gid]) return GCHAT_CONV_ID[gid];
+  if(!window.SB || !isSignedIn() || !gid) return null;
+  try{
+    const { data: row, error } = await window.SB.from("trip_groups")
+      .select("chat_conversation_id").eq("id", gid).maybeSingle();
+    if(error){ console.log("[gchat] lookup error:", error.code, error.message); return null; }
+    let convId = row && row.chat_conversation_id;
+    if(!convId){
+      // 新規作成。insert().select()は、まだ自分がメンバーでないためSELECTポリシーに阻まれる。
+      // DMと同じくidを先に生成して.select()を使わない
+      convId = crypto.randomUUID();
+      const { error: ce } = await window.SB.from("conversations").insert({ id:convId, kind:"group" });
+      if(ce){ console.log("[gchat] create conv error:", ce.code, ce.message); return null; }
+      // 複数人が同時に開いた時に会話が二重にできないよう、まだ空の時だけ書き込む。
+      // 先に他の人が書いていたら自分のものは捨ててそちらに合流する
+      const { data: won, error: le } = await window.SB.from("trip_groups")
+        .update({ chat_conversation_id: convId }).eq("id", gid)
+        .is("chat_conversation_id", null).select("chat_conversation_id");
+      if(le){ console.log("[gchat] link conv error:", le.code, le.message); return null; }
+      if(!won || !won.length){
+        const { data: again } = await window.SB.from("trip_groups")
+          .select("chat_conversation_id").eq("id", gid).maybeSingle();
+        convId = again && again.chat_conversation_id;
+        if(!convId) return null;
+      }
+    }
+    const { error: je } = await window.SB.from("conversation_members")
+      .insert({ conversation_id:convId, user_id:authUser().id });
+    if(je && je.code!=="23505") console.log("[gchat] join error:", je.code, je.message);
+    GCHAT_CONV_ID[gid]=convId;
+    return convId;
+  }catch(e){ console.log("[gchat] conv exception:", e); return null; }
+}
+/* messagesの1行を、画面が読む形へ変換する。送信者名はグループのメンバー一覧から引く */
+function groupMsgFromRow(row, gid){
+  const uid=isSignedIn()?authUser().id:null;
+  const g=GROUPS.find(x=>x.id===gid);
+  const mem=g?(g.room.members||[]).find(x=>x.id===row.sender_id):null;
+  const person=findPerson(row.sender_id);
+  const ts=new Date(row.created_at).getTime();
+  return {
+    id:row.id, senderId:row.sender_id, mine:row.sender_id===uid,
+    who:(mem&&mem.name)||(person&&person.name)||t("post.noName"),
+    t:row.text||"", img:row.image_url||null, imgFull:row.image_url_full||null,
+    ts, ago:computeAgo(ts)
+  };
+}
+/* 履歴を読み込み、読み終えた時点でlast_read_atを進める
+   (DMと同じく、画面を開いてメッセージを表示できた時点で1回だけ) */
+async function loadGroupMessages(gid){
+  const g=GROUPS.find(x=>x.id===gid); if(!g) return;
+  if(!window.SB || !isSignedIn()) return;
+  const convId=await getOrCreateGroupConversation(gid); if(!convId) return;
+  try{
+    const uid=authUser().id;
+    const { data, error } = await window.SB.from("messages")
+      .select("id, sender_id, text, image_url, image_url_full, created_at")
+      .eq("conversation_id", convId).order("created_at", { ascending:true });
+    if(error){ console.log("[gchat] load error:", error.code, error.message); return; }
+    const rows=data||[];
+    g.chat = rows.map(r=>groupMsgFromRow(r, gid));
+    g.unreadCount = 0;   // 開いて読み終えた時点で未読は無くなる
+    const latest = rows.length ? rows[rows.length-1].created_at : new Date().toISOString();
+    const { error: ue } = await window.SB.from("conversation_members")
+      .update({ last_read_at: latest }).eq("conversation_id", convId).eq("user_id", uid);
+    if(ue) console.log("[gchat] last_read_at error:", ue.code, ue.message);
+  }catch(e){ console.log("[gchat] load exception:", e); }
+}
+/* 他のメンバーの発言をその場で反映する */
+function subscribeGroupRealtime(convId, gid){
+  if(!window.SB) return;
+  if(groupRealtimeChannel){ try{ window.SB.removeChannel(groupRealtimeChannel); }catch(e){} groupRealtimeChannel=null; }
+  groupRealtimeChannel = window.SB.channel("gchat-"+convId)
+    .on("postgres_changes", { event:"INSERT", schema:"public", table:"messages", filter:"conversation_id=eq."+convId }, (payload)=>{
+      const row=payload.new;
+      if(isSignedIn() && row.sender_id===authUser().id) return;  // 自分の送信は送信時に足している
+      const g=GROUPS.find(x=>x.id===gid); if(!g) return;
+      g.chat=g.chat||[];
+      if(g.chat.some(m=>m.id===row.id)) return;
+      g.chat.push(groupMsgFromRow(row, gid));
+      const open = S.view==="groupchat" && activeGid===gid;
+      if(open){ renderGroupChatBody(true); }
+      else { g.unreadCount=(g.unreadCount||0)+1; renderApp(); }
+    })
+    .subscribe();
+}
+/* チャット一覧用。参加中の旅グループについて、最新の1件と未読件数だけを取る。
+   一覧を開いただけで全履歴を読む必要はないため、開いた時に読む loadGroupMessages とは別にしている */
+async function loadGroupChatSummaries(){
+  if(!window.SB || !isSignedIn()) return;
+  const uid=authUser().id;
+  try{
+    for(const g of GROUPS.filter(x=>x.joined && GCHAT_CONV_ID[x.id])){
+      if(g.chat && g.chat.length) continue;   // 既にチャットを開いて読み込み済みなら触らない
+      const convId=GCHAT_CONV_ID[g.id];
+      const { data: lastMsgs } = await window.SB.from("messages")
+        .select("id, sender_id, text, image_url, image_url_full, created_at")
+        .eq("conversation_id", convId).order("created_at",{ascending:false}).limit(1);
+      if(!lastMsgs || !lastMsgs.length) continue;
+      g.chat=[groupMsgFromRow(lastMsgs[0], g.id)];
+      const { data: myRow } = await window.SB.from("conversation_members")
+        .select("last_read_at").eq("conversation_id", convId).eq("user_id", uid).maybeSingle();
+      const lastRead = myRow && myRow.last_read_at;
+      if(!lastRead){ g.unreadCount=0; continue; }
+      const { data: newer } = await window.SB.from("messages")
+        .select("id, sender_id").eq("conversation_id", convId).gt("created_at", lastRead);
+      g.unreadCount=(newer||[]).filter(m=>m.sender_id!==uid).length;
+    }
+  }catch(e){ console.log("[gchat] summaries exception:", e); }
+}
+async function sendGroupChat(){
   const ta=document.getElementById("chatInput"); if(!ta)return;
   let txt=ta.value.trim(); if(!txt)return;
   if(txt.length>CHAT_MAX){ txt=txt.slice(0,CHAT_MAX); toast(t("chat.tooLong",{n:CHAT_MAX})); }
-  const g=GROUPS.find(x=>x.id===activeGid); if(!g)return;
-  g.chat.push({id:newMsgId(), ts:Date.now(), who:"Tomato", t:txt, mine:true, ago:nowTime(), reactions:{}, readBy:0, replyTo:replyDraft?{...replyDraft}:null});
-  notifyMentions(g, txt);
-  clearReplyDraft();
+  const gid=activeGid; const g=GROUPS.find(x=>x.id===gid); if(!g)return;
+  if(!window.SB || !isSignedIn()){ toast(t("x.chat.sendFailed")); return; }
+  const convId=await getOrCreateGroupConversation(gid);
+  if(!convId){ toast(t("x.chat.sendFailed")); return; }
   ta.value=""; ta.style.height="42px";
-  renderGroupChatBody(true);
+  try{
+    const { data, error } = await window.SB.from("messages")
+      .insert({ conversation_id:convId, sender_id:authUser().id, text:txt })
+      .select("id, sender_id, text, image_url, image_url_full, created_at").maybeSingle();
+    if(error){ console.log("[gchat] send error:", error.code, error.message); toast(t("x.chat.sendFailed")); return; }
+    g.chat=g.chat||[];
+    g.chat.push(groupMsgFromRow(data, gid));
+    renderGroupChatBody(true);
+    notifyMentions(g, txt);
+  }catch(e){ console.log("[gchat] send exception:", e); toast(t("x.chat.sendFailed")); }
+}
+/* グループへの写真送信。DMと同じく通常表示800px・拡大1600pxの2枚をchat-imagesへ上げる */
+async function sendGroupPhoto(dataUrl){
+  const gid=activeGid; const g=GROUPS.find(x=>x.id===gid); if(!g)return;
+  if(!window.SB || !isSignedIn()){ toast(t("x.chat.sendFailed")); return; }
+  const convId=await getOrCreateGroupConversation(gid);
+  if(!convId){ toast(t("x.chat.sendFailed")); return; }
+  try{
+    const [midBlob, fullBlob] = await Promise.all([
+      compressImageToBlob(dataUrl, IMG_MID_MAX, IMG_QUALITY),
+      compressImageToBlob(dataUrl, IMG_HQ_MAX, IMG_QUALITY)
+    ]);
+    const [midUrl, fullUrl] = await Promise.all([
+      uploadImageBlob(midBlob, "chat_mid", "chat-images"),
+      uploadImageBlob(fullBlob, "chat_full", "chat-images")
+    ]);
+    if(!midUrl || !fullUrl){ toast(t("x.chat.sendFailed")); return; }
+    const { data, error } = await window.SB.from("messages")
+      .insert({ conversation_id:convId, sender_id:authUser().id, text:"", image_url:midUrl, image_url_full:fullUrl })
+      .select("id, sender_id, text, image_url, image_url_full, created_at").maybeSingle();
+    if(error){ console.log("[gchat] send photo error:", error.code, error.message); toast(t("x.chat.sendFailed")); return; }
+    g.chat=g.chat||[];
+    g.chat.push(groupMsgFromRow(data, gid));
+    renderGroupChatBody(true);
+  }catch(e){ console.log("[gchat] send photo exception:", e); toast(t("x.chat.sendFailed")); }
 }
 
 /* ④チャット文字数: 送信上限3000字、表示は1000字超で「もっと見る」 */
@@ -9404,14 +9403,6 @@ function msgHTML(m){
   if(m.mine) return `<div class="bub-wrap me">${body}<div class="bub-time">${readHtml}<span class="msg-clock">${esc(m.ago||"")}</span></div></div>`;
   return `<div class="bub-wrap them">${body}<div class="bub-time">${esc(m.ago||"")}</div></div>`;
 }
-/* 長押し検出(モバイル):500msで操作メニューを開く */
-let _touchTimer=null;
-function msgTouchStart(e,scope,id){
-  const t=e.touches&&e.touches[0];
-  const x=t?t.clientX:0, y=t?t.clientY:0;
-  _touchTimer=setTimeout(()=>openMsgMenu(scope,id,x,y), 500);
-}
-function msgTouchEnd(){ if(_touchTimer){clearTimeout(_touchTimer);_touchTimer=null;} }
 function onChatPhoto(e,kind){
   const f=e.target.files&&e.target.files[0]; if(!f)return;
   const r=new FileReader();
@@ -9419,9 +9410,7 @@ function onChatPhoto(e,kind){
     if(kind==="dm"){
       sendDMPhoto(r.result);
     } else {
-      const g=GROUPS.find(x=>x.id===activeGid); if(!g)return;
-      g.chat.push({id:newMsgId(), ts:Date.now(), who:"Tomato", img:r.result, t:"[写真]", mine:true, ago:nowTime(), reactions:{}, readBy:0});
-      renderGroupChatBody(true);
+      sendGroupPhoto(r.result);
     }
   };
   r.readAsDataURL(f);
@@ -9433,75 +9422,25 @@ function renderDMBody(scroll){
   b.innerHTML = log.map(msgHTML).join("");
   if(scroll) chatScrollBottom();
 }
-/* グループチャット用メッセージ(リアクション+既読つき) */
-const REACTIONS = ["👍","❤️","😆","😮","😢","😡","🎉","🙏","🔥","💯"];
-function groupMsgHTML(m,idx){
+/* グループチャット用メッセージ。リアクション・引用返信・長押しメニュー・「既読 N」は、
+   いずれもこの端末の中だけで完結する見せかけだったため、メッセージをDBへ載せる際に撤去した */
+function groupMsgHTML(m){
   ensureMsgId(m);
-  // システムメッセージ:中央寄せ・半透明枠・白字・時刻つき
-  if(m.sys){
-    return `<div class="sys-msg"><span>${esc(m.t)}${m.ago?` ・ ${esc(m.ago)}`:""}</span></div>`;
-  }
-  // 送信取り消し済み:中央に淡色表示で残す
-  if(m.unsent){
-    return `<div class="sys-msg unsent"><span>${m.mine?"メッセージの送信を取り消しました":(esc(m.who||"相手")+"がメッセージの送信を取り消しました")}</span></div>`;
-  }
-  const press=`oncontextmenu="event.preventDefault();openMsgMenu('group','${m.id}',event.clientX,event.clientY)" ontouchstart="msgTouchStart(event,'group','${m.id}')" ontouchend="msgTouchEnd()" ontouchmove="msgTouchEnd()"`;
-  const reply = m.replyTo ? `<div class="reply-quote ${m.mine?'me':'them'}"><span class="rq-name">${esc(m.replyTo.who||"")}</span><span class="rq-text">${m.replyTo.img?"写真":esc((m.replyTo.t||"")).slice(0,50)}</span></div>` : "";
   const body = m.img
-    ? `<div class="bub ${m.mine?'me':'them'} img-bub" ${press}><img src="${m.img}" alt="${t('x.alt.photo')}"></div>`
-    : `<div class="bub ${m.mine?'me':'them'}" ${press}>${msgText(m)}</div>`;
-  // リアクションの集計表示
-  const rx=m.reactions||{};
-  const rxHtml=Object.keys(rx).filter(e=>(rx[e]||[]).length).map(e=>{
-    const cnt=(rx[e]||[]).length; const mineR=(rx[e]||[]).includes("Tomato");
-    return `<span class="rx-chip ${mineR?'mine':''}" onclick="toggleReaction(${idx},'${e}')">${e} ${cnt}</span>`;
-  }).join("");
-  const rxRow = rxHtml?`<div class="rx-row ${m.mine?'me':'them'}">${rxHtml}</div>`:"";
-  // 既読(自分のメッセージのみ小さく表示)
-  const readHtml = m.mine&&m.readBy?`<span class="read-mark">既読 ${m.readBy}</span>`:"";
-  // リアクション追加ボタン:自分の送信メッセージには出さない
-  const addBtn = m.mine ? "" : `<button class="rx-add" onclick="openReactionPicker(${idx})" title="${t('x.title.reaction')}">☺</button>`;
-
-  if(m.mine) return `<div class="bub-wrap me">${reply}
-      <div class="bub-line me">${body}</div>
-      <div class="bub-time">${readHtml}<span class="msg-clock">${esc(m.ago||"")}</span></div>${rxRow}</div>`;
-  return `<div class="bub-wrap them"><div class="bub-name">${esc(m.who||"")}</div>${reply}
-      <div class="bub-line them">${body}${addBtn}</div>
-      <div class="bub-time"><span class="msg-clock">${esc(m.ago||"")}</span></div>${rxRow}</div>`;
-}
-let reactionPickerIdx=null;
-function openReactionPicker(idx){ reactionPickerIdx=idx; renderGroupChatBody(false);
-  // ピッカーを描画
-  const host=document.getElementById("rxPicker");
-  if(host){ host.innerHTML=REACTIONS.map(e=>`<button onclick="pickReaction('${e}')">${e}</button>`).join("");
-    host.classList.add("show"); }
-}
-function closeReactionPicker(){ reactionPickerIdx=null; const h=document.getElementById("rxPicker"); if(h){h.classList.remove("show");h.innerHTML="";} }
-function pickReaction(e){ if(reactionPickerIdx==null)return; toggleReaction(reactionPickerIdx,e); closeReactionPicker(); }
-function toggleReaction(idx,e){
-  const g=GROUPS.find(x=>x.id===activeGid); if(!g)return;
-  const m=g.chat[idx]; if(!m)return;
-  if(m.mine){ toast(t("x.toast.noSelfReact")); return; }  // 自分の送信には不可
-  if(!m.reactions)m.reactions={};
-  // 一人1種類まで:既に押している別の絵文字があれば外す
-  const already=Object.keys(m.reactions).find(k=>(m.reactions[k]||[]).includes("Tomato"));
-  if(already && already!==e){
-    m.reactions[already]=m.reactions[already].filter(n=>n!=="Tomato");
-    if(!m.reactions[already].length)delete m.reactions[already];
-  }
-  if(!m.reactions[e])m.reactions[e]=[];
-  const i=m.reactions[e].indexOf("Tomato");
-  if(i>=0)m.reactions[e].splice(i,1); else m.reactions[e].push("Tomato");
-  if(!m.reactions[e].length)delete m.reactions[e];
-  renderGroupChatBody(false);
+    ? `<div class="bub ${m.mine?'me':'them'} img-bub" onclick="openFullImage('${esc(m.imgFull||m.img)}')"><img src="${esc(m.img)}" alt="${t('x.alt.photo')}"></div>`
+    : `<div class="bub ${m.mine?'me':'them'}">${msgText(m)}</div>`;
+  // .bub-lineは絵文字リアクションのボタンをバブルの横に並べるための入れ物だった。
+  // 幅を内容に合わせて縮める行の中で .bub の max-width:78% を効かせると、バブルが極端に
+  // 細くなって1文字ずつ折り返してしまうため、DM側と同じくバブルを直接置く形にしている
+  if(m.mine) return `<div class="bub-wrap me">${body}
+      <div class="bub-time"><span class="msg-clock">${esc(m.ago||"")}</span></div></div>`;
+  return `<div class="bub-wrap them"><div class="bub-name">${esc(m.who||"")}</div>${body}
+      <div class="bub-time"><span class="msg-clock">${esc(m.ago||"")}</span></div></div>`;
 }
 function renderGroupChatBody(scroll){
   const b=document.getElementById("chatBody"); if(!b)return;
   const g=GROUPS.find(x=>x.id===activeGid); const log=g?g.chat:[];
-  b.innerHTML = `<div class="daydiv">${t('x.chat.today')}</div>` + log.map((m,i)=>groupMsgHTML(m,i)).join("")
-
-    + `<div id="rxPicker" class="rx-picker"></div>`;
-  renderReplyBar();
+  b.innerHTML = log.map(groupMsgHTML).join("");
   if(scroll) chatScrollBottom();
 }
 
@@ -9530,7 +9469,7 @@ function screenChat(){
 
   const grpRows = GROUPS.filter(g=>g.joined&&!g.archived)
     .sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(g=>{
-    const log=g.chat||[]; const last=log[log.length-1]; const un=log.filter(c=>c.unread).length;
+    const log=g.chat||[]; const last=log[log.length-1]; const un=g.unreadCount||0;
     return `<div class="chatrow" onclick="openGroupChat('${g.id}')">
       ${groupAvHTML(g)}
       <div class="ct"><div class="nm">${g.pinned?pinIc(false)+' ':''}${esc(g.name)} <span style="font-size:11px;color:var(--ink-soft);font-weight:600">${(g.room.members||[]).length}人</span></div>
@@ -9938,7 +9877,6 @@ async function doInvite(gid,fid){
   }
   g.room.members.push({id:f.id,name:f.name,photo:f.photo||null,photoFull:f.photoFull||null});
   if(activeGid===gid) S.members=g.room.members;
-  g.chat.push({id:newMsgId(), ts:Date.now(), who:"システム", sys:true, t:`${f.name}さんがグループに参加しました`, mine:false, ago:nowTime()});
   inviteCandidates=inviteCandidates.filter(x=>x.id!==fid);
   toast(`${f.name}を招待しました`);
   renderApp();
@@ -10745,6 +10683,10 @@ function showBadgeInfo(id){
 /* ---- バッジ獲得チェック&通知 ---- */
 let BADGE_SEEN = {};   // 既に獲得通知済みのバッジid
 function checkBadgeAwards(silent){
+  // バッジはプロフィールから表示を外している間、獲得のお知らせも出さない
+  // (「プロフィールのバッジを確認しよう」と案内しても見る場所が無いため)。
+  // 復活させる時はこの1行を消すだけでよい
+  return;
   // 通常バッジ:各tierの最上位達成
   BADGE_DEFS.forEach(b=>{
     let ok=false; try{ok=b.need();}catch(e){}
@@ -10777,6 +10719,10 @@ function toggleBadgeVisible(id){
 /* ---- バッジ表示編集(他人に見せるバッジを最大8つ選ぶ) ---- */
 /* 他人プロフィールに見せる公開バッジ(相手の p.badges を使用。最大8) */
 function peopleBadgesHtml(p){
+  // バッジは自分のプロフィールから表示を外しているため、他人のプロフィールでも出さない
+  // (片方だけ残ると、自分には見えないものが相手には見えている状態になる)。
+  // 復活させる時はこの1行を消すだけでよい
+  return "";
   const ids=(p&&p.badges)||[];
   if(!ids.length) return "";
   const cells=ids.slice(0,8).map(id=>{
@@ -11844,7 +11790,7 @@ function renderApp(){
     html=screenChat();
     if(!chatSummariesLoaded){
       chatSummariesLoaded = true;
-      loadDMSummaries().then(()=>{ if(S.view==="chat"){ const sc2=document.getElementById("screen"); if(sc2) sc2.innerHTML=screenChat(); } });
+      Promise.all([loadDMSummaries(), loadGroupChatSummaries()]).then(()=>{ if(S.view==="chat"){ const sc2=document.getElementById("screen"); if(sc2) sc2.innerHTML=screenChat(); } });
     }
   }
   else if(S.view==="calendar"){ sc.innerHTML=screenCalendar(); drawMyCal(); window.scrollTo({top:0,behavior:"auto"}); return; }
