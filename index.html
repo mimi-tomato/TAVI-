@@ -73,6 +73,9 @@
   .answer-actions{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:18px}
   .answer-actions .btn{min-width:min(260px,100%)}
   .answer-actions .btn.close-early{min-width:0;font-size:0.8125rem;font-weight:600;padding:8px 14px}
+  /* 作成者専用ブロック。参加者にも内容は見せるが、操作はできないことが分かる見た目にする */
+  .owner-only :disabled{opacity:.5;cursor:not-allowed}
+  .owner-only input:disabled{background:var(--bg)}
   .seg-toggle{display:flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff}
   .seg-toggle button{flex:1;border:0;background:#fff;padding:12px;font-weight:700;cursor:pointer;
     font-family:inherit;font-size:0.875rem;color:var(--ink-soft)}
@@ -1479,8 +1482,8 @@ const I18N = {
     "s4.help.cal":"プロフィールの「カレンダー」に空き予定を登録しておくと、ここに自動で反映されます。",
     "s4.help.title":"日程調整の使い方", "s4.help.aria":"日程調整のヘルプ",
     "s4.undecided":"未定",
-    "s4.cal.synced":"🗓️ マイカレンダーの空き予定を反映済み。ここから自由に修正できます。",
-    "s4.cal.reapply":"再反映", "s4.cal.hint":"💡 プロフィールの「カレンダー」に空き予定を登録しておくと、ここに自動で反映されます。",
+    "s4.cal.offer":"🗓️ マイカレンダーに登録した空き予定を、この旅の回答に反映できます。",
+    "s4.cal.apply":"反映する",
     "s4.single":"単日で選ぶ", "s4.range":"範囲で選ぶ（終日）",
     "s4.range.hint":"開始日をタップ → 最終日をタップで、その間をまとめて終日で選択。もう一度始点を押すと取り消し。",
     "s4.wk":"週", "s4.full":"終日", "s4.dayOnly":"昼のみ", "s4.nightOnly":"夜のみ", "s4.weekBatch":"その週を一括", "slot.full":"終日", "slot.day":"昼", "slot.night":"夜",
@@ -1959,8 +1962,8 @@ const I18N = {
     "s4.help.cal":"Register free time under \"Calendar\" in your profile and it'll show up here automatically.",
     "s4.help.title":"How scheduling works", "s4.help.aria":"Scheduling help",
     "s4.undecided":"TBD",
-    "s4.cal.synced":"🗓️ Your free slots from My Calendar are applied. Edit freely from here.",
-    "s4.cal.reapply":"Re-apply", "s4.cal.hint":"💡 Register free time under \"Calendar\" in your profile and it'll show up here automatically.",
+    "s4.cal.offer":"🗓️ You can pull in the free time you saved in My Calendar.",
+    "s4.cal.apply":"Apply",
     "s4.single":"Single days", "s4.range":"A range (all day)",
     "s4.range.hint":"Tap a start day → tap an end day to select the whole span as all-day. Tap the start again to undo.",
     "s4.wk":"Wk", "s4.full":"All day", "s4.dayOnly":"Day only", "s4.nightOnly":"Night only", "s4.weekBatch":"Whole week", "slot.full":"All day", "slot.day":"Day", "slot.night":"Night",
@@ -3536,6 +3539,10 @@ function applyStepOwnerGate(){
     a.insertBefore(bar, a.firstChild);
   }
   if(isRoomOwner()) return;
+  // 作成者にしか意味のない入力(行き先の決定など)は、何が決められようとしているかは見えるよう
+  // 表示は残したまま、操作だけできないようにする。対象のブロックに .owner-only を付けること
+  document.querySelectorAll("#app .owner-only input, #app .owner-only textarea, #app .owner-only select, #app .owner-only button")
+    .forEach(el=>{ el.disabled=true; });
   const sel=STEP_ADVANCE_CALLS.map(c=>`#app button[onclick*="${c}"]`).join(",");
   const btns=[...document.querySelectorAll(sel)];
   if(!btns.length) return;
@@ -3926,13 +3933,15 @@ function viewWishTally(){
     ${enough?(frees.length?frees.map(f=>`<div class="anon-note">💬 ${esc(f)}</div>`).join(""):"")
             :`<p class="veil">${t("wt.veil")}</p>`}
     <div class="divider"></div>
-    <label class="fld">${t("wt.decideDest")}</label>
-    <div class="seg-toggle">
-      <button class="${S.destKind==='domestic'?'on':''}" onclick="S.destKind='domestic';render({noscroll:true})">${t("s1.domestic")}</button>
-      <button class="${S.destKind==='overseas'?'on':''}" onclick="S.destKind='overseas';render({noscroll:true})">${t("s1.overseas")}</button>
+    <div class="owner-only">
+      <label class="fld">${t("wt.decideDest")}</label>
+      <div class="seg-toggle">
+        <button class="${S.destKind==='domestic'?'on':''}" onclick="S.destKind='domestic';render({noscroll:true})">${t("s1.domestic")}</button>
+        <button class="${S.destKind==='overseas'?'on':''}" onclick="S.destKind='overseas';render({noscroll:true})">${t("s1.overseas")}</button>
+      </div>
+      <input type="text" id="destChoose" placeholder="${t("wt.dest.ph")}" value="${esc(S.destination)}" style="margin-top:8px">
+      <p class="hint">${t("wt.dest.hint")}</p>
     </div>
-    <input type="text" id="destChoose" placeholder="${t("wt.dest.ph")}" value="${esc(S.destination)}" style="margin-top:8px">
-    <p class="hint">${t("wt.dest.hint")}</p>
     <div class="btn-row">
       <button class="btn ghost" onclick="goStepBack(3)">${t("wt.backWish")}</button>
       <button class="btn primary" onclick="confirmDest()">${t("wt.confirmDest")}</button>
@@ -3945,13 +3954,7 @@ function confirmDest(){const v=$("#destChoose").value.trim();if(!v){toast(t("toa
 
 /* ===== 画面4 日程(単日 / 範囲) ===== */
 function viewDates(){
-  // 初回:マイカレンダーの空き予定をこの人の回答へ自動反映
-  const applied=applyMyCalToAvail(false);
-  // 反映した場合、見えるようマイカレンダーの最小月へ移動
-  if(applied){
-    const keys=Object.keys(MYCAL).sort();
-    if(keys.length){ const[Y,M]=keys[0].split("-"); S.calYear=+Y; S.calMonth=+M; }
-  }
+  // マイカレンダーは自動では反映しない。既定は手動入力で、取り込みたい人だけがボタンで反映する
   const hasMyCal=Object.keys(MYCAL).length>0;
   app.innerHTML=`${personSwitch()}
   <div class="card">
@@ -3962,8 +3965,8 @@ function viewDates(){
     </div>
     <p class="lead">${t("s4.lead.pre")}<b>${esc(S.destination||t("s4.undecided"))}</b></p>
     ${hasMyCal?`<div class="mycal-help" style="display:flex;align-items:center;gap:10px;justify-content:space-between">
-      <span>${t("s4.cal.synced")}</span>
-      <button class="mini-btn solid" style="white-space:nowrap" onclick="applyMyCalToAvail(true);drawCalendar();toast(t('toast.calOverwrite'))">${t("s4.cal.reapply")}</button>
+      <span>${t("s4.cal.offer")}</span>
+      <button class="mini-btn solid" style="white-space:nowrap" onclick="applyMyCalNow()">${t("s4.cal.apply")}</button>
     </div>`:``}
     <div class="modebar">
       <button class="${S.dateMode==='single'?'on':''}" onclick="setDateMode('single')">${t("s4.single")}</button>
@@ -4075,20 +4078,25 @@ function onDateClick(key){
   S.rangeStart=null; drawCalendar();
   toast(t("toast.rangeSel"));
 }
-/* マイカレンダーの内容を、この人の空き回答へ反映(この旅専用の投票。My Calendarと独立して保持) */
-function applyMyCalToAvail(force){
+/* マイカレンダーの内容を、この人の空き回答へ上書き反映する(この旅専用の投票。My Calendarとは
+   独立して保持し、双方向同期はしない)。以前は日程画面を開いた時点で未入力なら自動反映していたが、
+   手動で調整したい人には邪魔になるため、ボタンを押した時だけ反映する方式に変更した */
+function applyMyCalNow(){
   const mine=S.avail[S.me]||(S.avail[S.me]={});
-  if(!force){
-    // 初回のみ:まだ未入力なら反映
-    if(Object.keys(mine).length) return false;
-  } else {
-    // 上書き反映
-    Object.keys(mine).forEach(k=>delete mine[k]);
-    clearTripDateVotes(activeGid);
-  }
+  Object.keys(mine).forEach(k=>delete mine[k]);
   Object.keys(MYCAL).forEach(k=>{ mine[k]=MYCAL[k]; });
-  saveTripDateVotesFromMap(activeGid, MYCAL);
-  return true;
+  replaceTripDateVotes(activeGid, MYCAL);
+  // 反映した予定が見えるよう、マイカレンダーの最も早い月へ移動する
+  const keys=Object.keys(MYCAL).sort();
+  if(keys.length){ const[Y,M]=keys[0].split("-"); S.calYear=+Y; S.calMonth=+M; }
+  drawCalendar();
+  toast(t("toast.calOverwrite"));
+}
+/* 既存の回答を消してから入れ直す。削除と登録を並行して投げると、削除が後着して
+   入れたばかりの行まで消える可能性があるため、必ず順番に実行する */
+async function replaceTripDateVotes(gid, map){
+  await clearTripDateVotes(gid);
+  await saveTripDateVotesFromMap(gid, map);
 }
 
 /* ===== 日程調整投票のSupabase連携(trip_date_votes) =====
