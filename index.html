@@ -3487,7 +3487,9 @@ function render(opts){
     default:viewCreate();
   }
   if(!(opts&&opts.noscroll)) window.scrollTo({top:0,behavior:"smooth"});
-  if(activeGid) commitRoom();
+  // noscroll指定(カレンダーのタップ・予算札の増減など、その場での細かい更新)は連打されるため
+  // デバウンス保存に留め、それ以外(次へ/戻る等のステップ遷移)は区切りの良いタイミングなので即保存する
+  if(activeGid) commitRoom(!(opts&&opts.noscroll));
   // 脱退ボタン(参加済みグループで、作成直後以外)
   const g = activeGid?GROUPS.find(x=>x.id===activeGid):null;
   if(g && g.joined && S.step>=2){
@@ -3565,17 +3567,27 @@ async function doCreate(){
   }
   S.step=2; render();
 }
-/* グループ本体+自分の参加をSupabaseへ書き込む(upsertなので同じグループへの複数回呼び出しも安全) */
+/* グループ本体+自分の参加をSupabaseへ書き込む。同じグループへの複数回呼び出しに対応するため
+   冪等にしたいが、このプロジェクトではupsert(ON CONFLICT DO UPDATE)がRLS下で
+   「new row violates row-level security policy」を返す(競合が実際に無い新規行でも失敗する)
+   ことを実機で確認済みのため、upsertは使わず「insertを試し、重複エラー(23505)ならupdateする」
+   方式に統一している(insert単体は同じポリシーで問題なく成功することも確認済み) */
 async function persistTripGroup(gid, name, destKind, destination){
   if(!window.SB || !isSignedIn() || !gid) return;
   const uid=authUser().id;
+  const destKindVal = destKind||"domestic";
   try{
     const { error } = await window.SB.from("trip_groups")
-      .upsert({ id:gid, name, dest_kind:destKind||"domestic", destination, created_by:uid }, { onConflict:"id" });
-    if(error){ console.log("[trip_groups] upsert error:", error.message); return; }
+      .insert({ id:gid, name, dest_kind:destKindVal, destination, created_by:uid });
+    if(error && error.code!=="23505"){ console.log("[trip_groups] insert error:", error.message); return; }
+    if(error && error.code==="23505"){
+      const { error: ue } = await window.SB.from("trip_groups")
+        .update({ name, dest_kind:destKindVal, destination }).eq("id", gid);
+      if(ue){ console.log("[trip_groups] update error:", ue.message); return; }
+    }
     const { error: me1 } = await window.SB.from("trip_group_members")
-      .upsert({ group_id:gid, user_id:uid, role:"owner" }, { onConflict:"group_id,user_id" });
-    if(me1) console.log("[trip_group_members] self upsert error:", me1.message);
+      .insert({ group_id:gid, user_id:uid, role:"owner" });
+    if(me1 && me1.code!=="23505") console.log("[trip_group_members] self insert error:", me1.message);
   }catch(e){ console.log("[trip_groups] persist exception:", e); }
 }
 
@@ -3630,8 +3642,9 @@ function toggleFriendMember(pid){
     S.members.push(m); if(!S.me)S.me=m.id;
     toast(t("toast.memberAdded",{name:p.name}));
     if(activeGid && window.SB && isSignedIn()){
-      window.SB.from("trip_group_members").upsert({ group_id:activeGid, user_id:pid, role:"member" }, { onConflict:"group_id,user_id" })
-        .then(({error})=>{ if(error) console.log("[trip_group_members] add error:", error.message);
+      // upsertはRLS下で新規行でも失敗するため使わず、insert+重複エラー無視の方式にしている
+      window.SB.from("trip_group_members").insert({ group_id:activeGid, user_id:pid, role:"member" })
+        .then(({error})=>{ if(error && error.code!=="23505") console.log("[trip_group_members] add error:", error.message);
           else createNotification(pid, "group_invite", { groupId: activeGid }); });
     }
   }
@@ -4030,9 +4043,14 @@ async function saveTripDateVote(gid, dateKey, slot){
   const uid=authUser().id;
   try{
     if(slot){
+      // upsertはRLS下で新規行でも失敗するため使わず、insertを試して重複ならupdateする方式にしている
       const { error } = await window.SB.from("trip_date_votes")
-        .upsert({ group_id:gid, user_id:uid, date:dateKey, slot }, { onConflict:"group_id,user_id,date" });
-      if(error) console.log("[trip_date_votes] upsert error:", error.message);
+        .insert({ group_id:gid, user_id:uid, date:dateKey, slot });
+      if(error && error.code==="23505"){
+        const { error: ue } = await window.SB.from("trip_date_votes")
+          .update({ slot }).eq("group_id",gid).eq("user_id",uid).eq("date",dateKey);
+        if(ue) console.log("[trip_date_votes] update error:", ue.message);
+      }else if(error){ console.log("[trip_date_votes] insert error:", error.message); }
     }else{
       const { error } = await window.SB.from("trip_date_votes")
         .delete().eq("group_id",gid).eq("user_id",uid).eq("date",dateKey);
@@ -4100,9 +4118,10 @@ async function saveTripSpotAdd(gid, name){
       }
       (TRIP_SPOT_IDS[gid]=TRIP_SPOT_IDS[gid]||{})[name]=cid;
     }
+    // upsertはRLS下で新規行でも失敗するため使わず、insert+重複エラー無視の方式にしている
     const { error: ve } = await window.SB.from("trip_spot_votes")
-      .upsert({ candidate_id:cid, group_id:gid, user_id:authUser().id }, { onConflict:"candidate_id,user_id" });
-    if(ve) console.log("[trip_spot_votes] upsert error:", ve.message);
+      .insert({ candidate_id:cid, group_id:gid, user_id:authUser().id });
+    if(ve && ve.code!=="23505") console.log("[trip_spot_votes] insert error:", ve.message);
   }catch(e){ console.log("[trip_spot_candidates] add exception:", e); }
 }
 async function saveTripSpotVoteToggle(gid, name, adding){
@@ -4111,8 +4130,8 @@ async function saveTripSpotVoteToggle(gid, name, adding){
   try{
     if(adding){
       const { error } = await window.SB.from("trip_spot_votes")
-        .upsert({ candidate_id:cid, group_id:gid, user_id:authUser().id }, { onConflict:"candidate_id,user_id" });
-      if(error) console.log("[trip_spot_votes] insert error:", error.message);
+        .insert({ candidate_id:cid, group_id:gid, user_id:authUser().id });
+      if(error && error.code!=="23505") console.log("[trip_spot_votes] insert error:", error.message);
     }else{
       const { error } = await window.SB.from("trip_spot_votes")
         .delete().eq("candidate_id",cid).eq("user_id",authUser().id);
@@ -4817,6 +4836,15 @@ function blankRoom(over){
     calYear:2026, calMonth:6
   }, over||{});
 }
+/* "YYYY-M-D"形式の日付キーを"YYYY-MM-DD"へ正規化する。tripDate/tripDateEndの算出に
+   commitRoom()とloadTripGroups()の両方から使う共通ヘルパー */
+function normalizeDateKey(key){
+  if(key && /^\d{4}-\d{1,2}-\d{1,2}$/.test(key)){
+    const m=key.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    return `${m[1]}-${String(+m[2]).padStart(2,"0")}-${String(+m[3]).padStart(2,"0")}`;
+  }
+  return null;
+}
 function mkMembers(names){ return names.map(n=>({id:uid(), name:n})); }
 
 let GID = 100;
@@ -5085,7 +5113,7 @@ async function loadTripGroups(){
     const gids=[...new Set((myRows||[]).map(r=>r.group_id))];
     if(!gids.length){ GROUPS=[]; return; }
     const { data: groups, error: e2 } = await window.SB.from("trip_groups")
-      .select("id, name, dest_kind, destination, created_by, created_at").in("id", gids)
+      .select("id, name, dest_kind, destination, created_by, created_at, room_state").in("id", gids)
       .order("created_at", { ascending:false });
     if(e2){ console.log("[trip_groups] load error:", e2.message); return; }
     const { data: allMembers, error: e3 } = await window.SB.from("trip_group_members")
@@ -5108,12 +5136,20 @@ async function loadTripGroups(){
         return { id:r.user_id, name:p.display_name||t("post.noName"), photo:p.avatar_url||null, photoFull:p.avatar_url_full||null };
       });
       const prev=oldById[g.id];
+      // room_state列に保存済みの調整内容(ステップ進行・確定日程・予算・最終合意・巡回順・詳細プランなど)を
+      // 復元する。roomName/destination/destKind/membersはDBの正規テーブル側を常に優先させ、
+      // room_stateに古い値が残っていても上書きされないようにする
+      const saved=g.room_state||{};
+      const room=blankRoom(Object.assign({}, saved,
+        { roomName:g.name, destination:g.destination||"", destKind:g.dest_kind||"domestic", members:mems }));
+      const iso0=normalizeDateKey(room.tripStartKey), iso1=normalizeDateKey(room.tripEndKey);
       return {
         id:g.id, name:g.name, joined:true, cover:(prev&&prev.cover)||covers[i%covers.length], img:(prev&&prev.img)||null,
         pinned:(prev&&prev.pinned)||false, archived:(prev&&prev.archived)||false,
-        tripDate:(prev&&prev.tripDate)||"", tripDateEnd:(prev&&prev.tripDateEnd)||"",
+        tripDate: iso0 || ((prev&&prev.tripDate)||""),
+        tripDateEnd: iso0 ? ((iso1&&iso1!==iso0)?iso1:"") : ((prev&&prev.tripDateEnd)||""),
         createdAt:new Date(g.created_at).getTime(), pollDeadlineTs:null,
-        room:blankRoom({ roomName:g.name, destination:g.destination||"", destKind:g.dest_kind||"domestic", members:mems }),
+        room,
         chat:(prev&&prev.chat)||[], albums:(prev&&prev.albums)||[]
       };
     });
@@ -5233,24 +5269,48 @@ async function openRoom(gid){
   // 読み込み中に別の画面/別のルームへ移動していたら、その結果を今のSへ反映しない
   if(activeGid===gid && S.view==="room") renderApp();
 }
-/* S の進行内容を現在のグループへ書き戻す */
-function commitRoom(){
+/* S の進行内容を現在のグループへ書き戻す。immediate=trueならSupabaseへ即保存、
+   falseなら短時間デバウンスして保存する(既定はtrue。render()の細かいUI更新のみfalseを渡す) */
+function commitRoom(immediate=true){
   if(S.view!=="room") return;   // ルーム画面以外ではSはroomStateでないので書き戻さない
   if(!activeGid)return;
   const g=GROUPS.find(x=>x.id===activeGid); if(!g)return;
   const keys=Object.keys(blankRoom());
   keys.forEach(k=>{ g.room[k]=S[k]; });
   // ⑧旅行日付は計画された旅行日程の初日(ISO)を使う。確定日程文字列からは取らない
-  const normIso=(key)=>{
-    if(key && /^\d{4}-\d{1,2}-\d{1,2}$/.test(key)){
-      const m=key.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-      return `${m[1]}-${String(+m[2]).padStart(2,"0")}-${String(+m[3]).padStart(2,"0")}`;
-    }
-    return null;
-  };
-  const iso0=normIso(S.tripStartKey), iso1=normIso(S.tripEndKey);
+  const iso0=normalizeDateKey(S.tripStartKey), iso1=normalizeDateKey(S.tripEndKey);
   if(iso0){ g.tripDate=iso0; g.tripDateEnd=(iso1&&iso1!==iso0)?iso1:""; } // ④単日なら終了日は空
+  if(immediate) persistRoomStateNow(activeGid); else scheduleRoomStatePersist(activeGid);
 }
+
+/* ===== 旅行計画(ルーム)の調整内容をSupabaseへ永続化 =====
+   trip_groups.room_state(jsonb)へ、日程投票・スポット投票以外の調整内容(ステップ進行・
+   確定日程・予算投票・最終合意・巡回順・詳細プランなど)をまとめて保存する。これらは
+   trip_date_votes/trip_spot_*のような正規化テーブルを持たないため、g.roomをそのまま
+   1列にシリアライズする方式にしている(個人開発の現段階ではこれで十分)。 */
+let roomStateSaveTimer=null, roomStateSaveTimerGid=null;
+async function persistRoomStateNow(gid){
+  if(roomStateSaveTimer && roomStateSaveTimerGid===gid){ clearTimeout(roomStateSaveTimer); roomStateSaveTimer=null; roomStateSaveTimerGid=null; }
+  if(!window.SB || !isSignedIn() || !gid) return;
+  const g=GROUPS.find(x=>x.id===gid); if(!g) return;
+  try{
+    const { error } = await window.SB.from("trip_groups").update({ room_state:g.room }).eq("id", gid);
+    if(error) console.log("[trip_groups] room_state save error:", error.message);
+  }catch(e){ console.log("[trip_groups] room_state save exception:", e); }
+}
+function scheduleRoomStatePersist(gid){
+  if(roomStateSaveTimer) clearTimeout(roomStateSaveTimer);
+  roomStateSaveTimerGid=gid;
+  roomStateSaveTimer=setTimeout(()=>{ roomStateSaveTimer=null; persistRoomStateNow(gid); }, 900);
+}
+/* タブが隠れる/閉じられる瞬間、デバウンス待ちの保存が残っていれば即座に送る
+   (「編集直後にリロードすると消える」という今回の不具合の再発防止策) */
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="hidden" && roomStateSaveTimer) persistRoomStateNow(roomStateSaveTimerGid);
+});
+window.addEventListener("pagehide", ()=>{
+  if(roomStateSaveTimer) persistRoomStateNow(roomStateSaveTimerGid);
+});
 function toggleTheme(){
   S.theme = S.theme==="dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", S.theme);
@@ -9673,9 +9733,10 @@ async function doInvite(gid,fid){
   renderApp();
   if(window.SB && isSignedIn()){
     try{
+      // upsertはRLS下で新規行でも失敗するため使わず、insert+重複エラー無視の方式にしている
       const { error } = await window.SB.from("trip_group_members")
-        .upsert({ group_id:gid, user_id:fid, role:"member" }, { onConflict:"group_id,user_id" });
-      if(error) console.log("[trip_group_members] invite upsert error:", error.message);
+        .insert({ group_id:gid, user_id:fid, role:"member" });
+      if(error && error.code!=="23505") console.log("[trip_group_members] invite insert error:", error.message);
       else createNotification(fid, "group_invite", { groupId: gid });
     }catch(e){ console.log("[trip_group_members] invite exception:", e); }
   }
