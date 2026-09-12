@@ -1430,12 +1430,12 @@ const I18N = {
     "s2.eyebrow":"STEP 2 / メンバーを集める", "s2.h":"招待リンクを送る",
     "s2.lead":"フォローしている友達を選んで、この旅に追加しよう。",
     "s2.addName":"フォロー中の友達", "s2.name.ph":"例：たろう",
-    "s2.hint":"3人以上で先に進めます（匿名性のため）。", "s2.seed":"サンプルで5人入れる",
+    "s2.hint":"1人以上招待すると先に進めます。", "s2.seed":"サンプルで5人入れる",
     "s2.next.date":"日程調整へ進む", "s2.next.wish":"希望集約へ進む", "s2.dummy":"（ダミー）",
     "s2.noFriends":"追加できる友達がいません。フォローすると、ここから旅に誘えます。",
     "s2.added":"追加済み", "s2.addToTrip":"追加", "s2.rosterEmpty":"まだ誰もいません",
     "toast.memberAdded":"{name}を追加しました", "toast.memberRemoved":"{name}を外しました",
-    "toast.seeded":"5人追加しました", "toast.need3":"3人以上で進めます",
+    "toast.seeded":"5人追加しました", "toast.need3":"1人以上招待すると進めます",
     // STEP3 希望
     "s3.eyebrow":"STEP 3 / 希望（匿名）", "s3.h":"行きたい場所と、やりたいこと",
     "s3.lead":"誰が選んだかは誰にも見えません。本音でどうぞ。",
@@ -1909,12 +1909,12 @@ const I18N = {
     "s2.eyebrow":"STEP 2 / Gather members", "s2.h":"Send the invite link",
     "s2.lead":"Pick friends you follow and add them to this trip.",
     "s2.addName":"Friends you follow", "s2.name.ph":"e.g. Taro",
-    "s2.hint":"Need 3 or more people to continue (for anonymity).", "s2.seed":"Add 5 sample members",
+    "s2.hint":"Invite 1 or more people to continue.", "s2.seed":"Add 5 sample members",
     "s2.next.date":"Go to scheduling", "s2.next.wish":"Go to preferences", "s2.dummy":"(demo)",
     "s2.noFriends":"No friends to add yet. Follow people and you can invite them here.",
     "s2.added":"Added", "s2.addToTrip":"Add", "s2.rosterEmpty":"No one yet",
     "toast.memberAdded":"Added {name}", "toast.memberRemoved":"Removed {name}",
-    "toast.seeded":"Added 5 members", "toast.need3":"Need 3 or more people",
+    "toast.seeded":"Added 5 members", "toast.need3":"Invite 1 or more people",
     "s3.eyebrow":"STEP 3 / Preferences (anonymous)", "s3.h":"Where to go, what to do",
     "s3.lead":"No one can see who picked what. Be honest.",
     "s3.aPlace":"Pick places you want to go",
@@ -3510,7 +3510,7 @@ function viewCreate(){
     <h1>${t("s1.h")}</h1>
     <p class="lead">${t("s1.lead")}</p>
     <label class="fld">${t("s1.roomName")}</label>
-    <input type="text" id="roomName" placeholder="${t("s1.roomName.ph")}" value="${esc(S.roomName)}">
+    <input type="text" id="roomName" placeholder="${t("s1.roomName.ph")}" value="${esc(S.roomName)}" oninput="S.roomName=this.value">
     <label class="fld">${t("s1.cover")}</label>
     <div onclick="document.getElementById('coverInput').click()" style="height:120px;border-radius:13px;cursor:pointer;position:relative;overflow:hidden;border:1px solid var(--line);${coverStyle()}">
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:7px;color:#fff;font-weight:700;font-size:14px;background:rgba(0,0,0,.22)">
@@ -3532,10 +3532,10 @@ function viewCreate(){
         <button class="${S.destKind==='overseas'?'on':''}" onclick="S.destKind='overseas';render({noscroll:true})">${t("s1.overseas")}</button>
       </div>
       <label class="fld">${t("s1.dest")}</label>
-      <input type="text" id="dest" placeholder="${t("s1.dest.ph")}" value="${esc(S.destination)}">
+      <input type="text" id="dest" placeholder="${t("s1.dest.ph")}" value="${esc(S.destination)}" oninput="S.destination=this.value">
     </div>
     <label class="fld">${t("s1.limit")}</label>
-    <select id="limit">
+    <select id="limit" onchange="S.limitDays=parseInt(this.value,10)">
       <option value="1" ${S.limitDays==1?'selected':''}>${t("s1.limit.1")}</option>
       <option value="2" ${S.limitDays==2?'selected':''}>${t("s1.limit.2")}</option>
       <option value="3" ${S.limitDays==3?'selected':''}>${t("s1.limit.3")}</option>
@@ -3603,7 +3603,7 @@ function viewJoin(){
     <div class="roster" id="roster"></div>
     <div class="btn-row">
       <button class="btn ghost" onclick="seedMembers()">${t("s2.seed")}</button>
-      <button class="btn primary" id="toAct" onclick="startNext()" ${S.members.length<3?'disabled':''}>
+      <button class="btn primary" id="toAct" onclick="startNext()" ${S.members.length<1?'disabled':''}>
         ${S.mode==='decided'?t("s2.next.date"):t("s2.next.wish")}</button>
     </div>
   </div>`;
@@ -3652,11 +3652,11 @@ function toggleFriendMember(pid){
 }
 function drawRoster(){const r=$("#roster");if(!r)return;
   r.innerHTML=S.members.map(m=>`<span class="chip"><span class="dot"></span>${esc(m.name)}</span>`).join("")||`<span class="muted">${t("s2.rosterEmpty")}</span>`;
-  const b=$("#toAct");if(b)b.disabled=S.members.length<3;}
+  const b=$("#toAct");if(b)b.disabled=S.members.length<1;}
 function seedMembers(){["たろう","さくら","けんた","みう","ゆうき"].forEach(n=>{
   if(!S.members.find(x=>x.name===n))S.members.push({id:uid(),name:n});});
   if(!S.me)S.me=S.members[0].id;drawFriendPick();drawRoster();renderSteps();toast(t("toast.seeded"));}
-function startNext(){if(S.members.length<3){toast(t("toast.need3"));return;} S.step=S.mode==='decided'?4:3; render();}
+function startNext(){if(S.members.length<1){toast(t("toast.need3"));return;} S.step=S.mode==='decided'?4:3; render();}
 </script>
 <script>
 /* ===== 画面3 希望集約 ===== */
